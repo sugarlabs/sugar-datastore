@@ -1,0 +1,12 @@
+Metadata-Version: 1.0
+Name: olpc.datastore
+Version: 0.1.1
+Summary:     DataStore used for the OLPC project (http://laptop.org)
+    
+Home-page: UNKNOWN
+Author: Benjamin Saller
+Author-email: bcsaller@objectrealms.net
+License: GPL
+Description: UNKNOWN
+Keywords: datastore journal repository
+Platform: UNKNOWN

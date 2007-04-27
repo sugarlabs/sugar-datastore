@@ -1,0 +1,230 @@
+Status: Alpha - Implemented
+
+This document outlines the basic usage of the olpc.datastore.query and
+olpc.datastore.model modules. Not that these are not use independ of
+the olpc.datastore.backend which in turn is only accessed through the
+olpc.datastore module. This is intended only to document the innards
+of those modules.
+
+
+
+First lets create a query manager
+
+>>> from olpc.datastore.query import DefaultQueryManager
+>>> from olpc.datastore.model import Property
+>>> qm = DefaultQueryManager("sqlite://")
+>>> qm.prepare(None, None)
+True
+
+That will create the memory backed database which will be used in this
+documentation. The call to prepare() is normally invoked by the higher
+level datastore for you.
+
+Because this is a new database there should be nothing in it. We can
+verify this with the call to the find() method.
+
+>>> qm.find()
+[]
+
+
+The simplest way to add an entry to the datastore is by passing a
+dictionary of properties to the create method.
+
+>>> a = qm.create(dict(title="New Content"))
+
+Find will now return this object.
+
+>>> qm.find()
+[<Content id:1>]
+
+We can examine the Properties of this object.
+
+>>> a.title
+'New Content'
+
+We can see in this way that the property is seamlessly mapped onto
+object. This works as expected because the type of the Property title
+is a string. If we know that the type of a Property is complex and
+don't wish to have a string representation of we must get the property
+object itself. This can be done one of two ways
+
+>>> a.properties
+[... <Property title:'New Content' of <Content id:1>>, ...]
+
+This returned a list of all properties on the Content object in which
+case we can find the property by enumeration. The other option is
+using the get_properties call on Content
+
+>>> a.get_properties(key='title')
+[<Property title:'New Content' of <Content id:1>>]
+
+Using the query manager API we are able to update the
+properties. Using this form automatically synchronizes with the
+database and the property is immediately available.  To demonstrate
+that this works lets attach another property. 
+>>> qm.update(a, dict(author='Benjamin'))
+
+A request for title still returns only the title property.
+>>> a.get_properties(key='title')
+[<Property title:'New Content' of <Content id:1>>]
+
+And a request for author works as expected.
+>>> a.get_properties(key='author')
+[<Property author:'Benjamin' of <Content id:1>>]
+
+>>> qm.update(a, dict(foo='bar'))
+>>> set([p.key for p in a.properties]) == set(['title', 'mtime', 'ctime', 'language', 'mime_type', 'author', 'foo'])
+True
+
+We could have also passed an id for the content object rather than the
+object itself. A list of properties would have been acceptable in
+place of a dictionary. One thing that is shown here is that a number
+of default properties were added when the Content object was
+created. This is done by default and can be controlled by the
+include_defaults flag to the create() method.
+
+Some of the default Property objects have values which are not of the
+'string' type. 'ctime' and 'mtime' are examples of these
+
+>>> a.ctime
+datetime.datetime(...)
+
+We can see that ctime has been mapped to a standard Python
+datetime.datetime instance. olpc.datastore.model includes support for
+'number' and 'datetime' Property types by default. To add support for
+new property types see the oplc.datastore.model.Model.addPropertyType
+method. 
+
+Special support is needed to make dates easily addressable within the
+datastore. The properties 'ctime', creation time, and 'mtime',
+modification time are supported. To query on these properties two
+methods are available.
+
+>>> qm.find(ctime="2007-01-01 00:00")
+[]
+
+Which matches nothing. And the other form is to pass a dict with
+'start' and 'end' range boundries.
+>>> import datetime
+>>> now = datetime.datetime.now().isoformat()
+
+>>> qm.find(ctime=dict(end=now))
+[<Content id:1>]
+
+
+Property keys are unique per Content item. This means that adding a
+Property with an existing key should update the value rather than add
+another Property with the same key.
+
+>>> qm.update(1, [Property('another', 'property')])
+>>> a.another
+'property'
+
+>>> l1 = len(a.properties)
+>>> qm.update(1, dict(another="test"))
+>>> a.another
+'test'
+>>> len(a.properties) == l1
+True
+
+Both forms of passing properties work.
+
+>>> l1 = len(a.properties)
+>>> qm.update(1, [Property('another', 'value')])
+>>> a.another
+'value'
+>>> len(a.properties) == l1
+True
+
+
+We can also navigate from a Property object to the content to which it
+refers. This is available through the 'content' attrbiute of
+properties. Only properties bound to content and synchronized with the
+database have this property.
+
+>>> p = a.get_properties(key='author')[0]
+>>> p.content
+<Content id:1>
+
+Let's create additional content.
+
+>>> b = qm.create(dict(title="My Picture", author="Sarah", mime_type="image/png"))
+>>> c = qm.create(dict(title="My Song", author="Sarah", mime_type="audio/mp3"))
+
+At this point the find() method should be able to provide us with more
+interesting results. Note at this point that find() has multiple
+responsibilities. First it must search the Properties of objects,
+secondly it provides access to the full-text index associated with
+content in the datastore.
+
+For now we are only interested in the properties.
+
+>>> qm.find(mime_type="image/png")
+[<Content id:2>]
+
+>>> qm.find(author="Benjamin")
+[<Content id:1>]
+
+>>> qm.find(author="Sarah")
+[<Content id:2>, <Content id:3>]
+
+>>> qm.find(author="Sarah", mime_type="audio/mp3")
+[<Content id:3>]
+
+Passing the special value, 'content' to find will pass an expression
+to the full text index engine. The query manager maintains a full-text
+index in parallel to the normal metadata storeage. The full text index
+is updated on every create, update and delete call to the query
+manager provided the mime_type Property of the Content is one
+understood by the index.
+
+>>> from StringIO import StringIO
+>>> qm.fulltext_index(a, StringIO("this is my content, hear it roar"))
+>>> qm.find(fulltext="roar")
+[<Content id:1>]
+
+Combining this with properties also works.
+>>> qm.find(fulltext="roar", author="Benjamin")
+[<Content id:1>]
+
+And we can verify the negitive as well.
+>>> qm.find(fulltext="roar", author="Sarah")
+[]
+
+Calls to update() and create() both take an optional file argument
+which will update the fulltext indexed content with the new value of
+file.
+
+>>> qm.update(a, file=StringIO("different text"))
+
+The new content will be found
+>>> qm.find(fulltext="different", author="Benjamin")
+[<Content id:1>]
+
+And the old content is not.
+>>> qm.find(fulltext="roar", author="Benjamin")
+[]
+
+
+Passing a filename for file works as well. Files can be in a variety
+of binary formats include PDF.
+>>> qm.update(a, file="test.doc")
+>>> qm.find(fulltext="roar", author="Benjamin")
+[]
+>>> qm.find(fulltext="amazed", author="Benjamin")
+[<Content id:1>]
+
+We have converters for DOC, PDF and ODT by default
+
+>>> qm.update(a, file="test.pdf")
+>>> qm.find(fulltext="peek", author="Benjamin")
+[<Content id:1>]
+
+
+>>> qm.update(a, file="test.odt")
+>>> qm.find(fulltext="amazed", author="Benjamin")
+[<Content id:1>]
+
+
+Now for politeness we shut everything down
+>>> qm.stop()

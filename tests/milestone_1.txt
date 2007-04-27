@@ -1,0 +1,81 @@
+The initial requirements are as follows:
+
+* Get the unique ids of all the objects in the store.
+* Get an object from the store given his uid.
+* Get the object metadata.
+* Get the object file.
+* Push the changes made to the file back to the store.
+* Update the metadata of an object.
+
+Below I enumerate each point showing how this is performed on a local
+datastore.
+
+
+First, create and connect the store.
+
+>>> from olpc.datastore import DataStore
+>>> ds = DataStore('/tmp/test_ds', 'sqlite://')
+
+Because there is newly created we are going to quickly populate the
+datastore with some content.
+
+>>> from StringIO import StringIO
+
+>>> assert ds.create(dict(title="Document 1"), StringIO("""this is the first document"""))
+
+>>> assert ds.create(dict(title="Document 2"), StringIO("""this is the second document"""))
+
+
+Note that we retain no reference to the created documents. 
+
+Now we should be able to test the first requirement.
+* Get the unique ids of all the objects in the store.
+
+>>> uids = ds.find()
+
+A find command with out any parameters will return everything in the store.
+
+* Get an object from the store given his uid.
+>>> first_uid = uids[0]
+>>> c1 = ds.get(first_uid)
+
+* Get the object metadata.
+>>> c1.properties
+[...]
+
+* Get the object file.
+>>> c1.filename
+'/tmp/...'
+
+>>> c1.data
+'this is the first document'
+>>> c1.file
+<open file ...>
+
+
+Or if you prefer access through the datastore (which is how DBus would
+use it)
+
+>>> fn = ds.get_filename(first_uid)
+>>> ds.get_data(first_uid)
+'this is the first document'
+
+
+Now we can modify that file and then 
+* Push the changes made to the file back to the store.
+* Update the metadata of an object.
+
+>>> fp = open(fn, 'a')
+>>> print >>fp, "more content"
+>>> fp.close()
+>>> ds.update(first_uid, dict(title="Newish Content"), file=fn)
+
+
+We can also remove the file from the repository.
+>>> ds.delete(first_uid)
+
+This is the basis of milestone 1.
+
+
+
+

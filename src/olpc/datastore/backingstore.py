@@ -10,7 +10,7 @@ __docformat__ = 'restructuredtext'
 __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
-import hashlib
+import sha
 import os
 
 class BackingStore(object):
@@ -73,8 +73,6 @@ class FileBackingStore(BackingStore):
 
     def _translatePath(self, uid):
         """translate a UID to a path name"""
-        # this backend maps back the file checksum as a sha224 hex uid
-        # so this works
         return os.path.join(self.base, str(uid))
 
     def create(self, content, filelike):
@@ -110,6 +108,13 @@ class FileBackingStore(BackingStore):
         """
         content = self.querymanager.get(uid)
         content.file = fp
+        if self.options.get('verify', False):
+            c  = sha.sha()
+            for line in fp:
+                c.update(line)
+            fp.seek(0)
+            if c.hexdigest() != content.checksum:
+                raise ValueError("Content for %s corrupt" % uid)
         return content
 
     def _writeContent(self, content, filelike, replace=True):
@@ -118,7 +123,7 @@ class FileBackingStore(BackingStore):
             raise KeyError("objects with path:%s for uid:%s exists" %(
                             path, content.id))
         fp = open(path, 'w')
-        c  = hashlib.sha224()
+        c  = sha.sha()
         for line in filelike:
             c.update(line)
             fp.write(line)

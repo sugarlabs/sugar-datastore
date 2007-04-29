@@ -68,11 +68,10 @@ class subprocessconverter(object):
 
         try:
             cmd = cmd.split()
-            subprocess.check_call(cmd)
+            retcode = subprocess.call(cmd)
+            if retcode: return None
             #return codecs.open(target, 'r', 'utf-8')
             return Purify(open(target, 'r'))
-        except subprocess.CalledProcessError:
-            return None
         finally:
             # we unlink the file as its already been opened for
             # reading

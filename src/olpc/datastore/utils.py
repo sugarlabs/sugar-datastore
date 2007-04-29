@@ -1,4 +1,3 @@
-import inspect
 
 class Singleton(type):
     """A singleton metaclass
@@ -18,6 +17,3 @@ class Singleton(type):
             cls._instance=super(Singleton,cls).__call__(*args,**kw)
         return cls._instance
     
-
-
-

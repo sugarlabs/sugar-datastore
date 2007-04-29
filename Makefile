@@ -1,4 +1,4 @@
-export PYTHON=python
+export PYTHON=python2.4
 export PROJECTNAME=olpc.datastore
 
 CURRENT_VERSION=`shtool version -l python __version__.py`

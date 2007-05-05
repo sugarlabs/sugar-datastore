@@ -19,12 +19,10 @@ First, create and connect the store.
 Because there is newly created we are going to quickly populate the
 datastore with some content.
 
->>> from StringIO import StringIO
+>>> from testutils import tmpData
 
->>> assert ds.create(dict(title="Document 1"), StringIO("""this is the first document"""))
-
->>> assert ds.create(dict(title="Document 2"), StringIO("""this is the second document"""))
-
+>>> assert ds.create(dict(title="Document 1"), tmpData("""this is the first document"""))
+>>> assert ds.create(dict(title="Document 2"), tmpData("""this is the second document"""))
 
 Note that we retain no reference to the created documents. 
 
@@ -68,7 +66,7 @@ Now we can modify that file and then
 >>> fp = open(fn, 'a')
 >>> print >>fp, "more content"
 >>> fp.close()
->>> ds.update(first_uid, dict(title="Newish Content"), file=fn)
+>>> ds.update(first_uid, dict(title="Newish Content"), fn)
 
 
 We can also remove the file from the repository.

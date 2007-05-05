@@ -12,6 +12,7 @@ __license__  = 'The GNU Public License V2+'
 
 import sha
 import os
+import subprocess
 
 class BackingStore(object):
     """Backing stores manage stable storage. We abstract out the
@@ -79,7 +80,7 @@ class FileBackingStore(BackingStore):
         self._writeContent(content, filelike, replace=False)
         
     
-    def get(self, uid):
+    def get(self, uid, env=None):
         path = self._translatePath(uid)
         if not os.path.exists(path):
             raise KeyError("object for uid:%s missing" % uid)            
@@ -87,7 +88,7 @@ class FileBackingStore(BackingStore):
         fp = open(path, 'r')
         # now return a Content object from the model associated with
         # this file object
-        return self._mapContent(uid, fp, path)
+        return self._mapContent(uid, fp, path, env)
 
     def set(self, uid, filelike):
         self._writeContent(self.get(uid), filelike)
@@ -100,17 +101,26 @@ class FileBackingStore(BackingStore):
             if not allowMissing:
                 raise KeyError("object for uid:%s missing" % uid)            
         
-
-
-    def _mapContent(self, uid, fp, path):
+    def _targetFile(self, uid, fp, path, env):
+        targetpath = os.path.join('/tmp/', path.replace('/', '_'))
+        if subprocess.call(['cp', path, targetpath]):
+            raise OSError("unable to create working copy")
+        return open(targetpath, 'rw')
+            
+    def _mapContent(self, uid, fp, path, env=None):
         """map a content object and the file in the repository to a
         working copy.
         """
         content = self.querymanager.get(uid)
-        content.file = fp
+        # we need to map a copy of the content from the backingstore into the
+        # activities addressable space.
+        # map this to a rw file
+        targetfile = self._targetFile(uid, fp, path, env)
+        content.file = targetfile
+        
         if self.options.get('verify', False):
             c  = sha.sha()
-            for line in fp:
+            for line in targetfile:
                 c.update(line)
             fp.seek(0)
             if c.hexdigest() != content.checksum:

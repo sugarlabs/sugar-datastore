@@ -13,13 +13,41 @@ __license__  = 'The GNU Public License V2+'
 
 from olpc.datastore import backingstore
 from olpc.datastore import query
-import utils
 import logging
+import dbus
+import dbus.service
+import dbus.mainloop.glib
+import dbus_helpers
+from StringIO import StringIO
 
-class DataStore(object):
-    __metaclass__ = utils.Singleton
+
+_DS_SERVICE = "org.laptop.sugar.DataStore"
+_DS_DBUS_INTERFACE = "org.laptop.sugar.DataStore"
+_DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
+
+_DS_OBJECT_DBUS_INTERFACE = "org.laptop.sugar.DataStore.Object"
+_DS_OBJECT_OBJECT_PATH = "/org/laptop/sugar/DataStore/Object"
+
+# A noop decorator
+def noop(*args, **kwargs):
+    def func(func): return func
+    return func
+
+dmethod = dbus.service.method
+dsignal = dbus.service.signal
+dobject = dbus.service.Object
+
+# global handle to the main look
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+session_bus = dbus.SessionBus()
+
+class DataStore(dobject):
 
     def __init__(self, backingstore=None, querymanager=None):
+        dobject.__init__(self, session_bus, _DS_OBJECT_PATH,)
+        self.emitter = dbus_helpers.emitter(session_bus,
+                                            _DS_OBJECT_PATH,
+                                            _DS_DBUS_INTERFACE)
         self.backingstore = None
         self.querymanager = None
         if backingstore: self.connect_backingstore(backingstore)
@@ -61,6 +89,9 @@ class DataStore(object):
     
 
     # PUBLIC API
+    @dmethod(_DS_DBUS_INTERFACE,
+                         in_signature='a{ss}as',
+                         out_signature='s')
     def create(self, props, filelike=None):
         """create a new entry in the datastore. If a file is passed it
         will be consumed by the datastore. Because the repository has
@@ -72,13 +103,21 @@ class DataStore(object):
         new objects are created in the first datastore. More control
         over this process can come at a later time.
         """
+        if isinstance(filelike, basestring):
+            # lets treat it as a filename
+            filelike = open(filelike, "r")
         t = filelike.tell()
         content = self.querymanager.create(props, filelike)
         filelike.seek(t)
         if filelike is not None:
             self.backingstore.create(content, filelike)
+
+        self.emitter('create', content.id, props, signature="ia{sv}")
         return content.id
 
+    @dmethod(_DS_DBUS_INTERFACE,
+             in_signature='a{sv}',
+             out_signature='a{ss}')
     def find(self, query=None, **kwargs):
         # only goes to the primary now. Punting on the merge case
         results = self.querymanager.find(query, **kwargs)
@@ -90,7 +129,10 @@ class DataStore(object):
         # properly called in the current codebase
         if c: c.backingstore = self.backingstore
         return c
-    
+
+    @dmethod(_DS_DBUS_INTERFACE,
+             in_signature='s',
+             out_signature='s')
     def get_filename(self, uid):
         content = self.get(uid)
         if content:
@@ -101,18 +143,29 @@ class DataStore(object):
         if content:
             return content.get_data()
 
-
-    
-    def update(self, uid, props, file=None):
+    def put_data(self, uid, data):
+        self.update(uid, None, StringIO(data))
+        
+    @dsignal(_DS_DBUS_INTERFACE)
+    @dmethod(_DS_DBUS_INTERFACE,
+             in_signature='sa{ss}as',
+             out_signature='s')
+    def update(self, uid, props, filelike=None):
         """Record the current state of the object checked out for a
         given uid. If contents have been written to another file for
         example. You must create it
         """
+        if isinstance(filelike, basestring):
+            filelike = open(filelike, 'r')
         content = self.get(uid)
         if content:
-            self.querymanager.update(uid, props, file)
-            self.backingstore.set(uid, file)
+            self.querymanager.update(uid, props, filelike)
+            self.backingstore.set(uid, filelike)
 
+    @dsignal(_DS_DBUS_INTERFACE)
+    @dmethod(_DS_DBUS_INTERFACE,
+             in_signature='s',
+             out_signature='')
     def delete(self, uid):
         content = self.get(uid)
         if content:

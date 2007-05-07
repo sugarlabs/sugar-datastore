@@ -1,0 +1,25 @@
+#!/usr/bin/python2.4
+from ore.main import Application
+from olpc.datastore import DataStore
+
+class DataStoreApplication(Application):
+    def manage_options(self):
+        self.parser.add_option("--olpc.repo", dest="repo_dir",
+                               action="store", default="/tmp",
+                               help="""Location of the Repository""")
+
+        self.parser.add_option("--olpc.metadata", dest="md_db",
+                               action="store", default="sqlite://",
+                               help="""Location of the Repository""")
+
+    def main(self):
+        self.ds = DataStore(self.options.repo_dir,
+                            self.options.md_db)
+        
+        self.eventloop.run()
+
+dsa = DataStoreApplication("datastore")
+dsa()
+
+
+

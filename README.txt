@@ -25,12 +25,18 @@ xapian     -- integrated full text indexing
            currently this requires a checkout
 
 pyxapian   -- Python bindings
-           svn co svn://svn.xapian.org/xapian/trunk xapian
+           svn co http://pyxapian.googlecode.com/svn/trunk/lemur.sei
            the lemur package must be installed 
            
 sqllite    -- metadata database tuned to work in embedded systems 
 
 dbus       -- command and control
+
+ore.main   -- (optional) A command line application framework/shell
+           used in bin/datasore. If you don't want to use this dep 
+           for now run bin/datasore-native
+           
+
 
 Converters 
 ---------- 

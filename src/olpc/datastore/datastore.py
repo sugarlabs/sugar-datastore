@@ -14,7 +14,6 @@ __license__  = 'The GNU Public License V2+'
 from olpc.datastore import backingstore
 from olpc.datastore import query
 import logging
-import dbus
 import dbus.service
 import dbus.mainloop.glib
 import dbus_helpers
@@ -28,23 +27,17 @@ _DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
 _DS_OBJECT_DBUS_INTERFACE = "org.laptop.sugar.DataStore.Object"
 _DS_OBJECT_OBJECT_PATH = "/org/laptop/sugar/DataStore/Object"
 
-# A noop decorator
-def noop(*args, **kwargs):
-    def func(func): return func
-    return func
-
-dmethod = dbus.service.method
-dsignal = dbus.service.signal
-dobject = dbus.service.Object
-
 # global handle to the main look
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 session_bus = dbus.SessionBus()
 
-class DataStore(dobject):
+class DataStore(dbus.service.Object):
 
     def __init__(self, backingstore=None, querymanager=None):
-        dobject.__init__(self, session_bus, _DS_OBJECT_PATH,)
+        self.bus_name = dbus.service.BusName(_DS_SERVICE,
+                                             bus=session_bus)
+        dbus.service.Object.__init__(self, self.bus_name, _DS_OBJECT_PATH)
+        
         self.emitter = dbus_helpers.emitter(session_bus,
                                             _DS_OBJECT_PATH,
                                             _DS_DBUS_INTERFACE)
@@ -89,7 +82,7 @@ class DataStore(dobject):
     
 
     # PUBLIC API
-    @dmethod(_DS_DBUS_INTERFACE,
+    @dbus.service.method(_DS_DBUS_INTERFACE,
                          in_signature='a{ss}as',
                          out_signature='s')
     def create(self, props, filelike=None):
@@ -115,7 +108,7 @@ class DataStore(dobject):
         self.emitter('create', content.id, props, signature="ia{sv}")
         return content.id
 
-    @dmethod(_DS_DBUS_INTERFACE,
+    @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='a{sv}',
              out_signature='a{ss}')
     def find(self, query=None, **kwargs):
@@ -130,7 +123,7 @@ class DataStore(dobject):
         if c: c.backingstore = self.backingstore
         return c
 
-    @dmethod(_DS_DBUS_INTERFACE,
+    @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='s')
     def get_filename(self, uid):
@@ -146,8 +139,8 @@ class DataStore(dobject):
     def put_data(self, uid, data):
         self.update(uid, None, StringIO(data))
         
-    @dsignal(_DS_DBUS_INTERFACE)
-    @dmethod(_DS_DBUS_INTERFACE,
+    @dbus.service.signal(_DS_DBUS_INTERFACE)
+    @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='sa{ss}as',
              out_signature='s')
     def update(self, uid, props, filelike=None):
@@ -162,8 +155,8 @@ class DataStore(dobject):
             self.querymanager.update(uid, props, filelike)
             self.backingstore.set(uid, filelike)
 
-    @dsignal(_DS_DBUS_INTERFACE)
-    @dmethod(_DS_DBUS_INTERFACE,
+    @dbus.service.signal(_DS_DBUS_INTERFACE)
+    @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='')
     def delete(self, uid):

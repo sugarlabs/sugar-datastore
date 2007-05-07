@@ -1,0 +1,15 @@
+#!/usr/bin/python2.4
+from olpc.datastore import DataStore
+
+# native dbus loop
+import gobject
+import dbus.service
+import dbus.mainloop.glib
+
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+ds = DataStore("/tmp", "sqlite://")
+
+mainloop = gobject.MainLoop()
+mainloop.run()
+

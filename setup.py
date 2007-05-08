@@ -1,7 +1,9 @@
-import sys
-sys.path.insert(0, 'src') # for version
-
 from setuptools import setup, find_packages
+import sys, os
+
+sys.path.insert(0,
+                os.path.join(os.path.dirname(__file__),'src')) # for version
+
 
 from olpc.datastore.__version__ import version
 

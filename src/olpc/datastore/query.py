@@ -17,6 +17,7 @@ from olpc.datastore.model import BackingStoreContentMapping
 from sqlalchemy import create_engine, BoundMetaData
 from sqlalchemy import select, intersect, and_
 from datetime import datetime
+from utils import create_uid
 
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 
@@ -86,6 +87,7 @@ class QueryManager(object):
         """
         s = self.model.session
         c = Content()
+        c.id = create_uid()
         self._bindProperties(c, props, creating=True, include_defaults=include_defaults)
         s.save(c)
         s.flush()
@@ -148,9 +150,6 @@ class QueryManager(object):
             props = d
         # we should have a dict of property objects
         if creating:
-            if 'uid' in props:
-                raise ValueError("cannot supply uid on creation")
-            
             content.properties.extend(props.values())
         else:
             # if the automatically maintained properties (like mtime)
@@ -247,7 +246,7 @@ class QueryManager(object):
                 # the statement for inclusion
                 ft_res = self.fulltext_search(fulltext)
                 if ft_res:
-                    ft_ids = [int(ft[0]) for ft in ft_res if ft[1] >=
+                    ft_ids = [ft[0] for ft in ft_res if ft[1] >=
                               threshold]
                     
                     if ft_ids:
@@ -273,12 +272,14 @@ class QueryManager(object):
     
     # sqla util
     def _resolve(self, content_or_uid):
-        if isinstance(content_or_uid, int):
+        if isinstance(content_or_uid, basestring):
             # we need to resolve the object
             content_or_uid = self.model.session.query(Content).get(content_or_uid)
         else:
-            # verify that the object has a uid (and has been committed)
+            # verify that the object has a uid (and has been
+            # committed)
             if not hasattr(content_or_uid, 'id'):
+                content_or_uid.id = create_uid()
                 s = self.model.session
                 s.flush([content_or_uid])
                 s.refresh(content_or_uid)        

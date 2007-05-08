@@ -192,9 +192,10 @@ class Model(object):
         # content object
         content = Table('content',
                         self.querymanager.metadata,
-                        Column('id', Integer, Sequence('content_id_seq'), primary_key=True),
+                        Column('id', String, primary_key=True, nullable=False),
                         Column('activity_id', Integer),
                         Column('checksum', String,),
+                        UniqueConstraint('id', name='content_key')
                         )
         Index('content_activity_id_idx', content.c.activity_id)
         

@@ -102,11 +102,20 @@ class DataStore(dbus.service.Object):
         if filelike is not None:
             self.backingstore.create(content, filelike)
 
-        self.emitter('create', content.id, props, signature="ia{sv}")
+        self.emitter('create', content.id, props, signature="sa{sv}")
         return content.id
 
     @dbus.service.method(_DS_DBUS_INTERFACE,
-             in_signature='a{sv}',
+             in_signature='',
+             out_signature='as')
+    def all(self):
+        # workaround for not having optional args or None in
+        # DBus ..  blah
+        results = self.querymanager.find()
+        return [r.id for r in results]
+
+    @dbus.service.method(_DS_DBUS_INTERFACE,
+             in_signature='a{ss}',
              out_signature='as')
     def find(self, query=None, **kwargs):
         # only goes to the primary now. Punting on the merge case

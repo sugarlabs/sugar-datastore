@@ -12,6 +12,7 @@ src/olpc/datastore/__init__.py
 src/olpc/datastore/backingstore.py
 src/olpc/datastore/converter.py
 src/olpc/datastore/datastore.py
+src/olpc/datastore/dbus_helpers.py
 src/olpc/datastore/model.py
 src/olpc/datastore/query.py
 src/olpc/datastore/utils.py

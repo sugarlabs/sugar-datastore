@@ -7,7 +7,7 @@ from olpc.datastore import DataStore
 
 base_dir = os.path.expanduser("~/.sugar/default")
 repo_dir = os.path.join(base_dir, 'datastore')
-db_dir   = "sqlite://datastore.db" 
+db_dir   = "sqlite:///%s/datastore.db"  % repo_dir
 
 # operate from the repo directory
 if not os.path.exists(repo_dir):

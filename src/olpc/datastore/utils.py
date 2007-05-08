@@ -31,3 +31,9 @@ class partial:
             kw = kwargs or self.kwargs
 
         return self.fun(*(self.pending + args), **kw)
+
+
+def create_uid():
+    # this is linux specific but easily changed
+    # Python 2.5 has universal support for this built in
+    return open('/proc/sys/kernel/random/uuid', 'r').read()[:-1]

@@ -9,6 +9,7 @@ src/olpc.datastore.egg-info/requires.txt
 src/olpc.datastore.egg-info/top_level.txt
 src/olpc.datastore.egg-info/zip-safe
 src/olpc/datastore/__init__.py
+src/olpc/datastore/__version__.py
 src/olpc/datastore/backingstore.py
 src/olpc/datastore/converter.py
 src/olpc/datastore/datastore.py

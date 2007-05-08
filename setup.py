@@ -1,5 +1,9 @@
+import sys
+sys.path.append('src') # for version
+
 from setuptools import setup, find_packages
-from src.olpc.datastore.__version__ import version
+
+from olpc.datastore.__version__ import version
 
 DEPENDS = ['sqlalchemy >= 0.3.6', ]
 

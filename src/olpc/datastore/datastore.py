@@ -24,13 +24,14 @@ _DS_SERVICE = "org.laptop.sugar.DataStore"
 _DS_DBUS_INTERFACE = "org.laptop.sugar.DataStore"
 _DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
 
-# global handle to the main look
-dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-session_bus = dbus.SessionBus()
 
 class DataStore(dbus.service.Object):
 
     def __init__(self, backingstore=None, querymanager=None):
+        # global handle to the main look
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+        session_bus = dbus.SessionBus()
+
         self.bus_name = dbus.service.BusName(_DS_SERVICE,
                                              bus=session_bus)
         dbus.service.Object.__init__(self, self.bus_name, _DS_OBJECT_PATH)

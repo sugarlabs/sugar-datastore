@@ -8,7 +8,7 @@ import dbus
 def main():
     bus = dbus.SessionBus()
     remote_object = bus.get_object("org.laptop.sugar.Datastore",
-                                   "/org/laptop/sugar/DataStore.Object")
+                                   "/org/laptop/sugar/DataStore")
 
     uid = remote_object.create(dict(title="from dbus"), '/etc/passwd')
     print "created uid", uid

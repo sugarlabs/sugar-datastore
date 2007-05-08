@@ -24,9 +24,6 @@ _DS_SERVICE = "org.laptop.sugar.DataStore"
 _DS_DBUS_INTERFACE = "org.laptop.sugar.DataStore"
 _DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
 
-_DS_OBJECT_DBUS_INTERFACE = "org.laptop.sugar.DataStore.Object"
-_DS_OBJECT_OBJECT_PATH = "/org/laptop/sugar/DataStore/Object"
-
 # global handle to the main look
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 session_bus = dbus.SessionBus()
@@ -110,7 +107,7 @@ class DataStore(dbus.service.Object):
 
     @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='a{sv}',
-             out_signature='a{ss}')
+             out_signature='as')
     def find(self, query=None, **kwargs):
         # only goes to the primary now. Punting on the merge case
         results = self.querymanager.find(query, **kwargs)
@@ -118,8 +115,8 @@ class DataStore(dbus.service.Object):
 
     def get(self, uid):
         c = self.querymanager.get(uid)
-        # XXX: this is a workaround to the extension not being
-        # properly called in the current codebase
+        # XXX: this is a workaround to the sqla mapping extension not
+        # being properly called in the current codebase
         if c: c.backingstore = self.backingstore
         return c
 
@@ -138,7 +135,16 @@ class DataStore(dbus.service.Object):
 
     def put_data(self, uid, data):
         self.update(uid, None, StringIO(data))
+
+    @dbus.service.method(_DS_DBUS_INTERFACE,
+                         in_signature='s',
+                         out_signature='a{ss}')
+    def get_properties(self, uid):
+        content = self.get(uid)
+        if content:
+            return content.get_properties()
         
+
     @dbus.service.signal(_DS_DBUS_INTERFACE)
     @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='sa{ss}as',

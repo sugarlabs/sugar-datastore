@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name = org.laptop.sugar.DataStore
+Exec = /home/bcsaller/Projects/datastore/bin/datastore-service
+

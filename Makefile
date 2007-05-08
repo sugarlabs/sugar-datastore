@@ -1,7 +1,7 @@
 export PYTHON=python2.4
 export PROJECTNAME=olpc.datastore
 
-CURRENT_VERSION=`shtool version -l python __version__.py`
+CURRENT_VERSION=`shtool version -l python src/olpc/datastore/__version__.py`
 
 all: build test
 

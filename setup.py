@@ -1,5 +1,5 @@
 import sys
-sys.path.append('src') # for version
+sys.path.insert(0, 'src') # for version
 
 from setuptools import setup, find_packages
 

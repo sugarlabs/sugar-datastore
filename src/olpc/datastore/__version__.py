@@ -1,15 +1,15 @@
 ##
-##  __version__.py -- Version Information for olpc.datastore (syntax: Python)
+##  src/olpc/datastore/__version__.py -- Version Information for unknown (syntax: Python)
 ##  [automatically generated and maintained by GNU shtool]
 ##
 
 class version:
-    v_hex       = 0x001201
-    v_short     = "0.1.1"
-    v_long      = "0.1.1 (05-Apr-2007)"
-    v_tex       = "This is olpc.datastore, Version 0.1.1 (05-Apr-2007)"
-    v_gnu       = "olpc.datastore 0.1.1 (05-Apr-2007)"
-    v_web       = "olpc.datastore/0.1.1"
-    v_sccs      = "@(#)olpc.datastore 0.1.1 (05-Apr-2007)"
-    v_rcs       = "$Id: olpc.datastore 0.1.1 (05-Apr-2007) $"
+    v_hex       = 0x002200
+    v_short     = "0.2.0"
+    v_long      = "0.2.0 (08-May-2007)"
+    v_tex       = "This is unknown, Version 0.2.0 (08-May-2007)"
+    v_gnu       = "unknown 0.2.0 (08-May-2007)"
+    v_web       = "unknown/0.2.0"
+    v_sccs      = "@(#)unknown 0.2.0 (08-May-2007)"
+    v_rcs       = "$Id: unknown 0.2.0 (08-May-2007) $"
 

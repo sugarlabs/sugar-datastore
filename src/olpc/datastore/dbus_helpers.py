@@ -1,4 +1,4 @@
-import utils
+import olpc.datastore.utils
 import dbus
 import _dbus_bindings
 
@@ -13,8 +13,8 @@ class emitter(object):
     """
     def __init__(self, bus, obj_path, dbus_interface):
         self._connection = bus.get_connection()
-        self.message = utils.partial(_dbus_bindings.SignalMessage, obj_path,
-                                     dbus_interface)
+        self.message = olpc.datastore.utils.partial(_dbus_bindings.SignalMessage, obj_path,
+                                                    dbus_interface)
 
     def __call__(self, name, *args, **kwargs):
         signature = kwargs.pop('signature', None)

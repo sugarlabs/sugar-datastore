@@ -14,10 +14,11 @@ __license__  = 'The GNU Public License V2+'
 from olpc.datastore.converter import converter
 from olpc.datastore.model import Model, Content, Property
 from olpc.datastore.model import BackingStoreContentMapping
+from olpc.datastore.utils import create_uid
 from sqlalchemy import create_engine, BoundMetaData
 from sqlalchemy import select, intersect, and_
 from datetime import datetime
-from utils import create_uid
+
 
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 

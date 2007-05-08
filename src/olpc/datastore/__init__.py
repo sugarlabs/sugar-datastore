@@ -1,7 +1,7 @@
 # datastore package
 
 
-from datastore import DataStore
-from backingstore import FileBackingStore
-from query import DefaultQueryManager
+from olpc.datastore.datastore import DataStore
+from olpc.datastore.backingstore import FileBackingStore
+from olpc.datastore.query import DefaultQueryManager
 

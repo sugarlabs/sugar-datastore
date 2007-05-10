@@ -1,22 +1,45 @@
 #!/usr/bin/python2.4
-import os
+import sys, os
 import gobject
 import dbus.service
 import dbus.mainloop.glib
-from olpc.datastore import DataStore
+from olpc.datastore import DataStore, DS_LOG_CHANNEL
+import logging
 
+# Path handling
 base_dir = os.path.expanduser("~/.sugar/default")
 repo_dir = os.path.join(base_dir, 'datastore')
 db_dir   = "sqlite:///%s/datastore.db"  % repo_dir
 
 # operate from the repo directory
-if not os.path.exists(repo_dir):
-    os.makedirs(repo_dir)
+if not os.path.exists(repo_dir): os.makedirs(repo_dir)
+
+log_dir = os.path.join(base_dir, "logs")
+if not os.path.exists(log_dir): os.makedirs(log_dir)
+
 os.chdir(repo_dir)
 
+# setup logger
+logging.basicConfig(level=logging.DEBUG,
+                    format="%(asctime)-15s %(levelname)s: %(message)s",
+                    filename = os.path.join(log_dir, "datastore.log"),
+                    )
+# disable subsystem logging except where critical
+logging.getLogger('sqlalchemy').setLevel(logging.CRITICAL)
+logging.getLogger('lemur').setLevel(logging.CRITICAL)
+logger = logging.getLogger(DS_LOG_CHANNEL)
+
+# build the datastore
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 ds = DataStore(repo_dir, db_dir)
 
+# and run it 
+logger.info("Starting Datastore %s:%s" % (repo_dir, db_dir))
 mainloop = gobject.MainLoop()
-mainloop.run()
+
+try: mainloop.run()
+except KeyboardInterrupt: logger.info("DataStore shutdown by user")
+except: logger.debug("Datastore shutdown with error",
+                     exc_info=sys.exc_info())
+    
 

@@ -19,11 +19,25 @@ import dbus.mainloop.glib
 import dbus_helpers
 from StringIO import StringIO
 
+# the name used by the logger
+DS_LOG_CHANNEL = 'org.laptop.sugar.DataStore'
 
 _DS_SERVICE = "org.laptop.sugar.DataStore"
 _DS_DBUS_INTERFACE = "org.laptop.sugar.DataStore"
 _DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
 
+logger = logging.getLogger(DS_LOG_CHANNEL)
+# logging decorator
+# XXX: incompatible w/ @method/@signal
+# w/o resorting to deep magic
+def logged(func):
+    def decorator(*args, **kwargs):
+        r = func(*args, **kwargs)
+        logger.debug("%s(*%r, **%r) -> %r" % (func.__name__,
+                                              args, kwargs,
+                                              r))
+        return r
+    return decorator
 
 class DataStore(dbus.service.Object):
 
@@ -104,6 +118,8 @@ class DataStore(dbus.service.Object):
             self.backingstore.create(content, filelike)
 
         self.emitter('create', content.id, props, signature="sa{sv}")
+        logger.debug("created %s" % content.id)
+        
         return content.id
 
     @dbus.service.method(_DS_DBUS_INTERFACE,
@@ -170,7 +186,9 @@ class DataStore(dbus.service.Object):
         if content:
             self.querymanager.update(uid, props, filelike)
             self.backingstore.set(uid, filelike)
-        self.emitter('update', content.id, props, signature="sa{sv}")
+            self.emitter('update', content.id, props, signature="sa{sv}")
+            logger.debug("updated %s" % content.id)
+
     
     @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='s',
@@ -180,9 +198,6 @@ class DataStore(dbus.service.Object):
         if content:
             self.querymanager.delete(uid)
             self.backingstore.delete(uid)
-        self.emitter('update', content.id, signature="s")
+            self.emitter('delete', content.id, signature="s")
+            logger.debug("deleted %s" % content.id)
     
-def configure():
-    # disable as much logging by default for the OLPC
-    logging.getLogger('sqlalchemy').setLevel(logging.CRITICAL)
-    logging.getLogger('lemur').setLevel(logging.CRITICAL)

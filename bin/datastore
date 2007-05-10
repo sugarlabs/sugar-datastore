@@ -1,15 +1,25 @@
 #!/usr/bin/python2.4
 from ore.main import Application
 from olpc.datastore import DataStore
+import os
+
+base_dir = os.path.expanduser("~/.sugar/default")
+repo_dir = os.path.join(base_dir, 'datastore')
+db_dir   = "sqlite:///%s/datastore.db"  % repo_dir
+
+# operate from the repo directory
+if not os.path.exists(repo_dir):
+    os.makedirs(repo_dir)
+os.chdir(repo_dir)
 
 class DataStoreApplication(Application):
     def manage_options(self):
         self.parser.add_option("--olpc.repo", dest="repo_dir",
-                               action="store", default="/tmp",
+                               action="store", default=repo_dir,
                                help="""Location of the Repository""")
 
         self.parser.add_option("--olpc.metadata", dest="md_db",
-                               action="store", default="sqlite://",
+                               action="store", default=db_dir,
                                help="""Location of the Repository""")
 
     def main(self):

@@ -81,7 +81,7 @@ class DataStore(dbus.service.Object):
 
     # PUBLIC API
     @dbus.service.method(_DS_DBUS_INTERFACE,
-                         in_signature='a{ss}as',
+                         in_signature='a{ss}s',
                          out_signature='s')
     def create(self, props, filelike=None):
         """create a new entry in the datastore. If a file is passed it
@@ -155,10 +155,9 @@ class DataStore(dbus.service.Object):
             return content.get_properties()
         
 
-    @dbus.service.signal(_DS_DBUS_INTERFACE)
     @dbus.service.method(_DS_DBUS_INTERFACE,
-             in_signature='sa{ss}as',
-             out_signature='s')
+             in_signature='sa{ss}s',
+             out_signature='')
     def update(self, uid, props, filelike=None):
         """Record the current state of the object checked out for a
         given uid. If contents have been written to another file for
@@ -170,8 +169,8 @@ class DataStore(dbus.service.Object):
         if content:
             self.querymanager.update(uid, props, filelike)
             self.backingstore.set(uid, filelike)
-
-    @dbus.service.signal(_DS_DBUS_INTERFACE)
+        self.emitter('update', content.id, props, signature="sa{sv}")
+    
     @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='')
@@ -180,7 +179,7 @@ class DataStore(dbus.service.Object):
         if content:
             self.querymanager.delete(uid)
             self.backingstore.delete(uid)
-        
+        self.emitter('update', content.id, signature="s")
     
 def configure():
     # disable as much logging by default for the OLPC

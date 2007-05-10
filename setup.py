@@ -19,6 +19,9 @@ setup(
     package_data = {
     '': ['*.txt', '*.db', '*.png', '*.svg'],
     },
+    data_files = [
+        ('/usr/share/dbus-1/services', ['etc/org.laptop.sugar.DataStore.service']),
+    ],
     install_requires = DEPENDS,
     zip_safe=True,
     author='Benjamin Saller',

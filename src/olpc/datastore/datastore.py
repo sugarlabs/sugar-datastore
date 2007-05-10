@@ -116,7 +116,7 @@ class DataStore(dbus.service.Object):
         return [r.id for r in results]
 
     @dbus.service.method(_DS_DBUS_INTERFACE,
-             in_signature='a{ss}',
+             in_signature='a{sv}',
              out_signature='as')
     def find(self, query=None, **kwargs):
         # only goes to the primary now. Punting on the merge case
@@ -148,12 +148,13 @@ class DataStore(dbus.service.Object):
 
     @dbus.service.method(_DS_DBUS_INTERFACE,
                          in_signature='s',
-                         out_signature='a{ss}')
+                         out_signature='a{sv}')
     def get_properties(self, uid):
         content = self.get(uid)
-        if content:
-            return content.get_properties()
-        
+        dictionary = {}
+        for prop in content.get_properties():
+            dictionary[prop.key] = prop.marshall()
+        return dictionary
 
     @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='sa{ss}s',

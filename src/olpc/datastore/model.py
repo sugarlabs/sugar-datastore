@@ -19,6 +19,7 @@ from sqlalchemy import MapperExtension, EXT_PASS
 from sqlalchemy.ext.sessioncontext import SessionContext
 
 import datetime
+import time
 
 # XXX: Open issues
 # list properties - Contributors (a, b, c)
@@ -124,27 +125,39 @@ class Property(object):
     def __repr__(self):
         return "<Property %s:%r of %s>" % (self.key, self.value,
                                            self.content)
-
-class DateProperty(Property):
-    format = "YYYY-MM-DDTHH:MM:SS"
+    def marshall(self):
+        """Return the value marshalled as a string"""
+        return str(self.value)
     
-    def __init__(self, key, value, type="date"):
-        super(Property, self).__init__(key, value, type)
+class DateProperty(Property):
+    format = "%Y-%m-%dT%H:%M:%S"
 
+    def __init__(self, key, value, type="date"):
+        self._value = None
+        Property.__init__(self, key, value, type)
 
     def get_value(self):
         # parse the value back into a datetime
-        return datetime.datetime.strptime(self._value, self.format)
+        # XXX: strptime on datetime is a 2.5 thing :(
+        # XXX: we lose timezone in this conversion currently
+        if not self._value: return None
+        ti = time.strptime(self._value, self.format)
+        dt = datetime.datetime(*(ti[:-2]))
+        dt = dt.replace(microsecond=0)
+        return dt
 
     def set_value(self, value):
+        value = value.replace(microsecond=0)
         self._value = value.isoformat()
 
     value = property(get_value, set_value)
 
-
+    def marshall(self): return self.value.isoformat()
+    
+    
 class NumberProperty(Property):
     def __init__(self, key, value, type="number"):
-        super(Property, self).__init__(key, value, type)
+        Property.__init__(self, key, value, type)
 
     def get_value(self): return float(self._value)
     def set_value(self, value): self._value = value
@@ -287,7 +300,7 @@ class Model(object):
             properties['_value'] = self.properties.c.value
             
         mapper(PropertyClass,
-               inherits=self['properties'],
+               inherits=self.mappers['properties'],
                polymorphic_identity=typename,
                properties=properties
                )

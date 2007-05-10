@@ -13,6 +13,7 @@ __license__  = 'The GNU Public License V2+'
 
 from olpc.datastore.converter import converter
 from olpc.datastore.model import Model, Content, Property
+from olpc.datastore.model import DateProperty, NumberProperty
 from olpc.datastore.model import BackingStoreContentMapping
 from olpc.datastore.utils import create_uid
 from sqlalchemy import create_engine, BoundMetaData
@@ -109,13 +110,13 @@ class QueryManager(object):
     def _automaticProperties(self):
         now = datetime.now()
         return {
-            'mtime' : Property('mtime', now, 'date'),
+            'mtime' : DateProperty('mtime', now),
             }
     
     def _defaultProperties(self):
         now = datetime.now()
         default = {
-            'ctime' : Property('ctime', now, 'date'),
+            'ctime' : DateProperty('ctime', now),
             'author' : Property('author', '', 'string'),
             'title'  : Property('title', '', 'string'),
             'mime_type' : Property('mime_type', '', 'string'),

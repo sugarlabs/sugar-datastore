@@ -15,6 +15,7 @@ def main():
     print "huh?", datastore.find(dict(fulltext="kfdshaksjd"))
 
     datastore.update(uid, dict(title="updated title"), "/etc/passwd")
+    print datastore.get_properties(uid)
     datastore.delete(uid)
     
 if __name__ == '__main__':

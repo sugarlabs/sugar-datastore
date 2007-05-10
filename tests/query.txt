@@ -95,6 +95,16 @@ datetime.datetime instance. olpc.datastore.model includes support for
 new property types see the oplc.datastore.model.Model.addPropertyType
 method. 
 
+Here we want to show that certain types of Properties map to
+specialized implemenations automatically based on their type. 'ctime'
+is a DateTime Property and we can verify that it is returned properly
+from the mapping layer with the following.
+>>> ctimeProp = a.get_properties(key='ctime')[0]
+>>> ctimeProp.type == "date"
+True
+>>> type(ctimeProp)
+<class 'olpc.datastore.model.DateProperty'>
+
 Special support is needed to make dates easily addressable within the
 datastore. The properties 'ctime', creation time, and 'mtime',
 modification time are supported. To query on these properties two

@@ -108,13 +108,15 @@ class DataStore(dbus.service.Object):
         new objects are created in the first datastore. More control
         over this process can come at a later time.
         """
-        if isinstance(filelike, basestring):
-            # lets treat it as a filename
-            filelike = open(filelike, "r")
-        t = filelike.tell()
+        if filelike:
+            if isinstance(filelike, basestring):
+                # lets treat it as a filename
+                filelike = open(filelike, "r")
+            t = filelike.tell()
         content = self.querymanager.create(props, filelike)
-        filelike.seek(t)
+
         if filelike is not None:
+            filelike.seek(t)
             self.backingstore.create(content, filelike)
 
         self.emitter('create', content.id, props, signature="sa{sv}")

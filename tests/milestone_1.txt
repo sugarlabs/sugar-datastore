@@ -24,6 +24,9 @@ datastore with some content.
 >>> assert ds.create(dict(title="Document 1"), tmpData("""this is the first document"""))
 >>> assert ds.create(dict(title="Document 2"), tmpData("""this is the second document"""))
 
+We can also create an object w/o any associated file data
+>>> assert ds.create(dict(title="Web Session", url="http://google.com"))
+
 Note that we retain no reference to the created documents. 
 
 Now we should be able to test the first requirement.

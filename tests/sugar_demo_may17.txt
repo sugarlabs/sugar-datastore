@@ -1,0 +1,52 @@
+How Sugar will interact with the DS for the May 17th demo in Argentina:
+
+>>> from olpc.datastore import DataStore
+>>> ds = DataStore('/tmp/test_ds', 'sqlite://')
+
+Create an entry without data:
+>>> uid = ds.create(dict(title="New entry still without content"), '')
+
+>>> ds.get_filename(uid)
+''
+
+Add some data to the same entry:
+>>> fp = open('/tmp/sugar_ds_test', 'w')
+>>> print >>fp, "some content"
+>>> fp.close()
+>>> ds.update(uid, dict(title="Same entry now with some content"), fp.name)
+
+Retrieve that data:
+>>> fn = ds.get_filename(uid)
+>>> fp = open(fn, 'r')
+>>> fp.read()
+'some content\n'
+>>> fp.close()
+
+Update again:
+>>> fp = open('/tmp/sugar_ds_test2', 'w')
+>>> print >>fp, "some other content"
+>>> fp.close()
+>>> ds.update(uid, dict(title="Same entry with some other content"), fp.name)
+
+And retrieve again:
+>>> fn = ds.get_filename(uid)
+>>> fp = open(fn, 'r')
+>>> fp.read()
+'some other content\n'
+>>> fp.close()
+
+Get all entries (only have one):
+>>> uids = ds.find({})
+>>> for uid in uids:
+...     properties = ds.get_properties(uid)
+...     properties['title']
+'Same entry with some other content'
+
+Check content:
+>>> fn = ds.get_filename(uids[0])
+>>> fp = open(fn, 'r')
+>>> fp.read()
+'some other content\n'
+>>> fp.close()
+
+>>> del ds

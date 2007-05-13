@@ -80,18 +80,18 @@ class FileBackingStore(BackingStore):
         self._writeContent(content, filelike, replace=False)
         
     
-    def get(self, uid, env=None):
+    def get(self, uid, env=None, allowMissing=False):
         path = self._translatePath(uid)
         if not os.path.exists(path):
             raise KeyError("object for uid:%s missing" % uid)            
-
-        fp = open(path, 'r')
-        # now return a Content object from the model associated with
-        # this file object
+        else:
+            fp = open(path, 'r')
+            # now return a Content object from the model associated with
+            # this file object
         return self._mapContent(uid, fp, path, env)
 
     def set(self, uid, filelike):
-        self._writeContent(self.get(uid), filelike)
+        self._writeContent(uid, filelike)
 
     def delete(self, uid, allowMissing=False):
         path = self._translatePath(uid)
@@ -127,13 +127,15 @@ class FileBackingStore(BackingStore):
                 raise ValueError("Content for %s corrupt" % uid)
         return content
 
-    def _writeContent(self, content, filelike, replace=True):
+    def _writeContent(self, uid, filelike, replace=True):
+        content = self.querymanager.get(uid)
         path = self._translatePath(content.id)
         if replace is False and os.path.exists(path):
             raise KeyError("objects with path:%s for uid:%s exists" %(
                             path, content.id))
         fp = open(path, 'w')
         c  = sha.sha()
+        filelike.seek(0)
         for line in filelike:
             c.update(line)
             fp.write(line)

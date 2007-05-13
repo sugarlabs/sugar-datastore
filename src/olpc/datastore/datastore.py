@@ -47,7 +47,9 @@ class DataStore(dbus.service.Object):
         session_bus = dbus.SessionBus()
 
         self.bus_name = dbus.service.BusName(_DS_SERVICE,
-                                             bus=session_bus)
+                                             bus=session_bus,
+                                             replace_existing=True,
+                                             allow_replacement=True)
         dbus.service.Object.__init__(self, self.bus_name, _DS_OBJECT_PATH)
         
         self.emitter = dbus_helpers.emitter(session_bus,
@@ -113,9 +115,10 @@ class DataStore(dbus.service.Object):
                 # lets treat it as a filename
                 filelike = open(filelike, "r")
             t = filelike.tell()
+
         content = self.querymanager.create(props, filelike)
 
-        if filelike is not None:
+        if filelike:
             filelike.seek(t)
             self.backingstore.create(content, filelike)
 
@@ -154,8 +157,10 @@ class DataStore(dbus.service.Object):
     def get_filename(self, uid):
         content = self.get(uid)
         if content:
-            return self.backingstore.get(uid).filename
-
+            try: return self.backingstore.get(uid).filename
+            except KeyError: pass
+        return ''
+        
     def get_data(self, uid):
         content = self.get(uid)
         if content:

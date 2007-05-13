@@ -77,6 +77,6 @@ We can also remove the file from the repository.
 
 This is the basis of milestone 1.
 
-
+>>> del ds
 
 

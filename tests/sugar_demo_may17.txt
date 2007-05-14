@@ -4,8 +4,13 @@ How Sugar will interact with the DS for the May 17th demo in Argentina:
 >>> ds = DataStore('/tmp/test_ds', 'sqlite://')
 
 Create an entry without data:
->>> uid = ds.create(dict(title="New entry still without content"), '')
+>>> uid = ds.create(dict(title="New entry"), '')
+>>> ds.get_filename(uid)
+''
 
+Update an entry without data:
+>>> ds.update(uid, dict(title="New entry still without content"), '')
+ 
 >>> ds.get_filename(uid)
 ''
 

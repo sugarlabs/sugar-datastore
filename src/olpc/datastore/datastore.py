@@ -187,12 +187,13 @@ class DataStore(dbus.service.Object):
         given uid. If contents have been written to another file for
         example. You must create it
         """
-        if isinstance(filelike, basestring):
-            filelike = open(filelike, 'r')
+        if filelike:
+            if isinstance(filelike, basestring):
+                filelike = open(filelike, 'r')
         content = self.get(uid)
         if content:
             self.querymanager.update(uid, props, filelike)
-            self.backingstore.set(uid, filelike)
+            if filelike: self.backingstore.set(uid, filelike)
             self.emitter('update', content.id, props, signature="sa{sv}")
             logger.debug("updated %s" % content.id)
 

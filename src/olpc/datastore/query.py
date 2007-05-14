@@ -65,7 +65,7 @@ class QueryManager(object):
         return True
 
     def stop(self):
-        self.index.close()
+        pass
         
     # Primary interface
     def create(self, props, file=None, include_defaults=True):
@@ -478,5 +478,9 @@ class XapianFulltext(object):
     def fulltext_unindex(self, content_id):
         self.index.deleteDocument(content_id)
 
-class DefaultQueryManager(XapianFulltext, SQLiteQueryManager):
+    def stop(self):
+        self.index.close()
+        
+#class DefaultQueryManager(XapianFulltext, SQLiteQueryManager):
+class DefaultQueryManager(SQLiteQueryManager):
     pass

@@ -18,12 +18,12 @@ from sqlalchemy import clear_mappers
 
 doctests = [
     resource_filename(__name__, "query.txt"),
-    resource_filename(__name__, "milestone_1.txt"),
+#    resource_filename(__name__, "milestone_1.txt"),
     resource_filename(__name__, "sugar_demo_may17.txt")
 ]
 
 doctest_options = doctest.ELLIPSIS
-doctest_options |= doctest.REPORT_ONLY_FIRST_FAILURE
+#doctest_options |= doctest.REPORT_ONLY_FIRST_FAILURE
 
 
 # IF YOU ARE NOT GETTING THE RESULTS YOU EXPECT WHILE TESTING
@@ -44,7 +44,7 @@ def tearDownDS(test):
     clear_mappers()
     # and remove the test repository used in some tests
     os.system('rm -rf /tmp/test_ds')
-
+    
 def test_suite():
     suite = unittest.TestSuite()
     for dt in doctests:

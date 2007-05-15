@@ -37,21 +37,21 @@ class Content(object):
     def __repr__(self):
         return "<Content id:%s>" % (self.id, )
 
-    def __getattr__(self, key):
+    def get_property(self, key):
         # mapped to property keys
         session = get_session()
         query = session.query(Property)
         p = query.get_by(content_id=self.id, key=key)
         if not p:
             raise AttributeError(key)
-                
         return p.value
 
     def get_properties(self, **kwargs):
         session = get_session()
         query = session.query(Property)
         return query.select_by(content_id=self.id, **kwargs)
-    
+
+
 
     # Backingstore dependent bindings 
     def get_file(self):

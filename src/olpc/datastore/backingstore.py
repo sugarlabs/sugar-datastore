@@ -77,7 +77,7 @@ class FileBackingStore(BackingStore):
         return os.path.join(self.base, str(uid))
 
     def create(self, content, filelike):
-        self._writeContent(content, filelike, replace=False)
+        self._writeContent(content.id, filelike, replace=False)
         
     
     def get(self, uid, env=None, allowMissing=False):

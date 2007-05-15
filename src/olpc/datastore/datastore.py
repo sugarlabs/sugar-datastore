@@ -27,17 +27,6 @@ _DS_DBUS_INTERFACE = "org.laptop.sugar.DataStore"
 _DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
 
 logger = logging.getLogger(DS_LOG_CHANNEL)
-# logging decorator
-# XXX: incompatible w/ @method/@signal
-# w/o resorting to deep magic
-def logged(func):
-    def decorator(*args, **kwargs):
-        r = func(*args, **kwargs)
-        logger.debug("%s(*%r, **%r) -> %r" % (func.__name__,
-                                              args, kwargs,
-                                              r))
-        return r
-    return decorator
 
 class DataStore(dbus.service.Object):
 

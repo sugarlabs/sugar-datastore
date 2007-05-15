@@ -39,15 +39,6 @@ Find will now return this object.
 
 We can examine the Properties of this object.
 
->>> a.title
-'New Content'
-
-We can see in this way that the property is seamlessly mapped onto
-object. This works as expected because the type of the Property title
-is a string. If we know that the type of a Property is complex and
-don't wish to have a string representation of we must get the property
-object itself. This can be done one of two ways
-
 >>> a.properties
 [... <Property title:'New Content' of <Content id:...>>, ...]
 
@@ -86,7 +77,7 @@ include_defaults flag to the create() method.
 Some of the default Property objects have values which are not of the
 'string' type. 'ctime' and 'mtime' are examples of these
 
->>> a.ctime
+>>> a.get_property('ctime')
 datetime.datetime(...)
 
 We can see that ctime has been mapped to a standard Python
@@ -127,12 +118,12 @@ Property with an existing key should update the value rather than add
 another Property with the same key.
 
 >>> qm.update(a.id, [Property('another', 'property')])
->>> a.another
+>>> a.get_property('another')
 'property'
 
 >>> l1 = len(a.properties)
 >>> qm.update(a, dict(another="test"))
->>> a.another
+>>> a.get_property('another')
 'test'
 >>> len(a.properties) == l1
 True
@@ -141,7 +132,7 @@ Both forms of passing properties work.
 
 >>> l1 = len(a.properties)
 >>> qm.update(a, [Property('another', 'value')])
->>> a.another
+>>> a.get_property('another')
 'value'
 >>> len(a.properties) == l1
 True

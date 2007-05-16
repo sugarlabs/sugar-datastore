@@ -255,7 +255,8 @@ class Model(object):
                                 properties = {
                                             'properties' : relation(Property,
                                                                     cascade="all,delete-orphan",
-                                                                    backref='content'),
+                                                                    backref='content',
+                                                                    lazy=True),
                                             },
 
                                 )

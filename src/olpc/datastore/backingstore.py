@@ -93,7 +93,7 @@ class FileBackingStore(BackingStore):
     def set(self, uid, filelike):
         self._writeContent(uid, filelike)
 
-    def delete(self, uid, allowMissing=False):
+    def delete(self, uid, allowMissing=True):
         path = self._translatePath(uid)
         if os.path.exists(path):
             os.unlink(path)

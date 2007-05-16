@@ -13,13 +13,13 @@ __license__  = 'The GNU Public License V2+'
 
 from olpc.datastore.converter import converter
 from olpc.datastore.model import Model, Content, Property
-from olpc.datastore.model import DateProperty, NumberProperty
+from olpc.datastore.model import DateProperty
 from olpc.datastore.model import BackingStoreContentMapping
 from olpc.datastore.utils import create_uid
 from sqlalchemy import create_engine, BoundMetaData
 from sqlalchemy import select, intersect, and_
 from datetime import datetime
-
+import atexit
 
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 
@@ -132,7 +132,6 @@ class QueryManager(object):
         # for information on include_defaults see create()
         # default properties are only provided when creating is True
         session = self.model.session
-        q = session.query(Property)
 
         if isinstance(props, dict):
             # convert it into a list of properties
@@ -160,18 +159,14 @@ class QueryManager(object):
             auto.update(props)
             props = auto
             # we have to check for the update case
-            for p in props.itervalues():
-                existing = q.get_by(content_id = content.id, key = p.key)
-                if existing is not None:
-                    content.properties.remove(existing)
-                    session.delete(existing)
-                    # There is an order of operations problems with
-                    # the unique constraint if we don't flush the
-                    # deleted object here.
-                    # XXX: fix this as its per property and hence to
-                    # many writes
-                    session.flush([existing])
-                content.properties.append(p)
+            oldProps = dict([(p.key, p) for p in content.properties])
+
+            for k, p in props.iteritems():
+                if k in oldProps:
+                    oldProps[k].value = p.value
+                    oldProps[k].type  = p.type
+                else:    
+                    content.properties.append(p)
                     
     def get(self, uid):
         return self.model.session.query(self.model.mappers['content']).get(uid)
@@ -368,7 +363,7 @@ class SQLiteQueryManager(QueryManager):
     def connect_db(self):
         self.db = create_engine(self.uri)
         self.metadata = BoundMetaData(self.db)
-
+        #self.db.echo = True
         
     def prepare_db(self):
         # Using the sqlite backend we can tune the performance to
@@ -409,6 +404,7 @@ class XapianFulltext(object):
     def connect_fulltext(self, language='en'):
         self.index = DocumentStore('fulltext', language, read_only=False)
         self.index.registerFlattener(unicode, flatten_unicode)
+        atexit.register(self.index.close)
         
     def fulltext_index(self, content, fileobj):
         """Index the fileobj relative to content which should be a
@@ -481,6 +477,12 @@ class XapianFulltext(object):
     def stop(self):
         self.index.close()
         
-#class DefaultQueryManager(XapianFulltext, SQLiteQueryManager):
+class DefaultQueryManager(XapianFulltext, SQLiteQueryManager):
+    def delete(self, content_or_uid):
+        c =  self._resolve(content_or_uid)
+        SQLiteQueryManager.delete(self, c.id)
+        XapianFulltext.fulltext_unindex(self, c.id)
+
 class DefaultQueryManager(SQLiteQueryManager):
+    # for the demo run with indexing off
     pass

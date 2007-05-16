@@ -128,19 +128,22 @@ class FileBackingStore(BackingStore):
         return content
 
     def _writeContent(self, uid, filelike, replace=True):
-        content = self.querymanager.get(uid)
-        path = self._translatePath(content.id)
+        path = self._translatePath(uid)
         if replace is False and os.path.exists(path):
             raise KeyError("objects with path:%s for uid:%s exists" %(
-                            path, content.id))
+                            path, uid))
         fp = open(path, 'w')
-        c  = sha.sha()
+        verify = self.options.get('verify', False)
+        c = None
+        if verify: c  = sha.sha()
         filelike.seek(0)
         for line in filelike:
-            c.update(line)
+            if verify:c.update(line)
             fp.write(line)
         fp.close()
-        content.checksum = c.hexdigest()
+        if verify:
+            content = self.querymanager.get(uid)
+            content.checksum = c.hexdigest()
         
     
     

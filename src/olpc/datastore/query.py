@@ -23,6 +23,8 @@ import atexit
 
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 
+# for the demo we are not using the full text indexer
+USE_FULLTEXT = False
 
 class QueryManager(object):
     def __init__(self, metadata_uri, language='en'):
@@ -88,13 +90,15 @@ class QueryManager(object):
              mtime : '',
         """
         s = self.model.session
+        trans = s.create_transaction()
         c = Content()
+        # its important the id be set before other operations
         c.id = create_uid()
-        self._bindProperties(c, props, creating=True, include_defaults=include_defaults)
         s.save(c)
-        s.flush()
-
+        
+        self._bindProperties(c, props, creating=True, include_defaults=include_defaults)
         if file: self.fulltext_index(c, file)
+        trans.commit()
         return c
     
     def update(self, content_or_uid, props=None, file=None):
@@ -103,7 +107,7 @@ class QueryManager(object):
         if props is not None:
             self._bindProperties(content, props, creating=False)
             self.model.session.flush()
-
+            
         if file: self.fulltext_index(content, file)
             
 
@@ -124,15 +128,9 @@ class QueryManager(object):
         }
         default.update(self._automaticProperties())
         return default
-    
-    def _bindProperties(self, content, props, creating=False, include_defaults=False):
-        """Handle either a dict of properties or a list of property
-        objects, binding them to the content instance.
-        """
-        # for information on include_defaults see create()
-        # default properties are only provided when creating is True
-        session = self.model.session
 
+    def _normalizeProps(self, props, creating, include_defaults):
+        # return a dict of {name : property}
         if isinstance(props, dict):
             # convert it into a list of properties
             d = {}
@@ -149,6 +147,19 @@ class QueryManager(object):
             for p in props:
                 d[p.key] = p
             props = d
+        return props
+    
+    def _bindProperties(self, content, props, creating=False, include_defaults=False):
+        """Handle either a dict of properties or a list of property
+        objects, binding them to the content instance.
+        """
+        # for information on include_defaults see create()
+        # default properties are only provided when creating is True
+        session = self.model.session
+
+        props = self._normalizeProps(props, creating,
+                                     include_defaults)
+        
         # we should have a dict of property objects
         if creating:
             content.properties.extend(props.values())
@@ -272,14 +283,6 @@ class QueryManager(object):
         if isinstance(content_or_uid, basestring):
             # we need to resolve the object
             content_or_uid = self.model.session.query(Content).get(content_or_uid)
-        else:
-            # verify that the object has a uid (and has been
-            # committed)
-            if not hasattr(content_or_uid, 'id'):
-                content_or_uid.id = create_uid()
-                s = self.model.session
-                s.flush([content_or_uid])
-                s.refresh(content_or_uid)        
         return content_or_uid
 
     def _query_dates(self, ctime, mtime, selects):
@@ -363,7 +366,6 @@ class SQLiteQueryManager(QueryManager):
     def connect_db(self):
         self.db = create_engine(self.uri)
         self.metadata = BoundMetaData(self.db)
-        #self.db.echo = True
         
     def prepare_db(self):
         # Using the sqlite backend we can tune the performance to
@@ -476,13 +478,13 @@ class XapianFulltext(object):
 
     def stop(self):
         self.index.close()
-        
-class DefaultQueryManager(XapianFulltext, SQLiteQueryManager):
-    def delete(self, content_or_uid):
-        c =  self._resolve(content_or_uid)
-        SQLiteQueryManager.delete(self, c.id)
-        XapianFulltext.fulltext_unindex(self, c.id)
 
-class DefaultQueryManager(SQLiteQueryManager):
-    # for the demo run with indexing off
-    pass
+if USE_FULLTEXT:
+    class DefaultQueryManager(XapianFulltext, SQLiteQueryManager):
+        def delete(self, content_or_uid):
+            c =  self._resolve(content_or_uid)
+            SQLiteQueryManager.delete(self, c.id)
+            XapianFulltext.fulltext_unindex(self, c.id)
+else:
+    class DefaultQueryManager(SQLiteQueryManager):
+        pass

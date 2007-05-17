@@ -7,7 +7,8 @@ from olpc.datastore import DataStore, DS_LOG_CHANNEL
 import logging
 
 # Path handling
-base_dir = os.path.expanduser("~/.sugar/default")
+profile = os.environ.get('SUGAR_PROFILE', 'default')
+base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
 repo_dir = os.path.join(base_dir, 'datastore')
 db_dir   = "sqlite:///%s/datastore.db"  % repo_dir
 

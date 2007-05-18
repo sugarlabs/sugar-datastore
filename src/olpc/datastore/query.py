@@ -24,7 +24,7 @@ import atexit
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 
 # for the demo we are not using the full text indexer
-USE_FULLTEXT = False
+USE_FULLTEXT = True
 
 class QueryManager(object):
     def __init__(self, metadata_uri, language='en'):
@@ -90,7 +90,6 @@ class QueryManager(object):
              mtime : '',
         """
         s = self.model.session
-        trans = s.create_transaction()
         c = Content()
         # its important the id be set before other operations
         c.id = create_uid()
@@ -98,7 +97,7 @@ class QueryManager(object):
         
         self._bindProperties(c, props, creating=True, include_defaults=include_defaults)
         if file: self.fulltext_index(c, file)
-        trans.commit()
+        s.flush()
         return c
     
     def update(self, content_or_uid, props=None, file=None):
@@ -465,7 +464,10 @@ class XapianFulltext(object):
         search results.
 
         """
-        
+        if len(args) == 1:
+            # workaround for api change
+            args = (args[0], 0, 10)
+            
         res = self.index.performSearch(*args, **kwargs)
         est = max(1, res.estimatedResultCount())
         return res.getResults(0, est)

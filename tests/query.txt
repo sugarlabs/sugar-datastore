@@ -226,6 +226,10 @@ True
 >>> qm.find(fulltext="amazed", author="Benjamin") == [a]
 True
 
+>>> qm.update(a, file="test.doc")
+>>> qm.find(fulltext="amazed", author="Benjamin") == [a]
+True
+
 
 Now for politeness we shut everything down
 >>> qm.stop()

@@ -54,4 +54,10 @@ Check content:
 'some other content\n'
 >>> fp.close()
 
+Set content as pdf:
+>>> ds.update(uid, dict(title="Same entry with some content in pdf"), 'test.pdf')
+>>> ds.update(uid, dict(title="Same entry with some content in doc"), 'test.doc')
+>>> ds.update(uid, dict(title="Same entry with some content in odt"), 'test.odt')
+
+
 >>> del ds

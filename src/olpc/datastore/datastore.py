@@ -99,13 +99,14 @@ class DataStore(dbus.service.Object):
         new objects are created in the first datastore. More control
         over this process can come at a later time.
         """
+        filename = filelike
         if filelike:
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
                 filelike = open(filelike, "r")
             t = filelike.tell()
 
-        content = self.querymanager.create(props, filelike)
+        content = self.querymanager.create(props, filename)
 
         if filelike:
             filelike.seek(t)
@@ -176,12 +177,15 @@ class DataStore(dbus.service.Object):
         given uid. If contents have been written to another file for
         example. You must create it
         """
+        filename = filelike
         if filelike:
             if isinstance(filelike, basestring):
                 filelike = open(filelike, 'r')
+
+                
         content = self.get(uid)
         if content:
-            self.querymanager.update(uid, props, filelike)
+            self.querymanager.update(uid, props, filename)
             if filelike: self.backingstore.set(uid, filelike)
             self.emitter('update', content.id, props, signature="sa{sv}")
             logger.debug("updated %s" % content.id)

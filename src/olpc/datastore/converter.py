@@ -16,11 +16,40 @@ __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
 from olpc.datastore.utils import Singleton
+import logging
 import mimetypes
 import os
 import re
 import subprocess
+import sys
 import tempfile
+
+class Purify(object):
+    """Remove some non-printable characters from the output of a
+    conversion. This also re-encodes unicode text to utf-8
+    """
+
+    BAD_CHARS = re.compile('[\xa0|\x0c|\xc2]+')
+    
+    def __init__(self, fp):
+        self.fp = fp
+
+    def __iter__(self):
+        self._fp = iter(self.fp)
+        return self
+    
+    def next(self): return self.filter(self._fp.next())
+
+    def filter(self, line):
+        line = self.BAD_CHARS.sub(' ', line)
+        return line.encode('utf-8')
+
+    def read(self):
+        data = self.fp.read()
+        return self.filter(data)
+
+    def seek(self, *args):
+        self.fp.seek(*args)
 
 class subprocessconverter(object):
     """Process a command. Collect the output
@@ -54,7 +83,7 @@ class subprocessconverter(object):
     def verify(self):
         """should this converter be used?"""
         return os.path.exists(self.raw.split()[0])
-        
+    
     def __call__(self, filename):
         data = {}
         data['source'] = filename
@@ -78,30 +107,6 @@ class subprocessconverter(object):
             if os.path.exists(target):
                 os.unlink(target)
 
-class Purify(object):
-    """Remove some non-printable characters from the output of a
-    conversion. This also re-encodes unicode text to utf-8
-    """
-
-    BAD_CHARS = re.compile('[\xa0|\x0c|\xc2]+')
-    
-    def __init__(self, fp):
-        self.fp = fp
-
-    def __iter__(self):
-        self._fp = iter(self.fp)
-        return self
-    
-    def next(self): return self.filter(self._fp.next())
-
-    def filter(self, line):
-        line = self.BAD_CHARS.sub(' ', line)
-        return line.encode('utf-8')
-
-    def read(self):
-        data = self.fp.read()
-        return self.filter(data)
-        
         
 class Converter(object):
     __metaclass__ = Singleton
@@ -109,25 +114,29 @@ class Converter(object):
         # maps both extension -> plugin
         # and mimetype -> plugin
         self._converters = {}
-
+        self.logger = logging.getLogger('org.laptop.sugar.DataStore.converter')
+    
     def registerConverter(self, ext_or_mime, plugin):
         if plugin.verify():
             self._converters[ext_or_mime] = plugin
 
-    def __call__(self, filename):
+    def __call__(self, filename, encoding=None):
+        """Convert filename's content to utf-8 encoded text."""        
+        #encoding is passed its the known encoding of the
+        #contents. When None is passed the encoding is guessed which
+        #can result in unexpected or no output.
+
         ext = os.path.splitext(filename)[1]
         mt = mimetypes.guess_type(filename, False)
         
         converter = self._converters.get(mt)
         if not converter:
             converter = self._converters.get(ext)
-
         if converter:
-            try:
-                return converter(filename)
+            try: return converter(filename)
             except:
-                import traceback
-                traceback.print_exc()
+                logging.debug("Binary to Text failed: %s %s %s" %
+                              (ext, mt, filename), exc_info=sys.exc_info())
             
         return open(filename, 'r')
 

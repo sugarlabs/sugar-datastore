@@ -147,7 +147,12 @@ class DateProperty(Property):
         return dt
 
     def set_value(self, value):
+        if isinstance(value, basestring):
+            # XXX: there  is an issue with microseconds not getting parsed
+            ti = time.strptime(value, self.format)
+            value = datetime.datetime(*(ti[:-2]))
         value = value.replace(microsecond=0)
+            
         self._value = value.isoformat()
 
     value = property(get_value, set_value)

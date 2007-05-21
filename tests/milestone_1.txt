@@ -37,7 +37,7 @@ Now we should be able to test the first requirement.
 A find command with out any parameters will return everything in the store.
 
 * Get an object from the store given his uid.
->>> first_uid = uids[0]
+>>> first_uid = uids[0].keys()[0]
 >>> c1 = ds.get(first_uid)
 
 * Get the object metadata.

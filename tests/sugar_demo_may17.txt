@@ -41,14 +41,13 @@ And retrieve again:
 >>> fp.close()
 
 Get all entries (only have one):
->>> uids = ds.find({})
->>> for uid in uids:
-...     properties = ds.get_properties(uid)
+>>> results, count = ds.find({})
+>>> for uid, properties in results.iteritems():
 ...     properties['title']
 'Same entry with some other content'
 
 Check content:
->>> fn = ds.get_filename(uids[0])
+>>> fn = ds.get_filename(uid)
 >>> fp = open(fn, 'r')
 >>> fp.read()
 'some other content\n'

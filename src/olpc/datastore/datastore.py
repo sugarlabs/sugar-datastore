@@ -128,11 +128,31 @@ class DataStore(dbus.service.Object):
 
     @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='a{sv}',
-             out_signature='as')
+             out_signature='a{sv}u')
     def find(self, query=None, **kwargs):
         # only goes to the primary now. Punting on the merge case
+        # XXX: the 'include_files' keyword will trigger the availability of
+        # user accessible files. Because these are working copies we
+        # don't want to generate them unless needed. In the case the
+        # the full properties set matches doing the single roundtrip
+        # to start an activity makes sense.
+        include_files = kwargs.pop('include_files', False)
+        
         results = self.querymanager.find(query, **kwargs)
-        return [r.id for r in results]
+        d = {}
+        for r in results:
+            props =  {}
+            for prop in r.get_properties():
+                props[prop.key] = prop.marshall()
+
+            filename = None
+            if include_files :
+                try: filename = self.backingstore.get(r.id).filename
+                except KeyError: pass
+            props['filename'] = filename
+            d[r.id] = props
+
+        return (d, len(results))
 
     def get(self, uid):
         c = self.querymanager.get(uid)
@@ -202,3 +222,8 @@ class DataStore(dbus.service.Object):
             self.emitter('delete', content.id, signature="s")
             logger.debug("deleted %s" % content.id)
     
+    def stop(self):
+        """shutdown the service"""
+        self.querymanager.stop()
+        
+        

@@ -170,7 +170,7 @@ class DataStore(dbus.service.Object):
             if include_files :
                 try: filename = self.backingstore.get(r.id).filename
                 except KeyError: pass
-            props['filename'] = filename
+                props['filename'] = filename
             d.append(props)
 
         return (d, len(results))

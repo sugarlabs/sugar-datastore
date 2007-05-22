@@ -1,7 +1,6 @@
 import olpc.datastore.utils
 import dbus
-import _dbus_bindings
-
+from dbus.lowlevel import SignalMessage
 
 # A dbus signal emitter factory
 # this is for the case where we want dbus callable methods with
@@ -13,7 +12,7 @@ class emitter(object):
     """
     def __init__(self, bus, obj_path, dbus_interface):
         self._connection = bus.get_connection()
-        self.message = olpc.datastore.utils.partial(_dbus_bindings.SignalMessage, obj_path,
+        self.message = olpc.datastore.utils.partial(SignalMessage, obj_path,
                                                     dbus_interface)
 
     def __call__(self, name, *args, **kwargs):

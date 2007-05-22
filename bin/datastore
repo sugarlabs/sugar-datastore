@@ -46,7 +46,9 @@ class DataStoreApplication(Application):
         signal.signal(signal.SIGHUP, handle_shutdown)
         signal.signal(signal.SIGTERM, handle_shutdown)
 
-        self.eventloop.run()
+        try:
+            self.eventloop.run()
+        except: self.ds.stop()
 
 dsa = DataStoreApplication("datastore")
 dsa.plugins.append('ore.main.profile_support.ProfileSupport')

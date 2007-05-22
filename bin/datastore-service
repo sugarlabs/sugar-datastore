@@ -48,7 +48,9 @@ signal.signal(signal.SIGTERM, handle_shutdown)
 
 def main():
     try: mainloop.run()
-    except KeyboardInterrupt: logger.info("DataStore shutdown by user")
+    except KeyboardInterrupt:
+        ds.stop()
+        logger.info("DataStore shutdown by user")
     except:
         ds.stop()
         logger.debug("Datastore shutdown with error",

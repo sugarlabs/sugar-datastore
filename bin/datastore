@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 from ore.main import Application
 from olpc.datastore import DataStore
-import os
+import os, signal
 
 base_dir = os.path.expanduser("~/.sugar/default")
 repo_dir = os.path.join(base_dir, 'datastore')
 db_dir   = "sqlite:///%s/datastore.db"  % repo_dir
 
-# operate from the repo directory
-if not os.path.exists(repo_dir):
-    os.makedirs(repo_dir)
-os.chdir(repo_dir)
+import logging
+
+def handle_shutdown(signum, frame):
+    ds.stop()
+    raise SystemExit("Shutting down on signal %s" % signum)
+
 
 class DataStoreApplication(Application):
     def manage_options(self):
@@ -22,13 +24,31 @@ class DataStoreApplication(Application):
                                action="store", default=db_dir,
                                help="""Location of the Repository""")
 
+        self.parser.add_option("--olpc.debug.db", dest="debug_db",
+                               action="store_true", default=False,
+                               help="""Dump database work""")
+
     def main(self):
+        # operate from the repo directory
+        if not os.path.exists(repo_dir):
+            os.makedirs(repo_dir)
+        os.chdir(repo_dir)
+
         self.ds = DataStore(self.options.repo_dir,
                             self.options.md_db)
-        
+
+        if self.options.debug_db:
+            logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
+            self.ds.querymanager.db.echo = True
+
+        # register the signal handler
+        signal.signal(signal.SIGHUP, handle_shutdown)
+        signal.signal(signal.SIGTERM, handle_shutdown)
+
         self.eventloop.run()
 
 dsa = DataStoreApplication("datastore")
+dsa.plugins.append('ore.main.profile_support.ProfileSupport')
 dsa()
 
 

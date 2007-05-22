@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os
+import sys, os, signal
 import gobject
 import dbus.service
 import dbus.mainloop.glib
@@ -37,9 +37,25 @@ ds = DataStore(repo_dir, db_dir)
 logger.info("Starting Datastore %s:%s" % (repo_dir, db_dir))
 mainloop = gobject.MainLoop()
 
-try: mainloop.run()
-except KeyboardInterrupt: logger.info("DataStore shutdown by user")
-except: logger.debug("Datastore shutdown with error",
-                     exc_info=sys.exc_info())
-    
+def handle_shutdown(signum, frame):
+    ds.stop()
+    print "shutdown cleanly"
+    raise SystemExit("Shutting down on signal %s" % signum)
+
+signal.signal(signal.SIGHUP, handle_shutdown)
+signal.signal(signal.SIGTERM, handle_shutdown)
+
+def main():
+    try: mainloop.run()
+    except KeyboardInterrupt: logger.info("DataStore shutdown by user")
+    except:
+        ds.stop()
+        logger.debug("Datastore shutdown with error",
+                         exc_info=sys.exc_info())
+     
+#main()
+
+import hotshot
+p = hotshot.Profile('hs.prof')
+p.run('main()')
 

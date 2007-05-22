@@ -41,14 +41,12 @@ And retrieve again:
 >>> fp.close()
 
 Get all entries (only have one):
->>> uids = ds.find({})
->>> for uid in uids:
-...     properties = ds.get_properties(uid)
-...     properties['title']
+>>> results, count = ds.find({})
+>>> results[0]['title']
 'Same entry with some other content'
 
 Check content:
->>> fn = ds.get_filename(uids[0])
+>>> fn = ds.get_filename(uid)
 >>> fp = open(fn, 'r')
 >>> fp.read()
 'some other content\n'
@@ -59,5 +57,5 @@ Set content as pdf:
 >>> ds.update(uid, dict(title="Same entry with some content in doc"), 'test.doc')
 >>> ds.update(uid, dict(title="Same entry with some content in odt"), 'test.odt')
 
-
+>>> ds.stop()
 >>> del ds

@@ -2,6 +2,7 @@ import olpc.datastore.utils
 import dbus
 from dbus.lowlevel import SignalMessage
 
+
 # A dbus signal emitter factory
 # this is for the case where we want dbus callable methods with
 # returns to also notify others connected to the bus via a signal

@@ -42,8 +42,7 @@ And retrieve again:
 
 Get all entries (only have one):
 >>> results, count = ds.find({})
->>> for uid, properties in results.iteritems():
-...     properties['title']
+>>> results[0]['title']
 'Same entry with some other content'
 
 Check content:
@@ -58,5 +57,5 @@ Set content as pdf:
 >>> ds.update(uid, dict(title="Same entry with some content in doc"), 'test.doc')
 >>> ds.update(uid, dict(title="Same entry with some content in odt"), 'test.odt')
 
-
+>>> ds.stop()
 >>> del ds

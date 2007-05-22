@@ -24,7 +24,7 @@ Because this is a new database there should be nothing in it. We can
 verify this with the call to the find() method.
 
 >>> qm.find()
-[]
+([], 0)
 
 
 The simplest way to add an entry to the datastore is by passing a
@@ -35,7 +35,7 @@ dictionary of properties to the create method.
 Find will now return this object.
 
 >>> qm.find()
-[<Content id:...>]
+([<Content id:...>], 1)
 
 We can examine the Properties of this object.
 
@@ -102,7 +102,7 @@ modification time are supported. To query on these properties two
 methods are available.
 
 >>> qm.find(ctime="2007-01-01 00:00")
-[]
+([], 0)
 
 Which matches nothing. And the other form is to pass a dict with
 'start' and 'end' range boundries.
@@ -110,7 +110,7 @@ Which matches nothing. And the other form is to pass a dict with
 >>> now = datetime.datetime.now().isoformat()
 
 >>> qm.find(ctime=dict(end=now))
-[<Content id:...>]
+([<Content id:...>], 1)
 
 
 Property keys are unique per Content item. This means that adding a
@@ -160,16 +160,16 @@ content in the datastore.
 
 For now we are only interested in the properties.
 
->>> qm.find(mime_type="image/png") == [b]
+>>> qm.find(mime_type="image/png") == ([b], 1)
 True
 
->>> qm.find(author="Benjamin") == [a]
+>>> qm.find(author="Benjamin") == ([a],1)
 True
 
->>> qm.find(author="Sarah") == [b, c]
+>>> qm.find(author="Sarah") == ([b, c],2)
 True
 
->>> qm.find(author="Sarah", mime_type="audio/mp3") == [c]
+>>> qm.find(author="Sarah", mime_type="audio/mp3") == ([c], 1)
 True
 
 Passing the special value, 'content' to find will pass an expression
@@ -181,16 +181,16 @@ understood by the index.
 
 >>> from StringIO import StringIO
 >>> qm.fulltext_index(a, StringIO("this is my content, hear it roar"))
->>> qm.find(fulltext="roar") == [a]
+>>> qm.find(fulltext="roar") == ([a], 1)
 True
 
 Combining this with properties also works.
->>> qm.find(fulltext="roar", author="Benjamin") == [a]
+>>> qm.find(fulltext="roar", author="Benjamin") == ([a], 1)
 True
 
 And we can verify the negitive as well.
 >>> qm.find(fulltext="roar", author="Sarah")
-[]
+([], 0)
 
 Calls to update() and create() both take an optional file argument
 which will update the fulltext indexed content with the new value of
@@ -199,35 +199,35 @@ file.
 >>> qm.update(a, file=StringIO("different text"))
 
 The new content will be found
->>> qm.find(fulltext="different", author="Benjamin") == [a]
+>>> qm.find(fulltext="different", author="Benjamin") == ([a], 1)
 True
 
 And the old content is not.
 >>> qm.find(fulltext="roar", author="Benjamin")
-[]
+([], 0)
 
 
 Passing a filename for file works as well. Files can be in a variety
 of binary formats include PDF.
 >>> qm.update(a, file="test.doc")
 >>> qm.find(fulltext="roar", author="Benjamin")
-[]
->>> qm.find(fulltext="amazed", author="Benjamin") == [a]
+([], 0)
+>>> qm.find(fulltext="amazed", author="Benjamin") == ([a], 1)
 True
 
 We have converters for DOC, PDF and ODT by default
 
 >>> qm.update(a, file="test.pdf")
->>> qm.find(fulltext="peek", author="Benjamin") == [a]
+>>> qm.find(fulltext="peek", author="Benjamin") == ([a], 1)
 True
 
 
 >>> qm.update(a, file="test.odt")
->>> qm.find(fulltext="amazed", author="Benjamin") == [a]
+>>> qm.find(fulltext="amazed", author="Benjamin") == ([a], 1)
 True
 
 >>> qm.update(a, file="test.doc")
->>> qm.find(fulltext="amazed", author="Benjamin") == [a]
+>>> qm.find(fulltext="amazed", author="Benjamin") == ([a], 1)
 True
 
 

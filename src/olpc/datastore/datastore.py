@@ -128,29 +128,50 @@ class DataStore(dbus.service.Object):
 
     @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='a{sv}',
-             out_signature='a{sv}u')
+             out_signature='aa{sv}u')
     def find(self, query=None, **kwargs):
+        """find(query)
+        takes a dict of parameters and returns data in the following
+             format
+
+             (results, count)
+
+             where results are:
+             [ {props}, {props}, ... ]
+
+        which is to be read, results is an ordered list of property
+        dicts, akin to what is returned from get_properties. 'uid' is
+        included in the properties dict as well and is the unique
+        identifier used in subsequent calls to refer to that object.
+
+        special keywords in the query that are supported are more
+        fully documented in the query.py::find method docstring.
+
+        The 'include_files' keyword will trigger the availability of
+        user accessible files. Because these are working copies we
+        don't want to generate them unless needed. In the case the
+        the full properties set matches doing the single roundtrip
+        to start an activity makes sense.
+        """
         # only goes to the primary now. Punting on the merge case
-        # XXX: the 'include_files' keyword will trigger the availability of
-        # user accessible files. Because these are working copies we
-        # don't want to generate them unless needed. In the case the
-        # the full properties set matches doing the single roundtrip
-        # to start an activity makes sense.
         include_files = kwargs.pop('include_files', False)
         
-        results = self.querymanager.find(query, **kwargs)
-        d = {}
+        results, count = self.querymanager.find(query, **kwargs)
+        d = []
         for r in results:
             props =  {}
             for prop in r.get_properties():
                 props[prop.key] = prop.marshall()
 
-            filename = None
+            if 'uid' not in props:
+                props['uid'] = r.id
+                
+            filename = ''
             if include_files :
                 try: filename = self.backingstore.get(r.id).filename
                 except KeyError: pass
             props['filename'] = filename
-            d[r.id] = props
+            d.append(props)
 
         return (d, len(results))
 
@@ -224,6 +245,8 @@ class DataStore(dbus.service.Object):
     
     def stop(self):
         """shutdown the service"""
+        self._connection.get_connection()._unregister_object_path(_DS_OBJECT_PATH)
         self.querymanager.stop()
+
         
         

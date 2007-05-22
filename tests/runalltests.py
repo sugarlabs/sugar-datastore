@@ -18,12 +18,14 @@ from sqlalchemy import clear_mappers
 
 doctests = [
     resource_filename(__name__, "query.txt"),
-#    resource_filename(__name__, "milestone_1.txt"),
-    resource_filename(__name__, "sugar_demo_may17.txt")
+    resource_filename(__name__, "milestone_1.txt"),
+    resource_filename(__name__, "sugar_demo_may17.txt"),
+    resource_filename(__name__, "milestone_2.txt")
+    
 ]
 
 doctest_options = doctest.ELLIPSIS
-#doctest_options |= doctest.REPORT_ONLY_FIRST_FAILURE
+doctest_options |= doctest.REPORT_ONLY_FIRST_FAILURE
 
 
 # IF YOU ARE NOT GETTING THE RESULTS YOU EXPECT WHILE TESTING

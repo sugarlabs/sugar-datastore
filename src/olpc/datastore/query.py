@@ -17,8 +17,9 @@ from olpc.datastore.model import DateProperty
 from olpc.datastore.model import BackingStoreContentMapping
 from olpc.datastore.utils import create_uid
 from sqlalchemy import create_engine, BoundMetaData
-from sqlalchemy import select, intersect, and_
+from sqlalchemy import select, intersect, and_, asc, desc
 from datetime import datetime
+import logging
 import atexit
 
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
@@ -206,11 +207,23 @@ class QueryManager(object):
 
         providing the key 'fulltext' will include a full text search
         of content matching its parameters. see fulltext_search for
-        additional details
+        additional details.
+
+        To order results by a given property you can specify:
+        >>> qm.find(order_by=['author', 'title'])
+
+        Order by must be a list of property names given in the order
+        of decreasing precedence.
+
+        If 'limit' is passed it will be the maximum number of results
+        to return and 'offset' will be the offset from 0 into the
+        result set to return.
+        
         """
 
         # XXX: this will have to be expanded, but in its simplest form
         s = self.model.session
+        properties = self.model.tables['properties']
         if not query: query = {}
         query.update(kwargs)
         q = s.query(Content)
@@ -219,11 +232,38 @@ class QueryManager(object):
         # the content using the full text index which will result in a
         # list of id's which must be mapped into the query
         # fulltext_threshold is the minimum acceptable relevance score
+        order_by = query.pop('order_by', [])
+        limit = query.pop('limit', None)
+        offset = query.pop('offset', None)
+
+        
+##         if order_by:
+##             # resolve key names to columns
+##             if not isinstance(order_by, list):
+##                 logging.debug("bad query, order_by should be a list of property names")                
+##             mode = asc
+##             orders = []
+##             for key in order_by:
+##                 if key.startswith('-'):
+##                     mode = desc
+##                     key = key[1:]
+    
+##                 orders.append(select([properties.c.content_id],
+##                                      properties.c.key==key,
+##                                      order_by = properties.c.value))
+                
+##             q = intersect([q]+ orders)
+            
+        if offset: q = q.offset(offset)
+        if limit: q = q.limit(limit)
+        
         if query:
             properties = self.model.properties
             where = []
             fulltext = query.pop('fulltext', None)
             threshold = query.pop('fulltext_threshold', 60)
+
+            
             
             statement = None
             ft_select = None
@@ -247,7 +287,7 @@ class QueryManager(object):
                                  )
                 statement = intersect(*where)
                 statement.distinct=True
-
+                
             if fulltext:
                 # perform the full text search and map the id's into
                 # the statement for inclusion
@@ -264,7 +304,7 @@ class QueryManager(object):
                     # the full text query eliminated the possibility
                     # of results by returning nothing under a logical
                     # AND condition, bail now
-                    return []
+                    return ([], 0)
                 else:
                     if statement is None:
                         statement = ft_select
@@ -273,9 +313,10 @@ class QueryManager(object):
                         statement = intersect(statement, ft_select)
 
             result = statement.execute()
-            return [q.get(i[0]) for i in result]
+            r = [q.get(i[0]) for i in result]
+            return (r, len(r))
         else:
-            return q.select()
+            return (q.select(), q.count())
     
     # sqla util
     def _resolve(self, content_or_uid):

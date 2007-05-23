@@ -29,7 +29,7 @@ class QueryManager(object):
     def __init__(self, metadata_uri,
                  language='en',
                  fulltext_repo='fulltext',
-                 async_index=False,
+                 sync_index=True,
                  use_fulltext=True):
         """
         The metadata_uri is a sqlalchemy connection string used to
@@ -40,9 +40,12 @@ class QueryManager(object):
         additional control will be provided.
 
         This will check keywords for:
-               'async_index' which determines if we use an internal
+               'sync_index' which determines if we use an internal
                              sync index impl or an out of process one
-                             via DBus.
+                             via DBus. If the async process is to be
+                             used it must be properly configured and
+                             available for DBus to spawn.
+               
                'fulltext_repo' the full filepath to which the fulltext
                                index data will be stored
                'use_fulltext' when true indexing will be performed
@@ -52,10 +55,9 @@ class QueryManager(object):
         self.language = language
         self.content_ext = None
 
-        self.use_fulltext = use_fulltext
         self.fulltext_repo = fulltext_repo
-        self.async_index = async_index        
-        self.sync_index = use_fulltext and async_index
+        self.use_fulltext = use_fulltext
+        self.sync_index = use_fulltext and sync_index
         
     def prepare(self, datastore, backingstore):
         """This is called by the datastore with its backingstore and
@@ -77,7 +79,8 @@ class QueryManager(object):
         self.prepare_db()
         self.connect_model()
 
-        self.connect_fulltext(self.fulltext_repo, self.language)
+        self.connect_fulltext(self.fulltext_repo, self.language,
+                              read_only=not self.sync_index)
         return True
 
     def stop(self):
@@ -113,7 +116,7 @@ class QueryManager(object):
         s.flush()
 
         if self.sync_index and filelike:
-            self.index.fulltext_index(c.id, filelike)
+            self.fulltext_index(c.id, filelike)
         return c
     
     def update(self, content_or_uid, props=None, filelike=None):
@@ -123,7 +126,7 @@ class QueryManager(object):
             self._bindProperties(content, props, creating=False)
             self.model.session.flush()
         if self.sync_index and filelike:
-            self.index.fulltext_index(content.id, filelike)
+            self.fulltext_index(content.id, filelike)
 
     def _automaticProperties(self):
         now = datetime.now()
@@ -208,7 +211,7 @@ class QueryManager(object):
         s.delete(c)
         s.flush()
         if self.sync_index:
-            self.index.fulltext_unindex(c.id)
+            self.fulltext_unindex(c.id)
 
         
     def find(self, query=None, **kwargs):
@@ -467,6 +470,7 @@ class XapianFulltext(object):
         if not os.path.exists(repo) and read_only is True:
             # create the store 
             index = DocumentStore(repo, language, read_only=False)
+            index.close()
             # and abandon it
         self.index = DocumentStore(repo, language, read_only=read_only)
         self.index.registerFlattener(unicode, flatten_unicode)

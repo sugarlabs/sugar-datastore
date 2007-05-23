@@ -97,7 +97,6 @@ class QueryManager(object):
         s.save(c)
         
         self._bindProperties(c, props, creating=True, include_defaults=include_defaults)
-        if file: self.fulltext_index(c, file)
         s.flush()
         return c
     
@@ -107,8 +106,6 @@ class QueryManager(object):
         if props is not None:
             self._bindProperties(content, props, creating=False)
             self.model.session.flush()
-            
-        if file: self.fulltext_index(content, file)
             
 
     def _automaticProperties(self):
@@ -361,11 +358,11 @@ class QueryManager(object):
         
         
     # fulltext interface
-    def fulltext_index(self, content, fileobj):
-        """Index the fileobj relative to content which should be a
-        olpc.datastore.model.Content object. The fileobj can be either
-        a pathname or an object implementing the Python file ('read')
-        interface.
+    def fulltext_index(self, uid, fileobj):
+        """Index the fileobj relative to uid which should be a
+        olpc.datastore.model.Content object's uid. The fileobj can be
+        either a pathname or an object implementing the Python file
+        ('read') interface.
         """
         pass
 
@@ -443,14 +440,14 @@ class XapianBinaryValue(SortableValue):
         SortableValue.__init__(self, value, field_name)
 
 class XapianFulltext(object):
-    def connect_fulltext(self, language='en'):
-        self.index = DocumentStore('fulltext', language, read_only=False)
+    def connect_fulltext(self, language='en', read_only=False):
+        self.index = DocumentStore('fulltext', language, read_only=read_only)
         self.index.registerFlattener(unicode, flatten_unicode)
         atexit.register(self.index.close)
         
-    def fulltext_index(self, content, fileobj):
-        """Index the fileobj relative to content which should be a
-        olpc.datastore.model.Content object. The fileobj can be either
+    def fulltext_index(self, uid, fileobj):
+        """Index the fileobj relative to uid which should be a
+        olpc.datastore.model.Content's uid. The fileobj can be either
         a pathname or an object implementing the Python file ('read')
         interface.
         """
@@ -470,7 +467,7 @@ class XapianFulltext(object):
             # into an indexable form.
             return
         
-        self._ft_index(content.id, fp, piece)
+        self._ft_index(uid, fp, piece)
 
     def _ft_index(self, content_id, fp, piece=DocumentPiece):
         doc = [piece(p) for p in fp]
@@ -524,10 +521,11 @@ class XapianFulltext(object):
 
 if USE_FULLTEXT:
     class DefaultQueryManager(XapianFulltext, SQLiteQueryManager):
-        def delete(self, content_or_uid):
-            c =  self._resolve(content_or_uid)
-            SQLiteQueryManager.delete(self, c.id)
-            XapianFulltext.fulltext_unindex(self, c.id)
+        def connect_fulltext(self, language='en', read_only=True):
+            # When we use this mixin we want to connect in read-only
+            # mode as the writes are all done async in the index service
+            XapianFulltext.connect_fulltext(self, language, read_only=read_only)
+
 else:
     class DefaultQueryManager(SQLiteQueryManager):
         pass

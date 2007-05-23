@@ -1,0 +1,86 @@
+#!/usr/bin/python
+
+""" Async index service for the Datastore.
+
+Subscribes to the create/update/delete messages of the Datastore and
+performs the indexing. When this service is enabled the Datastore
+access the Xapian repository in read only mode.
+"""
+
+
+from ore.main import Application
+from olpc.datastore.datastore import _DS_SERVICE, _DS_OBJECT_PATH
+from olpc.datastore.datastore import _DS_DBUS_INTERFACE
+from olpc.datastore.query import XapianFulltext
+import dbus
+import dbus.mainloop.glib
+
+import sys
+import os
+
+profile = os.environ.get('SUGAR_PROFILE', 'default')
+base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
+repo_dir = os.path.join(base_dir, 'datastore')
+os.chdir(repo_dir)
+
+class IndexService(Application):
+    def main(self):
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+        bus = dbus.SessionBus()
+        self.fulltext = XapianFulltext()
+        self.fulltext.connect_fulltext(read_only=False)
+        
+        self.ds = bus.get_object(_DS_SERVICE, _DS_OBJECT_PATH)
+
+        self.ds.connect_to_signal("Created", self.created,
+                                  dbus_interface=_DS_DBUS_INTERFACE)
+
+        self.ds.connect_to_signal("Updated", self.updated,
+                                  dbus_interface=_DS_DBUS_INTERFACE)
+
+        self.ds.connect_to_signal("Deleted", self.deleted,
+                                  dbus_interface=_DS_DBUS_INTERFACE)
+
+
+        self.ds.connect_to_signal("Stopped", self.stopped,
+                                  dbus_interface=_DS_DBUS_INTERFACE)
+
+        self.eventloop.run()
+
+    def created(self, uid, props):
+        """An object was created on the bus and we want to index it"""
+        # because the file isn't encoded anywhere accessible in the
+        # create call we must actually get the filename and trigger
+        # the indexing on that
+        filename = self.ds.get_filename(uid)
+        if filename: self.fulltext.fulltext_index(uid, filename)
+
+    def updated(self, uid, props):
+        """An object was updated on the bus and we want to index it"""
+        # because the file isn't encoded anywhere accessible in the
+        # create call we must actually get the filename and trigger
+        # the indexing on that
+        filename = self.ds.get_filename(uid)
+        if filename: self.fulltext.fulltext_index(uid, filename)
+
+    def deleted(self, uid):
+        """An object was updated on the bus and we want to index it"""
+        # because the file isn't encoded anywhere accessible in the
+        # create call we must actually get the filename and trigger
+        # the indexing on that
+        try: self.fulltext.fulltext_unindex(uid)
+        except KeyError: pass
+        
+    def stopped(self):
+        """Respond to the datastore being stopped by shutting down
+        ourselves"""
+        self.index.stop()
+        sys.exit(0)
+        
+
+
+if __name__ == "__main__":
+    idx = IndexService()
+    idx.plugins.append('ore.main.profile_support.ProfileSupport')
+    idx()
+    

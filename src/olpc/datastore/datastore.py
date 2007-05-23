@@ -16,7 +16,6 @@ from olpc.datastore import query
 import logging
 import dbus.service
 import dbus.mainloop.glib
-import dbus_helpers
 from StringIO import StringIO
 
 # the name used by the logger
@@ -41,9 +40,6 @@ class DataStore(dbus.service.Object):
                                              allow_replacement=True)
         dbus.service.Object.__init__(self, self.bus_name, _DS_OBJECT_PATH)
         
-        self.emitter = dbus_helpers.emitter(session_bus,
-                                            _DS_OBJECT_PATH,
-                                            _DS_DBUS_INTERFACE)
         self.backingstore = None
         self.querymanager = None
         if backingstore: self.connect_backingstore(backingstore)
@@ -112,11 +108,15 @@ class DataStore(dbus.service.Object):
             filelike.seek(t)
             self.backingstore.create(content, filelike)
 
-        self.emitter('create', content.id, props, signature="sa{sv}")
+        self.Created(content.id, props)
         logger.debug("created %s" % content.id)
         
         return content.id
 
+    @dbus.service.signal(_DS_DBUS_INTERFACE, signature="sa{sv}")
+    def Created(self, uid, props): pass
+        
+    
     @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='',
              out_signature='as')
@@ -228,10 +228,12 @@ class DataStore(dbus.service.Object):
         if content:
             self.querymanager.update(uid, props, filename)
             if filelike: self.backingstore.set(uid, filelike)
-            self.emitter('update', content.id, props, signature="sa{sv}")
+            self.Updated(content.id, props)
             logger.debug("updated %s" % content.id)
 
-    
+    @dbus.service.signal(_DS_DBUS_INTERFACE, signature="sa{sv}")
+    def Updated(self, uid, props): pass
+
     @dbus.service.method(_DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='')
@@ -240,13 +242,19 @@ class DataStore(dbus.service.Object):
         if content:
             self.querymanager.delete(uid)
             self.backingstore.delete(uid)
-            self.emitter('delete', content.id, signature="s")
+            self.Deleted(content.id)
             logger.debug("deleted %s" % content.id)
-    
+
+    @dbus.service.signal(_DS_DBUS_INTERFACE, signature="s")
+    def Deleted(self, uid): pass
+
     def stop(self):
         """shutdown the service"""
+        self.Stopped()
         self._connection.get_connection()._unregister_object_path(_DS_OBJECT_PATH)
         self.querymanager.stop()
 
-        
+    @dbus.service.signal(_DS_DBUS_INTERFACE)
+    def Stopped(self): pass
+
         

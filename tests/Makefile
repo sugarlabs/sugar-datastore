@@ -1,3 +1,7 @@
+# howto inherit this properly from above?
+# its not an option to configure
+PYTHON=python2.4
+
 all: test
 
 test: 

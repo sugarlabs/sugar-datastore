@@ -12,7 +12,7 @@ First lets create a query manager
 
 >>> from olpc.datastore.query import DefaultQueryManager
 >>> from olpc.datastore.model import Property
->>> qm = DefaultQueryManager("sqlite://")
+>>> qm = DefaultQueryManager("sqlite://", fulltext_repo='/tmp/_test_fulltext')
 >>> qm.prepare(None, None)
 True
 
@@ -233,3 +233,5 @@ True
 
 Now for politeness we shut everything down
 >>> qm.stop()
+>>> import shutil
+>>> shutil.rmtree('/tmp/_test_fulltext')

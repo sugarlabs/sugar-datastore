@@ -21,24 +21,25 @@ from StringIO import StringIO
 # the name used by the logger
 DS_LOG_CHANNEL = 'org.laptop.sugar.DataStore'
 
-_DS_SERVICE = "org.laptop.sugar.DataStore"
-_DS_DBUS_INTERFACE = "org.laptop.sugar.DataStore"
-_DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
+DS_SERVICE = "org.laptop.sugar.DataStore"
+DS_DBUS_INTERFACE = "org.laptop.sugar.DataStore"
+DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
 
 logger = logging.getLogger(DS_LOG_CHANNEL)
 
 class DataStore(dbus.service.Object):
 
-    def __init__(self, backingstore=None, querymanager=None):
+    def __init__(self, backingstore=None, querymanager=None, **options):
         # global handle to the main look
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         session_bus = dbus.SessionBus()
 
-        self.bus_name = dbus.service.BusName(_DS_SERVICE,
+        self.bus_name = dbus.service.BusName(DS_SERVICE,
                                              bus=session_bus,
                                              replace_existing=True,
                                              allow_replacement=True)
-        dbus.service.Object.__init__(self, self.bus_name, _DS_OBJECT_PATH)
+        dbus.service.Object.__init__(self, self.bus_name, DS_OBJECT_PATH)
+        self.options = options
         
         self.backingstore = None
         self.querymanager = None
@@ -81,7 +82,7 @@ class DataStore(dbus.service.Object):
     
 
     # PUBLIC API
-    @dbus.service.method(_DS_DBUS_INTERFACE,
+    @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='a{ss}s',
                          out_signature='s')
     def create(self, props, filelike=None):
@@ -113,11 +114,11 @@ class DataStore(dbus.service.Object):
         
         return content.id
 
-    @dbus.service.signal(_DS_DBUS_INTERFACE, signature="sa{sv}")
+    @dbus.service.signal(DS_DBUS_INTERFACE, signature="sa{sv}")
     def Created(self, uid, props): pass
         
     
-    @dbus.service.method(_DS_DBUS_INTERFACE,
+    @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='',
              out_signature='as')
     def all(self):
@@ -126,7 +127,7 @@ class DataStore(dbus.service.Object):
         results = self.querymanager.find()
         return [r.id for r in results]
 
-    @dbus.service.method(_DS_DBUS_INTERFACE,
+    @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='a{sv}',
              out_signature='aa{sv}u')
     def find(self, query=None, **kwargs):
@@ -182,7 +183,7 @@ class DataStore(dbus.service.Object):
         if c: c.backingstore = self.backingstore
         return c
 
-    @dbus.service.method(_DS_DBUS_INTERFACE,
+    @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='s')
     def get_filename(self, uid):
@@ -200,7 +201,7 @@ class DataStore(dbus.service.Object):
     def put_data(self, uid, data):
         self.update(uid, None, StringIO(data))
 
-    @dbus.service.method(_DS_DBUS_INTERFACE,
+    @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='s',
                          out_signature='a{sv}')
     def get_properties(self, uid):
@@ -210,7 +211,7 @@ class DataStore(dbus.service.Object):
             dictionary[prop.key] = prop.marshall()
         return dictionary
 
-    @dbus.service.method(_DS_DBUS_INTERFACE,
+    @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='sa{ss}s',
              out_signature='')
     def update(self, uid, props, filelike=None):
@@ -231,10 +232,10 @@ class DataStore(dbus.service.Object):
             self.Updated(content.id, props)
             logger.debug("updated %s" % content.id)
 
-    @dbus.service.signal(_DS_DBUS_INTERFACE, signature="sa{sv}")
+    @dbus.service.signal(DS_DBUS_INTERFACE, signature="sa{sv}")
     def Updated(self, uid, props): pass
 
-    @dbus.service.method(_DS_DBUS_INTERFACE,
+    @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='')
     def delete(self, uid):
@@ -245,16 +246,16 @@ class DataStore(dbus.service.Object):
             self.Deleted(content.id)
             logger.debug("deleted %s" % content.id)
 
-    @dbus.service.signal(_DS_DBUS_INTERFACE, signature="s")
+    @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Deleted(self, uid): pass
 
     def stop(self):
         """shutdown the service"""
         self.Stopped()
-        self._connection.get_connection()._unregister_object_path(_DS_OBJECT_PATH)
+        self._connection.get_connection()._unregister_object_path(DS_OBJECT_PATH)
         self.querymanager.stop()
 
-    @dbus.service.signal(_DS_DBUS_INTERFACE)
+    @dbus.service.signal(DS_DBUS_INTERFACE)
     def Stopped(self): pass
 
         

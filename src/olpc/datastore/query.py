@@ -11,43 +11,57 @@ __docformat__ = 'restructuredtext'
 __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
+
+from datetime import datetime
+from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 from olpc.datastore.converter import converter
-from olpc.datastore.model import Model, Content, Property
-from olpc.datastore.model import DateProperty
 from olpc.datastore.model import BackingStoreContentMapping
+from olpc.datastore.model import DateProperty
+from olpc.datastore.model import Model, Content, Property
 from olpc.datastore.utils import create_uid
 from sqlalchemy import create_engine, BoundMetaData
 from sqlalchemy import select, intersect, and_, asc, desc
-from datetime import datetime
-import logging
 import atexit
-
-from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
-
-# for the demo we are not using the full text indexer
-USE_FULLTEXT = True
+import logging
+import os
 
 class QueryManager(object):
-    def __init__(self, metadata_uri, language='en'):
+    def __init__(self, metadata_uri,
+                 language='en',
+                 fulltext_repo='fulltext',
+                 async_index=False,
+                 use_fulltext=True):
         """
         The metadata_uri is a sqlalchemy connection string used to
         find the database.
         
-        The default model should be used unless you know exactly
-        what you're doing. Leaving this as None is best.
-
         Language is the language code used in the fulltext
         engine. This helps improve stemming and so on. In the future
         additional control will be provided.
+
+        This will check keywords for:
+               'async_index' which determines if we use an internal
+                             sync index impl or an out of process one
+                             via DBus.
+               'fulltext_repo' the full filepath to which the fulltext
+                               index data will be stored
+               'use_fulltext' when true indexing will be performed
+
         """
         self.uri = metadata_uri
         self.language = language
         self.content_ext = None
+
+        self.use_fulltext = use_fulltext
+        self.fulltext_repo = fulltext_repo
+        self.async_index = async_index        
+        self.sync_index = use_fulltext and async_index
         
     def prepare(self, datastore, backingstore):
         """This is called by the datastore with its backingstore and
         querymanager. Its assumed that querymanager is None and we are
-        the first in this release"""
+        the first in this release
+        """
         # XXX: more than on case
         # while there is a one-to-one mapping of backingstores to
         # query managers there can be more than one of these pairs
@@ -58,20 +72,19 @@ class QueryManager(object):
         # content instances
         if self.backingstore:
             self.content_ext = BackingStoreContentMapping(self.backingstore)
-
+        
         self.connect_db()
         self.prepare_db()
         self.connect_model()
 
-        self.connect_fulltext(self.language)
-
+        self.connect_fulltext(self.fulltext_repo, self.language)
         return True
 
     def stop(self):
         pass
         
     # Primary interface
-    def create(self, props, file=None, include_defaults=True):
+    def create(self, props, filelike=None, include_defaults=True):
         """Props can either be a dict of k,v pairs or a sequence of
         Property objects.
 
@@ -98,15 +111,19 @@ class QueryManager(object):
         
         self._bindProperties(c, props, creating=True, include_defaults=include_defaults)
         s.flush()
+
+        if self.sync_index and filelike:
+            self.index.fulltext_index(c.id, filelike)
         return c
     
-    def update(self, content_or_uid, props=None, file=None):
+    def update(self, content_or_uid, props=None, filelike=None):
         content = self._resolve(content_or_uid)
 
         if props is not None:
             self._bindProperties(content, props, creating=False)
             self.model.session.flush()
-            
+        if self.sync_index and filelike:
+            self.index.fulltext_index(content.id, filelike)
 
     def _automaticProperties(self):
         now = datetime.now()
@@ -190,6 +207,9 @@ class QueryManager(object):
         s = self.model.session
         s.delete(c)
         s.flush()
+        if self.sync_index:
+            self.index.fulltext_unindex(c.id)
+
         
     def find(self, query=None, **kwargs):
         """
@@ -285,7 +305,7 @@ class QueryManager(object):
                 statement = intersect(*where)
                 statement.distinct=True
                 
-            if fulltext:
+            if fulltext and self.use_fulltext:
                 # perform the full text search and map the id's into
                 # the statement for inclusion
                 ft_res = self.fulltext_search(fulltext)
@@ -366,6 +386,9 @@ class QueryManager(object):
         """
         pass
 
+    def fulltext_unindex(self, content_id):
+        pass
+
     def fulltext_search(self, *args, **kwargs):
         return []
     
@@ -391,7 +414,7 @@ class QueryManager(object):
         """
         pass
 
-    def connect_fulltext(self, language):
+    def connect_fulltext(self, repo, language, read_only):
         """Connect the full text index"""
         pass
         
@@ -440,8 +463,12 @@ class XapianBinaryValue(SortableValue):
         SortableValue.__init__(self, value, field_name)
 
 class XapianFulltext(object):
-    def connect_fulltext(self, language='en', read_only=False):
-        self.index = DocumentStore('fulltext', language, read_only=read_only)
+    def connect_fulltext(self, repo, language='en', read_only=True):
+        if not os.path.exists(repo) and read_only is True:
+            # create the store 
+            index = DocumentStore(repo, language, read_only=False)
+            # and abandon it
+        self.index = DocumentStore(repo, language, read_only=read_only)
         self.index.registerFlattener(unicode, flatten_unicode)
         atexit.register(self.index.close)
         
@@ -517,15 +544,9 @@ class XapianFulltext(object):
         self.index.deleteDocument(content_id)
 
     def stop(self):
-        self.index.close()
+        if self.use_fulltext:
+            self.index.close()
 
-if USE_FULLTEXT:
-    class DefaultQueryManager(XapianFulltext, SQLiteQueryManager):
-        def connect_fulltext(self, language='en', read_only=True):
-            # When we use this mixin we want to connect in read-only
-            # mode as the writes are all done async in the index service
-            XapianFulltext.connect_fulltext(self, language, read_only=read_only)
 
-else:
-    class DefaultQueryManager(SQLiteQueryManager):
-        pass
+class DefaultQueryManager(XapianFulltext, SQLiteQueryManager):
+    pass

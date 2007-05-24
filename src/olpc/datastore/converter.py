@@ -42,7 +42,10 @@ class Purify(object):
 
     def filter(self, line):
         line = self.BAD_CHARS.sub(' ', line)
-        return line.encode('utf-8')
+        if isinstance(line, unicode):
+            return line.encode('utf-8')
+        # the line should be utf-8 encoded already
+        return line
 
     def read(self):
         data = self.fp.read()

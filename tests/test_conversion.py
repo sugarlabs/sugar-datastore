@@ -27,7 +27,8 @@ class Test(unittest.TestCase):
         fn_expectations = {
             'test.pdf' : 'Don\'t',
             'test.doc' : 'amazed.',
-            'test.odt' : 'amazed.'
+            'test.odt' : 'amazed.',
+            'plugger.pdf' : 'Plugger'
             }
         for fn, expect in fn_expectations.iteritems():
             assert expect in converter(fn).read()

@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name = org.laptop.sugar.Indexer
+Exec = @bindir@/index-service

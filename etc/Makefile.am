@@ -3,7 +3,12 @@ service_in_files = org.laptop.sugar.DataStore.service.in org.laptop.sugar.Indexe
 service_DATA = $(service_in_files:.service.in=.service)
 
 $(service_DATA): $(service_in_files) Makefile
-	@sed -e "s|\@bindir\@|$(bindir)|" $< > $@
+	@for X in $^ ; do \
+		sed -e "s|\@bindir\@|$(bindir)|" $$X > `basename $$X .in` ; \
+    done
+
+
+
 
 DISTCLEANFILES = $(service_DATA)
 

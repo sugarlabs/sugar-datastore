@@ -16,6 +16,7 @@ __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
 from olpc.datastore.utils import Singleton
+import codecs
 import logging
 import mimetypes
 import os
@@ -23,36 +24,6 @@ import re
 import subprocess
 import sys
 import tempfile
-
-class Purify(object):
-    """Remove some non-printable characters from the output of a
-    conversion. This also re-encodes unicode text to utf-8
-    """
-
-    BAD_CHARS = re.compile('[\xa0|\x0c|\xc2]+')
-    
-    def __init__(self, fp):
-        self.fp = fp
-
-    def __iter__(self):
-        self._fp = iter(self.fp)
-        return self
-    
-    def next(self): return self.filter(self._fp.next())
-
-    def filter(self, line):
-        line = self.BAD_CHARS.sub(' ', line)
-        if isinstance(line, unicode):
-            return line.encode('utf-8')
-        # the line should be utf-8 encoded already
-        return line
-
-    def read(self):
-        data = self.fp.read()
-        return self.filter(data)
-
-    def seek(self, *args):
-        self.fp.seek(*args)
 
 class subprocessconverter(object):
     """Process a command. Collect the output
@@ -102,8 +73,7 @@ class subprocessconverter(object):
             cmd = cmd.split()
             retcode = subprocess.call(cmd)
             if retcode: return None
-            #return codecs.open(target, 'r', 'utf-8')
-            return Purify(open(target, 'r'))
+            return codecs.open(target, 'r', 'utf-8')
         finally:
             # we unlink the file as its already been opened for
             # reading

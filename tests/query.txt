@@ -12,7 +12,7 @@ First lets create a query manager
 
 >>> from olpc.datastore.query import DefaultQueryManager
 >>> from olpc.datastore.model import Property
->>> qm = DefaultQueryManager("sqlite://")
+>>> qm = DefaultQueryManager("sqlite://", fulltext_repo='/tmp/_test_fulltext')
 >>> qm.prepare(None, None)
 True
 
@@ -180,7 +180,7 @@ manager provided the mime_type Property of the Content is one
 understood by the index.
 
 >>> from StringIO import StringIO
->>> qm.fulltext_index(a, StringIO("this is my content, hear it roar"))
+>>> qm.update(a, {}, StringIO("this is my content, hear it roar"))
 >>> qm.find(fulltext="roar") == ([a], 1)
 True
 
@@ -196,7 +196,7 @@ Calls to update() and create() both take an optional file argument
 which will update the fulltext indexed content with the new value of
 file.
 
->>> qm.update(a, file=StringIO("different text"))
+>>> qm.update(a, filelike=StringIO("different text"))
 
 The new content will be found
 >>> qm.find(fulltext="different", author="Benjamin") == ([a], 1)
@@ -209,7 +209,7 @@ And the old content is not.
 
 Passing a filename for file works as well. Files can be in a variety
 of binary formats include PDF.
->>> qm.update(a, file="test.doc")
+>>> qm.update(a, filelike="test.doc")
 >>> qm.find(fulltext="roar", author="Benjamin")
 ([], 0)
 >>> qm.find(fulltext="amazed", author="Benjamin") == ([a], 1)
@@ -217,19 +217,21 @@ True
 
 We have converters for DOC, PDF and ODT by default
 
->>> qm.update(a, file="test.pdf")
+>>> qm.update(a, filelike="test.pdf")
 >>> qm.find(fulltext="peek", author="Benjamin") == ([a], 1)
 True
 
 
->>> qm.update(a, file="test.odt")
+>>> qm.update(a, filelike="test.odt")
 >>> qm.find(fulltext="amazed", author="Benjamin") == ([a], 1)
 True
 
->>> qm.update(a, file="test.doc")
+>>> qm.update(a, filelike="test.doc")
 >>> qm.find(fulltext="amazed", author="Benjamin") == ([a], 1)
 True
 
 
 Now for politeness we shut everything down
 >>> qm.stop()
+>>> import shutil
+>>> shutil.rmtree('/tmp/_test_fulltext')

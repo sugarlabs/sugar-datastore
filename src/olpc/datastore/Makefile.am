@@ -4,7 +4,6 @@ datastore_PYTHON = 		\
 	backingstore.py 	\
 	converter.py 		\
 	datastore.py		\
-	dbus_helpers.py 	\
 	model.py		\
 	query.py		\
 	utils.py		\

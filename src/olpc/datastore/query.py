@@ -25,6 +25,8 @@ import atexit
 import logging
 import os
 
+
+
 class QueryManager(object):
     def __init__(self, metadata_uri,
                  language='en',
@@ -55,19 +57,30 @@ class QueryManager(object):
         self.language = language
         self.content_ext = None
 
-        self.fulltext_repo = fulltext_repo
-        self.use_fulltext = use_fulltext
-        self.sync_index = use_fulltext and sync_index
+        self._handle_options(fulltext_repo=fulltext_repo,
+                             use_fulltext=use_fulltext,
+                             sync_index=sync_index)
+
+    def _handle_option(self, options, key):
+        if key in options:
+            setattr(self, key, options[key])
+
+    def _handle_options(self, **kwargs):
+        self._handle_option(kwargs, 'fulltext_repo')
+        self._handle_option(kwargs, 'use_fulltext')
+        self._handle_option(kwargs, 'sync_index')
+        self.sync_index = self.use_fulltext and self.sync_index
         
-    def prepare(self, datastore, backingstore):
+    def prepare(self, datastore, backingstore, **kwargs):
         """This is called by the datastore with its backingstore and
         querymanager. Its assumed that querymanager is None and we are
         the first in this release
         """
+        self._handle_options(**kwargs)
         # XXX: more than on case
         # while there is a one-to-one mapping of backingstores to
         # query managers there can be more than one of these pairs
-        # in the whole datastore.
+        # in the whole datastore.        
         self.datastore = datastore
         self.backingstore = backingstore
         # Create the mapping extension that will be used to create

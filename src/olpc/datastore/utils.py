@@ -37,3 +37,19 @@ def create_uid():
     # this is linux specific but easily changed
     # Python 2.5 has universal support for this built in
     return open('/proc/sys/kernel/random/uuid', 'r').read()[:-1]
+
+
+def options_for(dict, prefix):
+    """return a dict of the filtered properties for keys with prefix.
+    prefix will be removed
+
+    >>> assert options_for({'app.a.option' : 1, 'app.b.option' : 2}, 'app.b.')['option'] == 2
+    """
+    d = {}
+    l = len(prefix)
+    for k, v in dict.iteritems():
+        if k.startswith(prefix):
+            d[k[l:]] = v
+    return d
+    
+    

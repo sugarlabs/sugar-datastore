@@ -13,9 +13,11 @@ __license__  = 'The GNU Public License V2+'
 
 from olpc.datastore import backingstore
 from olpc.datastore import query
+from olpc.datastore import utils
 import logging
 import dbus.service
 import dbus.mainloop.glib
+
 from StringIO import StringIO
 
 # the name used by the logger
@@ -76,8 +78,10 @@ class DataStore(dbus.service.Object):
         if not self.backingstore or not self.querymanager:
             return False
         
-        self.backingstore.prepare(self, self.querymanager)
-        self.querymanager.prepare(self, self.backingstore)
+        self.backingstore.prepare(self, self.querymanager,
+                                  **utils.options_for(self.options, 'backingstore_'))
+        self.querymanager.prepare(self, self.backingstore,
+                                  **utils.options_for(self.options, 'querymanager_'))
         return True
     
 

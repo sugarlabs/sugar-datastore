@@ -37,7 +37,7 @@ class BackingStore(object):
         self._connect()
 
         
-    def prepare(self, datastore, querymanager):
+    def prepare(self, datastore, querymanager, **kwargs):
         """Verify the backingstore is ready to begin its duties"""
         return False
 
@@ -65,7 +65,7 @@ class FileBackingStore(BackingStore):
         super(FileBackingStore, self).__init__(uri, **kwargs)
         self.options = kwargs
         
-    def prepare(self, datastore, querymanager):
+    def prepare(self, datastore, querymanager, **kwargs):
         if not os.path.exists(self.base):
             os.makedirs(self.base)
         self.datastore = datastore

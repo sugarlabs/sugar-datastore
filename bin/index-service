@@ -8,26 +8,42 @@ access the Xapian repository in read only mode.
 """
 
 
-from ore.main import Application
+try: from ore.main import Application
+except ImportError: Application = object
+
 from olpc.datastore.datastore import DS_SERVICE, DS_OBJECT_PATH
 from olpc.datastore.datastore import DS_DBUS_INTERFACE
 from olpc.datastore.indexer import Indexer
 import dbus
 import dbus.mainloop.glib
-
+import gobject
+import logging
 import sys
 import os
+import signal
 
 profile = os.environ.get('SUGAR_PROFILE', 'default')
 base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
 repo_dir = os.path.join(base_dir, 'datastore')
+fulltext_dir = os.path.join(repo_dir, 'fulltext')
 os.chdir(repo_dir)
 
+logger = logging.getLogger('org.laptop.sugar.Indexer')
+
 class IndexService(Application):
+    def manage_options(self):
+        self.parser.add_option("--olpc.fulltext.repo",
+                               dest="fulltext_dir",
+                               action="store", default='fulltext',
+                               help="""Location of the FullText Repository""")
+
+
     def main(self):
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         bus = dbus.SessionBus()
-        self.fulltext = Indexer()
+        self.fulltext = Indexer(self.options.fulltext_dir)
+        self.fulltext.use_fulltext = True
+        
         self.ds = bus.get_object(DS_SERVICE, DS_OBJECT_PATH)
 
         self.ds.connect_to_signal("Created", self.created,
@@ -52,7 +68,8 @@ class IndexService(Application):
         # the indexing on that
         filename = self.ds.get_filename(uid)
         if filename: self.fulltext.fulltext_index(uid, filename)
-
+        logger.debug("index creation of %s" % uid)
+        
     def updated(self, uid, props):
         """An object was updated on the bus and we want to index it"""
         # because the file isn't encoded anywhere accessible in the
@@ -60,25 +77,50 @@ class IndexService(Application):
         # the indexing on that
         filename = self.ds.get_filename(uid)
         if filename: self.fulltext.fulltext_index(uid, filename)
-
+        logger.debug("index update of %s" % uid)
+        
     def deleted(self, uid):
         """An object was updated on the bus and we want to index it"""
         # because the file isn't encoded anywhere accessible in the
         # create call we must actually get the filename and trigger
         # the indexing on that
-        try: self.fulltext.fulltext_unindex(uid)
+        try:
+            self.fulltext.fulltext_unindex(uid)
+            logger.debug("unindex deletion  of %s" % uid);
         except KeyError: pass
+
         
     def stopped(self):
         """Respond to the datastore being stopped by shutting down
         ourselves"""
-        self.index.stop()
+        self.fulltext.stop()
         sys.exit(0)
         
 
 
+
 if __name__ == "__main__":
+    def handle_shutdown(signum, frame):
+        idx.stopped()
+        print "shutdown cleanly"
+        raise SystemExit("Shutting down on signal %s" % signum)
+
+    signal.signal(signal.SIGHUP, handle_shutdown)
+    signal.signal(signal.SIGTERM, handle_shutdown)
+
     idx = IndexService()
-    idx.plugins.append('ore.main.profile_support.ProfileSupport')
-    idx()
+    #idx()
+
+    # w/o ore.main
+    idx.eventloop = gobject.MainLoop()
+    class options(object): pass
+    o = options()
+    o.fulltext_dir = 'fulltext'
+    idx.options = o
+    try:
+        idx.main()
+    except:
+        idx.stopped()
+
+
     

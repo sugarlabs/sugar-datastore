@@ -7,6 +7,7 @@
 *.la
 *.lo
 *.loT
+*.service
 
 # Absolute
 Makefile

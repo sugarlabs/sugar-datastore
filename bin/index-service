@@ -26,7 +26,17 @@ profile = os.environ.get('SUGAR_PROFILE', 'default')
 base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
 repo_dir = os.path.join(base_dir, 'datastore')
 fulltext_dir = os.path.join(repo_dir, 'fulltext')
+
+log_dir = os.path.join(base_dir, "logs")
+if not os.path.exists(log_dir): os.makedirs(log_dir)
+
 os.chdir(repo_dir)
+
+# setup logger
+logging.basicConfig(level=logging.WARNING,
+                    format="%(asctime)-15s %(levelname)s: %(message)s",
+                    filename = os.path.join(log_dir, "indexer.log"),
+                    )
 
 logger = logging.getLogger('org.laptop.sugar.Indexer')
 
@@ -95,7 +105,6 @@ class IndexService(Application):
         ourselves"""
         self.fulltext.stop()
         sys.exit(0)
-        
 
 
 
@@ -120,6 +129,10 @@ if __name__ == "__main__":
     try:
         idx.main()
     except:
+        # force logging this one
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Problem in index service",
+                     exc_info=sys.exc_info())
         idx.stopped()
 
 

@@ -20,7 +20,7 @@ def main():
     print "bcsaller", datastore.find(dict(fulltext="bcsaller"))
     print "huh?", datastore.find(dict(fulltext="kfdshaksjd"))
 
-    datastore.update(uid, dict(title="updated title"), title"), os.path.abspath('tests/test.doc'))
+    datastore.update(uid, dict(title="updated title"), os.path.abspath('tests/test.doc'))
     datastore.update(uid, dict(title="another updated title"), os.path.abspath('tests/test.odt'))
     print datastore.get_properties(uid)
     #datastore.delete(uid)

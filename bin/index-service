@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """ Async index service for the Datastore.
 
@@ -49,6 +49,7 @@ class IndexService(Application):
 
 
     def main(self):
+        logging.debug('Starting the index service at %s' % self.options.fulltext_dir)
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         bus = dbus.SessionBus()
         self.fulltext = Indexer(self.options.fulltext_dir)

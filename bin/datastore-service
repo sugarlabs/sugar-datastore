@@ -4,6 +4,7 @@ import gobject
 import dbus.service
 import dbus.mainloop.glib
 from olpc.datastore import DataStore, DS_LOG_CHANNEL
+from olpc.datastore.indexer import INDEX_SERVICE, INDEX_OBJECT_PATH
 import logging
 
 # Path handling
@@ -32,6 +33,7 @@ logger = logging.getLogger(DS_LOG_CHANNEL)
 
 # build the datastore
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+bus = dbus.SessionBus()
 ds = DataStore(repo_dir, db_dir)
 
 # and run it 
@@ -47,6 +49,7 @@ signal.signal(signal.SIGHUP, handle_shutdown)
 signal.signal(signal.SIGTERM, handle_shutdown)
 
 def main():
+    indexer = bus.get_object(INDEX_SERVICE, INDEX_OBJECT_PATH)
     try: mainloop.run()
     except KeyboardInterrupt:
         ds.stop()

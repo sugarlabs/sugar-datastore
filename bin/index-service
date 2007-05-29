@@ -105,8 +105,7 @@ class IndexService(Application):
         """Respond to the datastore being stopped by shutting down
         ourselves"""
         self.fulltext.stop()
-        sys.exit(0)
-
+        self.eventloop.quit()
 
 
 if __name__ == "__main__":

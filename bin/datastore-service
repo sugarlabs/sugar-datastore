@@ -34,7 +34,7 @@ logger = logging.getLogger(DS_LOG_CHANNEL)
 # build the datastore
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 bus = dbus.SessionBus()
-ds = DataStore(repo_dir, db_dir)
+ds = DataStore(repo_dir, db_dir, querymanager_sync_index=False)
 
 # and run it 
 logger.info("Starting Datastore %s:%s" % (repo_dir, db_dir))

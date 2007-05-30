@@ -17,6 +17,15 @@ def handle_shutdown(signum, frame):
     dsa.stop()
     raise SystemExit("Shutting down on signal %s" % signum)
 
+# check for old lockfiles, the rules here are that we can't be
+# connected to a tty. If we are not then in all likelyhood the process
+# was started automatically, which hopefully implies a single instance
+if not sys.stdin.isatty():
+    lf = os.path.join(repo_dir, 'fulltext', 'flintlock')
+    if os.path.exists(lf):
+        logging.warning("Old lock file found -- removing.")
+        os.unlink(lf)
+
 
 class DataStoreApplication(Application):
     def manage_options(self):

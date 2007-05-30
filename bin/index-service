@@ -33,12 +33,16 @@ if not os.path.exists(log_dir): os.makedirs(log_dir)
 os.chdir(repo_dir)
 
 # setup logger
+filename = None
+if not sys.stdin.isatty():
+    filename = os.path.join(log_dir, "indexer.log")
 logging.basicConfig(level=logging.WARNING,
                     format="%(asctime)-15s %(levelname)s: %(message)s",
-                    filename = os.path.join(log_dir, "indexer.log"),
+                    filename = filename,
                     )
 
 logger = logging.getLogger('org.laptop.sugar.Indexer')
+logger.setLevel(logging.DEBUG)
 
 class IndexService(Application):
     def manage_options(self):

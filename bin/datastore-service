@@ -22,15 +22,29 @@ if not os.path.exists(log_dir): os.makedirs(log_dir)
 os.chdir(repo_dir)
 
 # setup logger
+filename = None
+if not sys.stdin.isatty():
+    filename = os.path.join(log_dir, "datastore.log")
+
 logging.basicConfig(level=logging.WARNING,
                     format="%(asctime)-15s %(levelname)s: %(message)s",
-                    filename = os.path.join(log_dir, "datastore.log"),
+                    filename = filename,
                     )
 # disable subsystem logging except where critical
 logging.getLogger('sqlalchemy').setLevel(logging.CRITICAL)
 logging.getLogger('lemur').setLevel(logging.CRITICAL)
 logger = logging.getLogger(DS_LOG_CHANNEL)
 
+# check for old lockfiles, the rules here are that we can't be
+# connected to a tty. If we are not then in all likelyhood the process
+# was started automatically, which hopefully implies a single instance
+if not sys.stdin.isatty():
+    lf = os.path.join(repo_dir, 'fulltext', 'flintlock')
+    if os.path.exists(lf):
+        logging.warning("Old lock file found -- removing.")
+        os.unlink(lf)
+
+        
 # build the datastore
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 bus = dbus.SessionBus()

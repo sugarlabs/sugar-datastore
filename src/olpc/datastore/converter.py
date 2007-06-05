@@ -25,6 +25,11 @@ import subprocess
 import sys
 import tempfile
 
+def guess_mimetype(filename):
+    output = subprocess.Popen(["file", "-bi", filename], stdout=subprocess.PIPE).communicate()[0]
+    return output.strip()
+
+    
 class subprocessconverter(object):
     """Process a command. Collect the output
 
@@ -87,7 +92,7 @@ class Converter(object):
         # maps both extension -> plugin
         # and mimetype -> plugin
         self._converters = {}
-        self.logger = logging.getLogger('org.laptop.sugar.DataStore.converter')
+        self.logger = logging.getLogger('org.laptop.sugar.Indexer')
     
     def registerConverter(self, ext_or_mime, plugin):
         if plugin.verify():
@@ -98,20 +103,25 @@ class Converter(object):
         #encoding is passed its the known encoding of the
         #contents. When None is passed the encoding is guessed which
         #can result in unexpected or no output.
-
         ext = os.path.splitext(filename)[1]
         mt = mimetypes.guess_type(filename, False)
-        
+        if mt[0] is not None: mt = "%s/%s" % mt
+        else:
+            # try harder to get the mimetype
+            # most datastore files won't have extensions
+            mt = guess_mimetype(filename)
+            
         converter = self._converters.get(mt)
         if not converter:
             converter = self._converters.get(ext)
         if converter:
-            try: return converter(filename)
+            try:
+                return converter(filename)
             except:
                 logging.debug("Binary to Text failed: %s %s %s" %
                               (ext, mt, filename), exc_info=sys.exc_info())
             
-        return open(filename, 'r')
+        return None
 
 # our global instance 
 converter = Converter()
@@ -120,6 +130,7 @@ converter = Converter()
 # PDF
 pdf2txt = subprocessconverter('/usr/bin/pdftotext -nopgbrk -enc UTF-8 %(source)s %(target)s')
 converter.registerConverter('.pdf', pdf2txt)
+converter.registerConverter('application/pdf', pdf2txt)
 
 
 # DOC
@@ -128,8 +139,10 @@ def find_by_ext(filename, ext="txt"):
 
 doctotext = subprocessconverter('/usr/bin/abiword -t txt %(source)s', find_by_ext)
 converter.registerConverter('.doc', doctotext)
+converter.registerConverter('application/msword', doctotext)
 
 # ODT
 odt2txt = subprocessconverter('/usr/local/bin/odt2txt --encoding=UTF-8 --output=%(target)s %(source)s')
 converter.registerConverter('.odt', odt2txt)
+converter.registerConverter('application/vnd.oasis.opendocument.text', odt2txt)
 

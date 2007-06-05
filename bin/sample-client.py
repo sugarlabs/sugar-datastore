@@ -2,6 +2,7 @@
 from ore.main import Application
 import dbus
 import os
+import time
 
 def main():
     bus = dbus.SessionBus()
@@ -11,21 +12,26 @@ def main():
     uid = datastore.create(dict(title="from dbus", author="Benjamin"), os.path.abspath('tests/test.pdf'))
     print "created uid", uid
     
-    #print "all", datastore.find()
-    #for u in datastore.find()[0]:
-    #    if u['uid'] != uid:
-    #        datastore.delete(u['uid'])
+    time.sleep(1.2)
+
     print "find", datastore.find(dict(author="Benjamin", title="from"))
-    
-    print "bcsaller", datastore.find(dict(fulltext="bcsaller"))
+    res, count = datastore.find(dict(fulltext="peek"))
+    if not res:
+        print "unable to index content"
+        return 
+    item = res[0]
+    print "bcsaller", item['uid']
+
     print "huh?", datastore.find(dict(fulltext="kfdshaksjd"))
 
+    # try the other mimetypes
     datastore.update(uid, dict(title="updated title"), os.path.abspath('tests/test.doc'))
     datastore.update(uid, dict(title="another updated title"), os.path.abspath('tests/test.odt'))
-    print datastore.get_properties(uid)
-    #datastore.delete(uid)
+    datastore.get_properties(uid)
+    datastore.delete(uid)
     
 if __name__ == '__main__':
-    a = Application("client", main)
-    a.plugins.append('ore.main.profile_support.ProfileSupport')
-    a()
+    #a = Application("client", main)
+    #a.plugins.append('ore.main.profile_support.ProfileSupport')
+    #a()
+    main()

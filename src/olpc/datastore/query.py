@@ -20,10 +20,10 @@ from olpc.datastore.model import DateProperty
 from olpc.datastore.model import Model, Content, Property
 from olpc.datastore.utils import create_uid
 from sqlalchemy import create_engine, BoundMetaData
-from sqlalchemy import select, intersect, and_, asc, desc
+from sqlalchemy import select, intersect, and_ #, asc, desc
 import atexit
 import logging
-import os
+import os, sys
 
 
 
@@ -255,6 +255,8 @@ class QueryManager(object):
         """
 
         # XXX: this will have to be expanded, but in its simplest form
+        if not self.sync_index: self.index.reopen()
+        
         s = self.model.session
         properties = self.model.tables['properties']
         if not query: query = {}
@@ -502,6 +504,8 @@ class XapianFulltext(object):
             fp = converter(fileobj)
             #piece = XapianBinaryValue
         elif hasattr(fileobj, 'read'):
+            # this is an off case, we have to assume utf-8 data
+            logging.debug("Indexing from readable, not filename")
             fp = fileobj
         else:
             raise ValueError("Not a valid file object")
@@ -509,13 +513,21 @@ class XapianFulltext(object):
         if fp is None:
             # for whatever reason we were unable to get the content
             # into an indexable form.
-            return
+            logging.debug("Unable to index %s %s" % (uid, fileobj))
+            return False
         
-        self._ft_index(uid, fp, piece)
+        return self._ft_index(uid, fp, piece)
 
     def _ft_index(self, content_id, fp, piece=DocumentPiece):
-        doc = [piece(p) for p in fp]
-        self.index.addDocument(doc, content_id)
+        try:
+            doc = [piece(fp.read())]
+            self.index.addDocument(doc, content_id)
+            return True
+        except:
+            logging.debug("fulltext index exception", exc_info=sys.exc_info())
+            return False
+
+
 
     def fulltext_search(self, *args, **kwargs):
         """

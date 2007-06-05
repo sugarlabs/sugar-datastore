@@ -114,7 +114,7 @@ class DataStore(dbus.service.Object):
             self.backingstore.create(content, filelike)
 
         self.Created(content.id, props)
-        logger.debug("created %s" % content.id)
+        logging.debug("created %s" % content.id)
         
         return content.id
 
@@ -160,7 +160,6 @@ class DataStore(dbus.service.Object):
         """
         # only goes to the primary now. Punting on the merge case
         include_files = kwargs.pop('include_files', False)
-        
         results, count = self.querymanager.find(query, **kwargs)
         d = []
         for r in results:

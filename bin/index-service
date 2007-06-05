@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.4
 
 """ Async index service for the Datastore.
 
@@ -82,17 +82,32 @@ class IndexService(Application):
         # create call we must actually get the filename and trigger
         # the indexing on that
         filename = self.ds.get_filename(uid)
-        if filename: self.fulltext.fulltext_index(uid, filename)
-        logger.debug("index creation of %s" % uid)
-        
+        r = None
+        if filename:
+            r = self.fulltext.fulltext_index(uid, filename)
+        if r is True:
+            logger.debug("index creation of %s" % uid)
+        elif r is False:
+            logger.debug("unable to index creation of  %s" % uid)
+        else:
+            logger.debug("nothing to index on creation of %s" % uid)
+            
     def updated(self, uid, props):
         """An object was updated on the bus and we want to index it"""
         # because the file isn't encoded anywhere accessible in the
         # create call we must actually get the filename and trigger
         # the indexing on that
         filename = self.ds.get_filename(uid)
-        if filename: self.fulltext.fulltext_index(uid, filename)
-        logger.debug("index update of %s" % uid)
+        r = None
+        if filename:
+            r = self.fulltext.fulltext_index(uid, filename)
+        if r is True:
+            logger.debug("index update of %s" % uid)
+        elif r is False:
+            logger.debug("unable to index update of  %s" % uid)
+        else:
+            logger.debug("nothing to index on update of %s" % uid)
+            
         
     def deleted(self, uid):
         """An object was updated on the bus and we want to index it"""
@@ -122,22 +137,22 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_shutdown)
 
     idx = IndexService()
-    #idx()
+    idx()
 
     # w/o ore.main
-    idx.eventloop = gobject.MainLoop()
-    class options(object): pass
-    o = options()
-    o.fulltext_dir = 'fulltext'
-    idx.options = o
-    try:
-        idx.main()
-    except:
-        # force logging this one
-        logger.setLevel(logging.DEBUG)
-        logger.debug("Problem in index service",
-                     exc_info=sys.exc_info())
-        idx.stopped()
+##     idx.eventloop = gobject.MainLoop()
+##     class options(object): pass
+##     o = options()
+##     o.fulltext_dir = 'fulltext'
+##     idx.options = o
+##     try:
+##         idx.main()
+##     except:
+##         # force logging this one
+##         logger.setLevel(logging.DEBUG)
+##         logger.debug("Problem in index service",
+##                      exc_info=sys.exc_info())
+##         idx.stopped()
 
 
     

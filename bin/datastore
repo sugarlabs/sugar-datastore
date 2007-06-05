@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.4
 from ore.main import Application
 from olpc.datastore import DataStore
 from olpc.datastore.indexer import INDEX_SERVICE, INDEX_OBJECT_PATH
-import os, signal
+import os, signal, sys
 import dbus
 import dbus.mainloop.glib
 

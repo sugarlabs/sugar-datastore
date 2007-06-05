@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
     idx = IndexService()
 ##     idx()
-
+    import gobject 
     # w/o ore.main
     idx.eventloop = gobject.MainLoop()
     class options(object): pass

@@ -80,7 +80,6 @@ class IndexService(Application):
         # because the file isn't encoded anywhere accessible in the
         # create call we must actually get the filename and trigger
         # the indexing on that
-        import pdb;pdb.set_trace()
         filename = self.ds.get_filename(uid)
         r = None
         if filename:
@@ -137,9 +136,10 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_shutdown)
 
     idx = IndexService()
-##     idx()
-    import gobject 
+    ##idx()
     # w/o ore.main
+
+    import gobject 
     idx.eventloop = gobject.MainLoop()
     class options(object): pass
     o = options()

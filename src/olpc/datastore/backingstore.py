@@ -61,7 +61,10 @@ class FileBackingStore(BackingStore):
     def __init__(self, uri, **kwargs):
         """ FileSystemStore(path=<root of managed storage>)
         """
-        self.base = uri
+        self.base = os.path.join(uri, 'store')
+        if not os.path.exists(self.base):
+            os.makedirs(self.base)
+            
         super(FileBackingStore, self).__init__(uri, **kwargs)
         self.options = kwargs
         

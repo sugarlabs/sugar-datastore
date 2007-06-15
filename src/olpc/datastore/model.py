@@ -33,17 +33,19 @@ context = None
 
 def get_session(): return context.current
 
+_marker = object()
 class Content(object):
     def __repr__(self):
         return "<Content id:%s>" % (self.id, )
 
-    def get_property(self, key):
+    def get_property(self, key, default=_marker):
         # mapped to property keys
         session = get_session()
         query = session.query(Property)
         p = query.get_by(content_id=self.id, key=key)
         if not p:
-            raise AttributeError(key)
+            if default is _marker: raise AttributeError(key)
+            return default
         return p.value
 
     def get_properties(self, **kwargs):

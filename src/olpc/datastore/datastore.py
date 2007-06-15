@@ -85,9 +85,18 @@ class DataStore(dbus.service.Object):
         return True
     
 
+    def mount(self, uri):
+        """Given a URI attempt to mount/remount it as a datastore."""
+        # on some media we don't want to write the indexes back to the
+        # medium (maybe an SD card for example) and we'd want to keep
+        # that on the XO itself. In these cases their might be very
+        # little identifying information on the media itself.
+        pass
+    
+    
     # PUBLIC API
     @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature='a{ss}s',
+                         in_signature='a{sv}s',
                          out_signature='s')
     def create(self, props, filelike=None):
         """create a new entry in the datastore. If a file is passed it
@@ -215,7 +224,7 @@ class DataStore(dbus.service.Object):
         return dictionary
 
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='sa{ss}s',
+             in_signature='sa{sv}s',
              out_signature='')
     def update(self, uid, props, filelike=None):
         """Record the current state of the object checked out for a

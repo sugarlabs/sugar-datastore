@@ -20,7 +20,7 @@ from olpc.datastore.model import DateProperty
 from olpc.datastore.model import Model, Content, Property
 from olpc.datastore.utils import create_uid
 from sqlalchemy import create_engine, BoundMetaData
-from sqlalchemy import select, intersect, and_ #, asc, desc
+from sqlalchemy import select, intersect, and_ 
 import atexit
 import logging
 import os, sys
@@ -271,24 +271,21 @@ class QueryManager(object):
         limit = query.pop('limit', None)
         offset = query.pop('offset', None)
 
-        
-##         if order_by:
-##             # resolve key names to columns
-##             if not isinstance(order_by, list):
-##                 logging.debug("bad query, order_by should be a list of property names")                
-##             mode = asc
-##             orders = []
-##             for key in order_by:
-##                 if key.startswith('-'):
-##                     mode = desc
-##                     key = key[1:]
-    
-##                 orders.append(select([properties.c.content_id],
-##                                      properties.c.key==key,
-##                                      order_by = properties.c.value))
+        # ordering is difficult when we are dealing with sets from
+        # more than one source. The model is this.
+        # order by the primary (first) sort criteria, then do the rest
+        # in post processing. This allows use to assemble partially
+        # database sorted results from many sources and quickly
+        # combine them.
+        if order_by:
+            # resolve key names to columns
+            if isinstance(order_by, basestring):
+                order_by = [o.strip() for o in order_by.split(',')]
                 
-##             q = intersect([q]+ orders)
-            
+            if not isinstance(order_by, list):
+                logging.debug("bad query, order_by should be a list of property names")                
+                order_by = None
+                
         if offset: q = q.offset(offset)
         if limit: q = q.limit(limit)
         
@@ -318,8 +315,8 @@ class QueryManager(object):
                 for k,v in query.iteritems():
                     where.append(select([properties.c.content_id],
                                         and_( properties.c.key==k,
-                                              properties.c.value==v))
-                                 )
+                                              properties.c.value==v)))
+                                 
                 statement = intersect(*where)
                 statement.distinct=True
                 
@@ -349,9 +346,35 @@ class QueryManager(object):
 
             result = statement.execute()
             r = [q.get(i[0]) for i in result]
-            return (r, len(r))
+            r = (r, len(r))
         else:
-            return (q.select(), q.count())
+            r = (q.select(), q.count())
+
+        if order_by:
+            # this is a little tricky, these are the partially ordered
+            # results. we now generate a sort function based on the
+            # complete set of ordering criteria which includes the
+            # primary sort criteria as well to keep it stable.
+            def comparator(a, b):
+                # we only sort on properties so
+                for criteria in order_by:
+                    mode = 1 # ascending
+                    if criteria.startswith('-'):
+                        mode = -1
+                        criteria = criteria[1:]
+                    pa = a.get_property(criteria, None)
+                    pb = b.get_property(criteria, None)
+                    r = cmp(pa, pb) * mode
+                    if r != 0: return r
+                return 0
+            
+            d,c = r
+            import rbtree
+            results = rbtree.RBTree(cmp=comparator)
+            for i in d: results[i] = i
+            
+            r = results ,c 
+        return r
     
     # sqla util
     def _resolve(self, content_or_uid):

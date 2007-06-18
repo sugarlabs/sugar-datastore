@@ -13,7 +13,6 @@ class Test(unittest.TestCase):
         p = model.DateProperty('ctime', n)
         assert p.key == "ctime"
         assert p.value.isoformat() == n.isoformat()
-        
 
         
 def test_suite():

@@ -11,7 +11,7 @@ __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
 from sqlalchemy import Table, Column, UniqueConstraint
-from sqlalchemy import String, Integer, Unicode
+from sqlalchemy import String, Integer, Unicode, PickleType
 from sqlalchemy import ForeignKey, Sequence, Index
 from sqlalchemy import mapper, relation
 from sqlalchemy import create_session
@@ -225,7 +225,7 @@ class Model(object):
                            Column('id', Integer, Sequence('property_id_seq'), primary_key=True),
                            Column('content_id', Integer, ForeignKey('content.id')),
                            Column('key', Unicode,  ),
-                           Column('value', Unicode, ),
+                           Column('value', PickleType, ),
                            Column('type', Unicode, ),
                            # unique key to content mapping
                            UniqueConstraint('content_id', 'key',

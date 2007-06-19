@@ -122,13 +122,13 @@ class DataStore(dbus.service.Object):
             filelike.seek(t)
             self.backingstore.create(content, filelike)
 
-        self.Created(content.id, props)
+        self.Created(content.id)
         logging.debug("created %s" % content.id)
         
         return content.id
 
-    @dbus.service.signal(DS_DBUS_INTERFACE, signature="sa{sv}")
-    def Created(self, uid, props): pass
+    @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
+    def Created(self, uid): pass
         
     
     @dbus.service.method(DS_DBUS_INTERFACE,
@@ -241,11 +241,11 @@ class DataStore(dbus.service.Object):
         if content:
             self.querymanager.update(uid, props, filename)
             if filelike: self.backingstore.set(uid, filelike)
-            self.Updated(content.id, props)
+            self.Updated(content.id)
             logger.debug("updated %s" % content.id)
 
-    @dbus.service.signal(DS_DBUS_INTERFACE, signature="sa{sv}")
-    def Updated(self, uid, props): pass
+    @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
+    def Updated(self, uid): pass
 
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',

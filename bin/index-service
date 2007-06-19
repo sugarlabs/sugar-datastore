@@ -75,7 +75,7 @@ class IndexService(Application):
 
         self.eventloop.run()
 
-    def created(self, uid, props):
+    def created(self, uid):
         """An object was created on the bus and we want to index it"""
         # because the file isn't encoded anywhere accessible in the
         # create call we must actually get the filename and trigger
@@ -91,7 +91,7 @@ class IndexService(Application):
         else:
             logger.debug("nothing to index on creation of %s" % uid)
             
-    def updated(self, uid, props):
+    def updated(self, uid):
         """An object was updated on the bus and we want to index it"""
         # because the file isn't encoded anywhere accessible in the
         # create call we must actually get the filename and trigger

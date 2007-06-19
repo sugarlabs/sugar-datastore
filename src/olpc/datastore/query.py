@@ -369,7 +369,7 @@ class QueryManager(object):
                 return 0
             
             d,c = r
-            import rbtree
+
             results = []
             for i in d: results.append(i)
             results.sort(comparator)

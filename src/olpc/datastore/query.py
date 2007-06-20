@@ -515,7 +515,7 @@ class XapianFulltext(object):
         self.index.registerFlattener(unicode, flatten_unicode)
         atexit.register(self.index.close)
         
-    def fulltext_index(self, uid, fileobj):
+    def fulltext_index(self, uid, fileobj, mimetype=None):
         """Index the fileobj relative to uid which should be a
         olpc.datastore.model.Content's uid. The fileobj can be either
         a pathname or an object implementing the Python file ('read')
@@ -525,7 +525,7 @@ class XapianFulltext(object):
         if isinstance(fileobj, basestring):
             # treat it as a pathname
             # use the global converter to try to get text from the file
-            fp = converter(fileobj)
+            fp = converter(fileobj, mimetype=mimetype)
             #piece = XapianBinaryValue
         elif hasattr(fileobj, 'read'):
             # this is an off case, we have to assume utf-8 data
@@ -546,6 +546,7 @@ class XapianFulltext(object):
         try:
             doc = [piece(fp.read())]
             self.index.addDocument(doc, content_id)
+            self.index.flush()
             return True
         except:
             logging.debug("fulltext index exception", exc_info=sys.exc_info())

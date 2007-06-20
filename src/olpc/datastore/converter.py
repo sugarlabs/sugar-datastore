@@ -20,14 +20,13 @@ import codecs
 import logging
 import mimetypes
 import os
-import re
 import subprocess
 import sys
 import tempfile
 
 def guess_mimetype(filename):
     output = subprocess.Popen(["file", "-bi", filename], stdout=subprocess.PIPE).communicate()[0]
-    return output.strip()
+    return output.split()[-1].strip()
 
     
 class subprocessconverter(object):
@@ -98,19 +97,21 @@ class Converter(object):
         if plugin.verify():
             self._converters[ext_or_mime] = plugin
 
-    def __call__(self, filename, encoding=None):
+    def __call__(self, filename, encoding=None, mimetype=None):
         """Convert filename's content to utf-8 encoded text."""        
         #encoding is passed its the known encoding of the
         #contents. When None is passed the encoding is guessed which
         #can result in unexpected or no output.
-        ext = os.path.splitext(filename)[1]
-        mt = mimetypes.guess_type(filename, False)
-        if mt[0] is not None: mt = "%s/%s" % mt
+        if mimetype: mt = mimetype
         else:
-            # try harder to get the mimetype
-            # most datastore files won't have extensions
-            mt = guess_mimetype(filename)
-            
+            ext = os.path.splitext(filename)[1]
+            mt = mimetypes.guess_type(filename, False)
+            if mt[0] is not None: mt = "%s/%s" % mt
+            else:
+                # try harder to get the mimetype
+                # most datastore files won't have extensions
+                mt = guess_mimetype(filename)
+
         converter = self._converters.get(mt)
         if not converter:
             converter = self._converters.get(ext)

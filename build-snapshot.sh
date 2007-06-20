@@ -7,5 +7,3 @@ rm sugar-datastore-$VERSION.tar.bz2
 make distcheck
 
 mv sugar-datastore-$VERSION.tar.bz2 $TARBALL
-scp $TARBALL mpg@devserv.devel.redhat.com:~
-rm $TARBALL

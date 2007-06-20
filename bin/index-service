@@ -83,7 +83,8 @@ class IndexService(Application):
         filename = self.ds.get_filename(uid)
         r = None
         if filename:
-            r = self.fulltext.fulltext_index(uid, filename)
+            mime_type = self.ds.get_properties(uid).get('mime_type', None)
+            r = self.fulltext.fulltext_index(uid, filename, mime_type)
         if r is True:
             logger.debug("index creation of %s" % uid)
         elif r is False:
@@ -99,7 +100,9 @@ class IndexService(Application):
         filename = self.ds.get_filename(uid)
         r = None
         if filename:
-            r = self.fulltext.fulltext_index(uid, filename)
+            mime_type = self.ds.get_properties(uid).get('mime_type', None)
+            print uid, filename, mime_type
+            r = self.fulltext.fulltext_index(uid, filename, mime_type)
         if r is True:
             logger.debug("index update of %s" % uid)
         elif r is False:

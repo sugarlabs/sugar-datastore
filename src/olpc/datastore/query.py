@@ -15,33 +15,33 @@ __license__  = 'The GNU Public License V2+'
 from datetime import datetime
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 from olpc.datastore.converter import converter
-from olpc.datastore.model import BackingStoreContentMapping
 from olpc.datastore.model import DateProperty
 from olpc.datastore.model import Model, Content, Property
+from olpc.datastore.model import BackingStoreContentMapping
 from olpc.datastore.utils import create_uid
+
 from sqlalchemy import create_engine, BoundMetaData
 from sqlalchemy import select, intersect, and_ 
 import atexit
 import logging
 import os, sys
 
-
+_marker = object()
 
 class QueryManager(object):
-    def __init__(self, metadata_uri,
-                 language='en',
-                 fulltext_repo='fulltext',
-                 sync_index=True,
-                 use_fulltext=True):
+    FULLTEXT_NAME = "fulltext"
+    
+    def __init__(self, metadata_uri, **options):
         """
-        The metadata_uri is a sqlalchemy connection string used to
-        find the database.
+        The metadata_uri is a string used to find the database.
         
-        Language is the language code used in the fulltext
-        engine. This helps improve stemming and so on. In the future
-        additional control will be provided.
 
         This will check keywords for:
+               'language'    Language is the language code used in the fulltext
+                             engine. This helps improve stemming and
+                             so on. In the future additional control
+                             will be provided. 
+
                'sync_index' which determines if we use an internal
                              sync index impl or an out of process one
                              via DBus. If the async process is to be
@@ -50,52 +50,51 @@ class QueryManager(object):
                
                'fulltext_repo' the full filepath to which the fulltext
                                index data will be stored
+                               
                'use_fulltext' when true indexing will be performed
 
         """
         self.uri = metadata_uri
-        self.language = language
+        self.options = options
+
+        self.backingstore = None
         self.content_ext = None
 
-        self._handle_options(fulltext_repo=fulltext_repo,
-                             use_fulltext=use_fulltext,
-                             sync_index=sync_index)
-
-    def _handle_option(self, options, key):
-        if key in options:
-            setattr(self, key, options[key])
-
+        
+    def _handle_option(self, options, key, default=_marker):
+        value = options.get(key, default)
+        if value is _marker: raise KeyError(key)
+        setattr(self, key, value)
+            
     def _handle_options(self, **kwargs):
-        self._handle_option(kwargs, 'fulltext_repo')
-        self._handle_option(kwargs, 'use_fulltext')
-        self._handle_option(kwargs, 'sync_index')
+        self._handle_option(kwargs, 'fulltext_repo', None)
+        self._handle_option(kwargs, 'use_fulltext', True)
+        self._handle_option(kwargs, 'sync_index', True)
+        self._handle_option(kwargs, 'language', 'en')
         self.sync_index = self.use_fulltext and self.sync_index
-        
-    def prepare(self, datastore, backingstore, **kwargs):
-        """This is called by the datastore with its backingstore and
-        querymanager. Its assumed that querymanager is None and we are
-        the first in this release
-        """
-        self._handle_options(**kwargs)
-        # XXX: more than on case
-        # while there is a one-to-one mapping of backingstores to
-        # query managers there can be more than one of these pairs
-        # in the whole datastore.        
-        self.datastore = datastore
+
+    def bind_to(self, backingstore):
         self.backingstore = backingstore
-        # Create the mapping extension that will be used to create
-        # content instances
-        if self.backingstore:
-            self.content_ext = BackingStoreContentMapping(self.backingstore)
         
+    def prepare_index(self):
         self.connect_db()
         self.prepare_db()
         self.connect_model()
 
+    def prepare_fulltext(self):
         self.connect_fulltext(self.fulltext_repo, self.language,
                               read_only=not self.sync_index)
+        
+    def prepare(self):
+        """This is called by the datastore with its backingstore and
+        querymanager. Its assumed that querymanager is None and we are
+        the first in this release
+        """
+        self._handle_options(**self.options)
+        self.prepare_index()
+        self.prepare_fulltext()
         return True
-
+    
     def stop(self):
         pass
         
@@ -130,11 +129,13 @@ class QueryManager(object):
 
         if self.sync_index and filelike:
             self.fulltext_index(c.id, filelike)
+        c.backingstore = self.backingstore
         return c
     
     def update(self, content_or_uid, props=None, filelike=None):
         content = self._resolve(content_or_uid)
-
+        content.backingstore = self.backingstore
+        
         if props is not None:
             self._bindProperties(content, props, creating=False)
             self.model.session.flush()
@@ -465,6 +466,14 @@ class SQLiteQueryManager(QueryManager):
     """The default implementation of the query manager. This owns the
     model object and the fulltext object
     """
+
+    def __init__(self, uri, **kwargs):
+        super(SQLiteQueryManager, self).__init__(uri, **kwargs)
+        # now re-write the URI to be sqlite specific
+        # (we were initialized to a namepattern in the proper
+        # directory by the backingstore)
+        self.uri= "sqlite:///%s.db"  % self.uri
+        
     def connect_db(self):
         self.db = create_engine(self.uri)
         self.metadata = BoundMetaData(self.db)
@@ -484,7 +493,7 @@ class SQLiteQueryManager(QueryManager):
             connection.execute("PRAGMA temp_store=MEMORY")
             # XXX: what is the ideal jffs2 page size
             # connection.execute("PRAGMA page_size 4096")
-
+        
     
     def connect_model(self, model=None):
         if model is None: model = Model()
@@ -496,6 +505,7 @@ class SQLiteQueryManager(QueryManager):
         
         self.model = model
 
+            
 
 # Full text support
 def flatten_unicode(value): return value.encode('utf-8')

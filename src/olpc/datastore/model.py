@@ -238,8 +238,9 @@ class Model(object):
         # storage
         storage = Table('storage',
                         self.querymanager.metadata,
-                        Column('id', Integer, primary_key=True),
-                        Column('description', String, )
+                        Column('id', String, primary_key=True),
+                        Column('description', String, ),
+                        Column('uri', String, )
                         )
 
         # storage -> * content

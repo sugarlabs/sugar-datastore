@@ -14,7 +14,11 @@ datastore.
 First, create and connect the store.
 
 >>> from olpc.datastore import DataStore
->>> ds = DataStore('/tmp/test_ds', 'sqlite://')
+>>> from olpc.datastore import backingstore
+>>> ds = DataStore()
+>>> ds.registerBackend(backingstore.FileBackingStore)
+>>> ds.mount("/tmp/test_ds")
+True
 
 Because there is newly created we are going to quickly populate the
 datastore with some content.
@@ -37,7 +41,13 @@ Now we should be able to test the first requirement.
 A find command with out any parameters will return everything in the store.
 
 * Get an object from the store given his uid.
->>> first_uid = results[0]['uid']
+
+Here we manually cycle through the results looking for the title we
+want.
+>>> for item in results:
+...     if item['title'] == 'Document 1':
+...           first_uid = item['uid']
+...           break
 >>> c1 = ds.get(first_uid)
 
 * Get the object metadata.

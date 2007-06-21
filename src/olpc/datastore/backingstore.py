@@ -10,9 +10,14 @@ __docformat__ = 'restructuredtext'
 __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
+import cPickle as pickle
 import sha
 import os
 import subprocess
+
+from olpc.datastore import query
+from olpc.datastore import utils
+
 
 class BackingStore(object):
     """Backing stores manage stable storage. We abstract out the
@@ -32,17 +37,54 @@ class BackingStore(object):
         """
         pass
 
-    def connect(self):
-        """connect to the metadata store"""
-        self._connect()
-
-        
-    def prepare(self, datastore, querymanager, **kwargs):
-        """Verify the backingstore is ready to begin its duties"""
+    # Init phases
+    @staticmethod
+    def parse(uri):
+        """parse the uri into an actionable mount-point.
+        Returns True or False indicating if this backend handles a
+        given uri.
+        """
         return False
 
+    def initialize_and_load(self):
+        """phase to check the state of the located mount point, this
+        method returns True (mount point is valid) or False (invalid
+        or uninitialized mount point).
 
+        self.check() which must return a boolean should check if the
+        result of self.locate() is already a datastore and then
+        initialize/load it according to self.options.
+        
+        When True self.load() is invoked.
+        When False self.create() followed by self.load() is invoked.
+        """
+        if self.check() is False:
+            self.initialize()
+        self.load()
 
+    def check(self):
+        return False
+    
+    def load(self):
+        """load the index for a given mount-point, then initialize its
+        fulltext subsystem. This is the routine that will bootstrap
+        the querymanager (though create() may have just created it)
+        """
+        pass
+
+    def initialize(self):
+        """Initialize a new mount point"""
+        pass
+    
+    # Informational
+    def descriptor(self):
+        """return a dict with atleast the following keys
+              'id' -- the id used to refer explicitly to the mount point
+              'title' -- Human readable identifier for the mountpoint
+              'uri' -- The uri which triggered the mount
+        """
+        pass
+    
 
 class FileBackingStore(BackingStore):
     """ A backing store that directs maps the storage of content
@@ -57,55 +99,123 @@ class FileBackingStore(BackingStore):
     in place. Its the actions create/update that create new revisions
     in the datastore and hence new versions.
     """
+    STORE_NAME = "store"
+    INDEX_NAME = "index"
+    DESCRIPTOR_NAME = "metainfo"
     
     def __init__(self, uri, **kwargs):
         """ FileSystemStore(path=<root of managed storage>)
         """
-        self.base = os.path.join(uri, 'store')
-        if not os.path.exists(self.base):
-            os.makedirs(self.base)
-            
-        super(FileBackingStore, self).__init__(uri, **kwargs)
         self.options = kwargs
+        self.local_querymanager = self.options.get('local_querymanager', True)
+
+        self.uri = uri
+        self.base = os.path.join(uri, self.STORE_NAME)
+        self.querymanager = None
         
-    def prepare(self, datastore, querymanager, **kwargs):
+    # Informational
+    def descriptor(self):
+        """return a dict with atleast the following keys
+              'id' -- the id used to refer explicitly to the mount point
+              'title' -- Human readable identifier for the mountpoint
+              'uri' -- The uri which triggered the mount
+        """
+        # a hidden file with a pickled dict will live in the base
+        # directory for each storage
+        fn = os.path.join(self.base, self.DESCRIPTOR_NAME)
+        if not os.path.exists(fn):
+            # the data isn't there, this could happen for a number of
+            # reasons (the store isn't writeable)
+            desc = {'id' : self.uri,
+                    'uri' : self.uri,
+                    'title' : self.uri
+                    }
+            self.create_descriptor(**desc)
+        else:
+            fp = open(fn, 'r')
+            desc = pickle.load(fp)
+            fp.close()
+            
+        return desc
+    
+    
+    def create_descriptor(self, **kwargs):
+        # create the information descriptor for this store
+        # defaults will be created if need be
+        # passing limited values will leave existing keys in place
+        fn = os.path.join(self.base, self.DESCRIPTOR_NAME)
+        desc = {}
+        if os.path.exists(fn):
+            fp = open(fn, 'r')
+            desc = pickle.load(fp)
+            fp.close()
+        if 'id' not in kwargs: desc['id'] = utils.create_uid()
+        if 'uri' not in kwargs: desc['uri'] = self.uri
+        if not kwargs.get('title', None): desc['title'] = self.uri
+
+        desc.update(kwargs)
+        fp = open(fn, 'w')
+        pickle.dump(desc, fp)
+        fp.close()
+
+    def get_id(self): return self.descriptor()['id']
+    id = property(get_id)
+
+    @staticmethod
+    def parse(uri):
+        return os.path.isabs(uri) or os.path.isdir(uri)
+
+    def check(self):
+        if not os.path.exists(self.uri): return False
+        if not os.path.exists(self.base): return False
+        return True
+    
+    def initialize(self):
         if not os.path.exists(self.base):
             os.makedirs(self.base)
+
+        # examine options and see what the querymanager plan is
+        if self.local_querymanager:
+            # create a local storage using the querymanager
+            # otherwise we will connect the global manager
+            # in load
+            index_name = os.path.join(self.base, self.INDEX_NAME)
+            options = utils.options_for(self.options, 'querymanager_')
+            if 'fulltext_repo' not in options:
+                options['fulltext_repo'] = os.path.join(self.uri,
+                                                        query.DefaultQueryManager.FULLTEXT_NAME)
+                
+            qm = query.DefaultQueryManager(index_name, **options)
+            # This will ensure the fulltext and so on are all assigned
+            qm.prepare()
+            qm.bind_to(self)
+            self.create_descriptor(title=self.options.get('title', None))
+            self.querymanager = qm
+            
+    def load(self):
+        if not self.querymanager and self.local_querymanager:
+            # create a local storage using the querymanager
+            # otherwise we will connect the global manager
+            # in load
+            index_name = os.path.join(self.base, self.INDEX_NAME)
+            qm = query.DefaultQueryManager(index_name,
+                                                  **utils.options_for(self.options,
+                                                                      'querymanager_'))
+            # This will ensure the fulltext and so on are all assigned
+            qm.prepare()
+            qm.bind_to(self)
+            self.querymanager = qm
+            
+    def bind_to(self, datastore):
+        ## signal from datastore that we are being bound to it
         self.datastore = datastore
-        self.querymanager = querymanager
-        return True
 
     def _translatePath(self, uid):
         """translate a UID to a path name"""
         return os.path.join(self.base, str(uid))
 
-    def create(self, content, filelike):
-        self._writeContent(content.id, filelike, replace=False)
-        
-    
-    def get(self, uid, env=None, allowMissing=False):
-        path = self._translatePath(uid)
-        if not os.path.exists(path):
-            raise KeyError("object for uid:%s missing" % uid)            
-        else:
-            fp = open(path, 'r')
-            # now return a Content object from the model associated with
-            # this file object
-        return self._mapContent(uid, fp, path, env)
-
-    def set(self, uid, filelike):
-        self._writeContent(uid, filelike)
-
-    def delete(self, uid, allowMissing=True):
-        path = self._translatePath(uid)
-        if os.path.exists(path):
-            os.unlink(path)
-        else:
-            if not allowMissing:
-                raise KeyError("object for uid:%s missing" % uid)            
-        
     def _targetFile(self, uid, fp, path, env):
-        targetpath = os.path.join('/tmp/', path.replace('/', '_'))
+        targetpath = os.path.join('/tmp/', path.replace('/', '_').replace('.', '__'))
         if subprocess.call(['cp', path, targetpath]):
             raise OSError("unable to create working copy")
         return open(targetpath, 'rw')
@@ -118,16 +228,17 @@ class FileBackingStore(BackingStore):
         # we need to map a copy of the content from the backingstore into the
         # activities addressable space.
         # map this to a rw file
-        targetfile = self._targetFile(uid, fp, path, env)
-        content.file = targetfile
+        if fp:
+            targetfile = self._targetFile(uid, fp, path, env)
+            content.file = targetfile
         
-        if self.options.get('verify', False):
-            c  = sha.sha()
-            for line in targetfile:
-                c.update(line)
-            fp.seek(0)
-            if c.hexdigest() != content.checksum:
-                raise ValueError("Content for %s corrupt" % uid)
+            if self.options.get('verify', False):
+                c  = sha.sha()
+                for line in targetfile:
+                    c.update(line)
+                fp.seek(0)
+                if c.hexdigest() != content.checksum:
+                    raise ValueError("Content for %s corrupt" % uid)
         return content
 
     def _writeContent(self, uid, filelike, replace=True):
@@ -148,5 +259,55 @@ class FileBackingStore(BackingStore):
             content = self.querymanager.get(uid)
             content.checksum = c.hexdigest()
         
+    # File Management API
+    def create(self, props, filelike):
+        content = self.querymanager.create(props, filelike)
+        filename = filelike
+        if filelike:
+            if isinstance(filelike, basestring):
+                # lets treat it as a filename
+                filelike = open(filelike, "r")
+            filelike.seek(0)
+            self._writeContent(content.id, filelike, replace=False)
+        return content
     
+    def get(self, uid, env=None, allowMissing=False):
+        content = self.querymanager.get(uid)
+        if not content: raise KeyError(uid)
+        path = self._translatePath(uid)
+        fp = None
+        if os.path.exists(path):
+            fp = open(path, 'r')
+            # now return a Content object from the model associated with
+            # this file object
+        return self._mapContent(uid, fp, path, env)
+
+    def update(self, uid, props, filelike=None):
+        self.querymanager.update(uid, props, filelike)
+        filename = filelike
+        if filelike:
+            if isinstance(filelike, basestring):
+                # lets treat it as a filename
+                filelike = open(filelike, "r")
+            filelike.seek(0)
+            self.set(uid, filelike)
+
+    def set(self, uid, filelike):
+        self._writeContent(uid, filelike)
+
+    def delete(self, uid, allowMissing=True):
+        self.querymanager.delete(uid)
+        path = self._translatePath(uid)
+        if os.path.exists(path):
+            os.unlink(path)
+        else:
+            if not allowMissing:
+                raise KeyError("object for uid:%s missing" % uid)            
+        
     
+
+    def find(self, query):
+        return self.querymanager.find(query)
+
+    def stop(self):
+        self.querymanager.stop()

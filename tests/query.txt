@@ -1,5 +1,3 @@
-Status: Alpha - Implemented
-
 This document outlines the basic usage of the olpc.datastore.query and
 olpc.datastore.model modules. Not that these are not use independ of
 the olpc.datastore.backend which in turn is only accessed through the
@@ -12,8 +10,8 @@ First lets create a query manager
 
 >>> from olpc.datastore.query import DefaultQueryManager
 >>> from olpc.datastore.model import Property
->>> qm = DefaultQueryManager("sqlite://", fulltext_repo='/tmp/_test_fulltext')
->>> qm.prepare(None, None)
+>>> qm = DefaultQueryManager("/tmp/_test_index", fulltext_repo='/tmp/_test_fulltext')
+>>> qm.prepare()
 True
 
 That will create the memory backed database which will be used in this
@@ -233,5 +231,6 @@ True
 
 Now for politeness we shut everything down
 >>> qm.stop()
->>> import shutil
+>>> import shutil, os
 >>> shutil.rmtree('/tmp/_test_fulltext')
+>>> os.unlink('/tmp/_test_index.db')

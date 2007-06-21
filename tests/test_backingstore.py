@@ -2,6 +2,7 @@ import unittest
 from StringIO import StringIO
 
 from olpc.datastore import backingstore
+from sqlalchemy import clear_mappers
 import os
 
 DEFAULT_STORE = '/tmp/_bs_test'
@@ -10,8 +11,11 @@ class Test(unittest.TestCase):
     def tearDown(self):
         if os.path.exists(DEFAULT_STORE):
             os.system("rm -rf %s" % DEFAULT_STORE)
+
+        clear_mappers()
             
     def test_fsstore(self):
+        clear_mappers()
         bs = backingstore.FileBackingStore(DEFAULT_STORE)
         bs.initialize_and_load()
         bs.create_descriptor()

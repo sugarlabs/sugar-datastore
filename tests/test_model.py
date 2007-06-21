@@ -2,7 +2,7 @@ import unittest
 from testutils import tmpData
 
 from olpc.datastore import DataStore
-from olpc.datastore import model 
+from olpc.datastore import model, backingstore
 import datetime
 
 class Test(unittest.TestCase):
@@ -16,8 +16,10 @@ class Test(unittest.TestCase):
         assert p.value.isoformat() == n.isoformat()
 
     def test_binaryproperty(self):
-        ds = DataStore('/tmp/test_ds', 'sqlite://')
-
+        ds = DataStore()
+        ds.registerBackend(backingstore.FileBackingStore)
+        ds.mount('/tmp/test_ds')
+        
         data = open('test.jpg', 'r').read()
         # binary data with \0's in it can cause dbus errors here
         uid = ds.create(dict(title="Document 1", thumbnail=data),

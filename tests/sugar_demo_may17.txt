@@ -1,7 +1,11 @@
 How Sugar will interact with the DS for the May 17th demo in Argentina:
 
 >>> from olpc.datastore import DataStore
->>> ds = DataStore('/tmp/test_ds', 'sqlite://')
+>>> from olpc.datastore import backingstore
+>>> ds = DataStore()
+>>> ds.registerBackend(backingstore.FileBackingStore)
+>>> ds.mount("/tmp/test_ds")
+True
 
 Create an entry without data:
 >>> uid = ds.create(dict(title="New entry"), '')

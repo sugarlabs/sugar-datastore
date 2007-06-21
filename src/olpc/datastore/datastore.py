@@ -10,14 +10,9 @@ __docformat__ = 'restructuredtext'
 __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
-
-from olpc.datastore import backingstore
-from olpc.datastore import query
-from olpc.datastore import utils
 import logging
 import dbus.service
 import dbus.mainloop.glib
-
 from StringIO import StringIO
 
 # the name used by the logger
@@ -31,69 +26,131 @@ logger = logging.getLogger(DS_LOG_CHANNEL)
 
 class DataStore(dbus.service.Object):
 
-    def __init__(self, backingstore=None, querymanager=None, **options):
+    def __init__(self, **options):
+        self.options = options
+        self.backends = []
+        self.mountpoints = {}
+        self.root = None
+        
         # global handle to the main look
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         session_bus = dbus.SessionBus()
 
         self.bus_name = dbus.service.BusName(DS_SERVICE,
                                              bus=session_bus,
-                                             replace_existing=True,
-                                             allow_replacement=True)
+                                             replace_existing=False,
+                                             allow_replacement=False)
         dbus.service.Object.__init__(self, self.bus_name, DS_OBJECT_PATH)
-        self.options = options
+
         
-        self.backingstore = None
-        self.querymanager = None
-        if backingstore: self.connect_backingstore(backingstore)
-        if querymanager: self.connect_querymanager(querymanager)
+##         self.backingstore = None
+##         self.querymanager = None
+##         if backingstore: self.connect_backingstore(backingstore)
+##         if querymanager: self.connect_querymanager(querymanager)
+
+
+    ####
+    ## Backend API
+    ## register a set of datastore backend factories which will manage
+    ## storage
+    def registerBackend(self, backendClass):
+        self.backends.append(backendClass)
         
-    def connect_backingstore(self, uri_or_backingstore):
+    ## MountPoint API
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature="sa{sv}",
+                         out_signature='b')
+    def mount(self, uri, options=None):
+        """(re)Mount a new backingstore for this datastore.
+        Returns a Boolean indicating if it worked or not.
+        """
+        # on some media we don't want to write the indexes back to the
+        # medium (maybe an SD card for example) and we'd want to keep
+        # that on the XO itself. In these cases their might be very
+        # little identifying information on the media itself.
+        if not options: options = {}
+        mp = self.connect_backingstore(uri, **options)
+        if not mp: return False
+        if mp.id in self.mountpoints:
+            self.mountpoints[mp.id].stop()
+
+        mp.bind_to(self)
+        self.mountpoints[mp.id] = mp
+        if self.root is None:
+            self.root = mp
+        return True
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature="",
+                         out_signature="aa{ss}")
+    def mounts(self):
+        """return a list of mount point descriptiors where each
+        descriptor is a dict containing atleast the following keys:
+        'id' -- the id used to refer explicitly to the mount point
+        'title' -- Human readable identifier for the mountpoint
+        'uri' -- The uri which triggered the mount
+        """
+        return [mp.descriptor() for mp in self.mountpoints]
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature="s",
+                         out_signature="")
+    def unmount(self, mountpoint_id):
+        """Unmount a mountpoint by id"""
+        if mountpoint_id not in self.mountpoints: return
+        self.mountpoints[mountpoint_id].stop()
+        del self.mountpoints[mountpoint_id]
+    ### End Mount Points
+    
+    def connect_backingstore(self, uri, **kwargs):
         """
         connect to a new backing store
 
         @returns: Boolean for success condition
         """
-        if isinstance(uri_or_backingstore, basestring):
-            # XXX: divert to factory
-            # for now we assume a local FS store
-            bs = backingstore.FileBackingStore(uri_or_backingstore)
-        else:
-            bs = uri_or_backingstore
-
-        self.backingstore = bs
-        return self._bind()
-
-    def connect_querymanager(self, uri_or_querymanager):
-        if isinstance(uri_or_querymanager, basestring):
-            qm = query.DefaultQueryManager(uri_or_querymanager)
-        else:
-            qm = uri_or_querymanager
-        self.querymanager = qm
-        return self._bind()
+        bs = None
+        for backend in self.backends:
+            if backend.parse(uri) is True:
+                bs = backend(uri, **kwargs)
+                bs.initialize_and_load()
+                # The backingstore should be ready to run
+                break
+        return bs
     
-    def _bind(self):
-        """Notify components they are being bound to this datastore"""
-        # verify that both are set, then init both in order
-        if not self.backingstore or not self.querymanager:
-            return False
+    #return self._bind()
+
+##     def connect_querymanager(self, uri_or_querymanager):
+##         if isinstance(uri_or_querymanager, basestring):
+##             qm = query.DefaultQueryManager(uri_or_querymanager)
+##         else:
+##             qm = uri_or_querymanager
+##         self.querymanager = qm
+##         return self._bind()
+    
+##     def _bind(self):
+##         """Notify components they are being bound to this datastore"""
+##         # verify that both are set, then init both in order
+##         if not self.backingstore or not self.querymanager:
+##             return False
         
-        self.backingstore.prepare(self, self.querymanager,
-                                  **utils.options_for(self.options, 'backingstore_'))
-        self.querymanager.prepare(self, self.backingstore,
-                                  **utils.options_for(self.options, 'querymanager_'))
-        return True
-    
+##         self.backingstore.prepare(self, self.querymanager,
+##                                   **utils.options_for(self.options, 'backingstore_'))
+##         self.querymanager.prepare(self, self.backingstore,
+##                                   **utils.options_for(self.options, 'querymanager_'))
+##         return True
 
-    def mount(self, uri):
-        """Given a URI attempt to mount/remount it as a datastore."""
-        # on some media we don't want to write the indexes back to the
-        # medium (maybe an SD card for example) and we'd want to keep
-        # that on the XO itself. In these cases their might be very
-        # little identifying information on the media itself.
-        pass
-    
-    
+    def _resolveMountpoint(self, mountpoint=None):
+        if isinstance(mountpoint, dict):
+            mountpoint = mountpoint.get('mountpoint')
+            
+        if mountpoint is not None:
+            # this should be the id of a mount point
+            mp = self.mountpoints[mountpoint]
+        else:
+            # the first one is the default
+            mp = self.root
+        return mp
+
     # PUBLIC API
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='a{sv}s',
@@ -109,19 +166,8 @@ class DataStore(dbus.service.Object):
         new objects are created in the first datastore. More control
         over this process can come at a later time.
         """
-        filename = filelike
-        if filelike:
-            if isinstance(filelike, basestring):
-                # lets treat it as a filename
-                filelike = open(filelike, "r")
-            t = filelike.tell()
-
-        content = self.querymanager.create(props, filename)
-
-        if filelike:
-            filelike.seek(t)
-            self.backingstore.create(content, filelike)
-
+        mp = self._resolveMountpoint(props)
+        content = mp.create(props, filelike)
         self.Created(content.id)
         logging.debug("created %s" % content.id)
         
@@ -140,6 +186,33 @@ class DataStore(dbus.service.Object):
         results = self.querymanager.find()
         return [r.id for r in results]
 
+
+    def _multiway_search(self, query, **kwargs):
+        mountpoints = kwargs.pop('mountpoints',
+                                 self.mountpoints)
+        mountpoints = [self.mountpoints[m] for m in mountpoints]
+        results = []
+        # XXX: the merge will become *much* more complex in when
+        # distributed versioning is implemented.
+
+        if query: kwargs.update(query)
+
+        # collect
+        for mp in mountpoints:
+            result, count =  mp.find(kwargs)
+            results.append(result)
+
+        # merge
+        d = {}
+        for res in results:
+            for hit in res:
+                existing = d.get(hit.id)
+                if not existing or \
+                   existing.get_property('mtime') < hit.get_property('mtime'):
+                    # XXX: age/version check
+                    d[hit.id] = hit
+        return d, len(d)
+    
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='a{sv}',
              out_signature='aa{sv}u')
@@ -169,9 +242,13 @@ class DataStore(dbus.service.Object):
         """
         # only goes to the primary now. Punting on the merge case
         include_files = kwargs.pop('include_files', False)
-        results, count = self.querymanager.find(query, **kwargs)
+
+        # distribute the search to all the mountpoints unless a
+        # backingstore id set is specified
+        results, count = self._multiway_search(query, **kwargs)
+
         d = []
-        for r in results:
+        for r in results.itervalues():
             props =  {}
             for prop in r.get_properties():
                 props[prop.key] = prop.marshall()
@@ -189,10 +266,12 @@ class DataStore(dbus.service.Object):
         return (d, len(results))
 
     def get(self, uid):
-        c = self.querymanager.get(uid)
-        # XXX: this is a workaround to the sqla mapping extension not
-        # being properly called in the current codebase
-        if c: c.backingstore = self.backingstore
+        mp = self._resolveMountpoint()
+        c = mp.get(uid)
+        if not c:
+            for mp in self.mountpoints.itervalues():
+                c = mp.get(uid)
+                if c: break
         return c
 
     @dbus.service.method(DS_DBUS_INTERFACE,
@@ -201,8 +280,8 @@ class DataStore(dbus.service.Object):
     def get_filename(self, uid):
         content = self.get(uid)
         if content:
-            try: return self.backingstore.get(uid).filename
-            except KeyError: pass
+            try: return content.filename
+            except AttributeError: pass
         return ''
         
     def get_data(self, uid):
@@ -231,16 +310,9 @@ class DataStore(dbus.service.Object):
         given uid. If contents have been written to another file for
         example. You must create it
         """
-        filename = filelike
-        if filelike:
-            if isinstance(filelike, basestring):
-                filelike = open(filelike, 'r')
-
-                
         content = self.get(uid)
-        if content:
-            self.querymanager.update(uid, props, filename)
-            if filelike: self.backingstore.set(uid, filelike)
+        content.backingstore.update(uid, props, filelike)
+        if filelike:
             self.Updated(content.id)
             logger.debug("updated %s" % content.id)
 
@@ -253,8 +325,7 @@ class DataStore(dbus.service.Object):
     def delete(self, uid):
         content = self.get(uid)
         if content:
-            self.querymanager.delete(uid)
-            self.backingstore.delete(uid)
+            content.backingstore.delete(uid)
             self.Deleted(content.id)
             logger.debug("deleted %s" % content.id)
 
@@ -265,7 +336,8 @@ class DataStore(dbus.service.Object):
         """shutdown the service"""
         self.Stopped()
         self._connection.get_connection()._unregister_object_path(DS_OBJECT_PATH)
-        self.querymanager.stop()
+        for mp in self.mountpoints.values(): mp.stop()
+
 
     @dbus.service.signal(DS_DBUS_INTERFACE)
     def Stopped(self): pass

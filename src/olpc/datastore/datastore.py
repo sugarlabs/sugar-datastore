@@ -43,12 +43,6 @@ class DataStore(dbus.service.Object):
         dbus.service.Object.__init__(self, self.bus_name, DS_OBJECT_PATH)
 
         
-##         self.backingstore = None
-##         self.querymanager = None
-##         if backingstore: self.connect_backingstore(backingstore)
-##         if querymanager: self.connect_querymanager(querymanager)
-
-
     ####
     ## Backend API
     ## register a set of datastore backend factories which will manage
@@ -117,27 +111,6 @@ class DataStore(dbus.service.Object):
                 break
         return bs
     
-    #return self._bind()
-
-##     def connect_querymanager(self, uri_or_querymanager):
-##         if isinstance(uri_or_querymanager, basestring):
-##             qm = query.DefaultQueryManager(uri_or_querymanager)
-##         else:
-##             qm = uri_or_querymanager
-##         self.querymanager = qm
-##         return self._bind()
-    
-##     def _bind(self):
-##         """Notify components they are being bound to this datastore"""
-##         # verify that both are set, then init both in order
-##         if not self.backingstore or not self.querymanager:
-##             return False
-        
-##         self.backingstore.prepare(self, self.querymanager,
-##                                   **utils.options_for(self.options, 'backingstore_'))
-##         self.querymanager.prepare(self, self.backingstore,
-##                                   **utils.options_for(self.options, 'querymanager_'))
-##         return True
 
     def _resolveMountpoint(self, mountpoint=None):
         if isinstance(mountpoint, dict):
@@ -187,7 +160,7 @@ class DataStore(dbus.service.Object):
         return [r.id for r in results]
 
 
-    def _multiway_search(self, query, **kwargs):
+    def _multiway_search(self, **kwargs):
         mountpoints = kwargs.pop('mountpoints',
                                  self.mountpoints)
         mountpoints = [self.mountpoints[m] for m in mountpoints]
@@ -195,7 +168,6 @@ class DataStore(dbus.service.Object):
         # XXX: the merge will become *much* more complex in when
         # distributed versioning is implemented.
 
-        if query: kwargs.update(query)
 
         # collect
         for mp in mountpoints:
@@ -211,6 +183,9 @@ class DataStore(dbus.service.Object):
                    existing.get_property('mtime') < hit.get_property('mtime'):
                     # XXX: age/version check
                     d[hit.id] = hit
+
+        # ordering (when needed)
+        
         return d, len(d)
     
     @dbus.service.method(DS_DBUS_INTERFACE,
@@ -241,14 +216,58 @@ class DataStore(dbus.service.Object):
         to start an activity makes sense.
         """
         # only goes to the primary now. Punting on the merge case
+        if isinstance(query, dict):
+            kwargs.update(query)
+
         include_files = kwargs.pop('include_files', False)
+        order_by = kwargs.pop('order_by', [])
 
         # distribute the search to all the mountpoints unless a
         # backingstore id set is specified
-        results, count = self._multiway_search(query, **kwargs)
+        results, count = self._multiway_search(**kwargs)
 
+        
+        # ordering is difficult when we are dealing with sets from
+        # more than one source. The model is this.
+        # order by the primary (first) sort criteria, then do the rest
+        # in post processing. This allows use to assemble partially
+        # database sorted results from many sources and quickly
+        # combine them.
+        if order_by:
+            # resolve key names to columns
+            if isinstance(order_by, basestring):
+                order_by = [o.strip() for o in order_by.split(',')]
+                
+            if not isinstance(order_by, list):
+                logging.debug("bad query, order_by should be a list of property names")                
+                order_by = None
+
+            # generate a sort function based on the complete set of
+            # ordering criteria which includes the primary sort
+            # criteria as well to keep it stable.
+            def comparator(a, b):
+                # we only sort on properties so
+                for criteria in order_by:
+                    mode = 1 # ascending
+                    if criteria.startswith('-'):
+                        mode = -1
+                        criteria = criteria[1:]
+                    pa = a.get_property(criteria, None)
+                    pb = b.get_property(criteria, None)
+                    r = cmp(pa, pb) * mode
+                    if r != 0: return r
+                return 0
+            
+
+
+            r = results.values()
+            r.sort(comparator)
+            results = r
+        else:
+            results = results.itervalues()
+            
         d = []
-        for r in results.itervalues():
+        for r in results:
             props =  {}
             for prop in r.get_properties():
                 props[prop.key] = prop.marshall()

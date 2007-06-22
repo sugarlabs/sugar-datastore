@@ -268,25 +268,9 @@ class QueryManager(object):
         # the content using the full text index which will result in a
         # list of id's which must be mapped into the query
         # fulltext_threshold is the minimum acceptable relevance score
-        order_by = query.pop('order_by', [])
         limit = query.pop('limit', None)
         offset = query.pop('offset', None)
 
-        # ordering is difficult when we are dealing with sets from
-        # more than one source. The model is this.
-        # order by the primary (first) sort criteria, then do the rest
-        # in post processing. This allows use to assemble partially
-        # database sorted results from many sources and quickly
-        # combine them.
-        if order_by:
-            # resolve key names to columns
-            if isinstance(order_by, basestring):
-                order_by = [o.strip() for o in order_by.split(',')]
-                
-            if not isinstance(order_by, list):
-                logging.debug("bad query, order_by should be a list of property names")                
-                order_by = None
-                
         if offset: q = q.offset(offset)
         if limit: q = q.limit(limit)
         
@@ -351,31 +335,6 @@ class QueryManager(object):
         else:
             r = (q.select(), q.count())
 
-        if order_by:
-            # this is a little tricky, these are the partially ordered
-            # results. we now generate a sort function based on the
-            # complete set of ordering criteria which includes the
-            # primary sort criteria as well to keep it stable.
-            def comparator(a, b):
-                # we only sort on properties so
-                for criteria in order_by:
-                    mode = 1 # ascending
-                    if criteria.startswith('-'):
-                        mode = -1
-                        criteria = criteria[1:]
-                    pa = a.get_property(criteria, None)
-                    pb = b.get_property(criteria, None)
-                    r = cmp(pa, pb) * mode
-                    if r != 0: return r
-                return 0
-            
-            d,c = r
-
-            results = []
-            for i in d: results.append(i)
-            results.sort(comparator)
-            
-            r = results ,c 
         return r
     
     # sqla util

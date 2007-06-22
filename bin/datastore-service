@@ -3,7 +3,7 @@ import sys, os, signal
 import gobject
 import dbus.service
 import dbus.mainloop.glib
-from olpc.datastore import DataStore, DS_LOG_CHANNEL
+from olpc.datastore import DataStore, DS_LOG_CHANNEL, backingstore
 from olpc.datastore.indexer import INDEX_SERVICE, INDEX_OBJECT_PATH
 import logging
 
@@ -11,7 +11,6 @@ import logging
 profile = os.environ.get('SUGAR_PROFILE', 'default')
 base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
 repo_dir = os.path.join(base_dir, 'datastore')
-db_dir   = "sqlite:///%s/datastore.db"  % repo_dir
 
 # operate from the repo directory
 if not os.path.exists(repo_dir): os.makedirs(repo_dir)
@@ -48,10 +47,13 @@ if not sys.stdin.isatty():
 # build the datastore
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 bus = dbus.SessionBus()
-ds = DataStore(repo_dir, db_dir, querymanager_sync_index=False)
+
+ds = DataStore(querymanager_sync_index=False)
+ds.registerBackend(backingstore.FileBackingStore)
+ds.mount(repo_dir)
 
 # and run it 
-logger.info("Starting Datastore %s:%s" % (repo_dir, db_dir))
+logger.info("Starting Datastore %s" % (repo_dir))
 mainloop = gobject.MainLoop()
 
 def handle_shutdown(signum, frame):

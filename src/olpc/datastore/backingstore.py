@@ -187,8 +187,8 @@ class FileBackingStore(BackingStore):
                 
             qm = query.DefaultQueryManager(index_name, **options)
             # This will ensure the fulltext and so on are all assigned
-            qm.prepare()
             qm.bind_to(self)
+            qm.prepare()
             self.create_descriptor(title=self.options.get('title', None))
             self.querymanager = qm
             
@@ -198,12 +198,16 @@ class FileBackingStore(BackingStore):
             # otherwise we will connect the global manager
             # in load
             index_name = os.path.join(self.base, self.INDEX_NAME)
-            qm = query.DefaultQueryManager(index_name,
-                                                  **utils.options_for(self.options,
-                                                                      'querymanager_'))
+            if 'fulltext_repo' not in self.options:
+                self.options['fulltext_repo'] = os.path.join(self.uri,
+                                                             query.DefaultQueryManager.FULLTEXT_NAME)
+
+            qm = query.DefaultQueryManager(index_name, **self.options)
+
             # This will ensure the fulltext and so on are all assigned
-            qm.prepare()
             qm.bind_to(self)
+            qm.prepare()
+
             self.querymanager = qm
             
     def bind_to(self, datastore):

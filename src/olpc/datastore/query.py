@@ -67,7 +67,7 @@ class QueryManager(object):
         setattr(self, key, value)
             
     def _handle_options(self, **kwargs):
-        self._handle_option(kwargs, 'fulltext_repo', None)
+        self._handle_option(kwargs, 'fulltext_repo')
         self._handle_option(kwargs, 'use_fulltext', True)
         self._handle_option(kwargs, 'sync_index', True)
         self._handle_option(kwargs, 'language', 'en')

@@ -160,9 +160,8 @@ class DataStore(dbus.service.Object):
         return [r.id for r in results]
 
 
-    def _multiway_search(self, **kwargs):
-        mountpoints = kwargs.pop('mountpoints',
-                                 self.mountpoints)
+    def _multiway_search(self, query):
+        mountpoints = query.pop('mountpoints', self.mountpoints)
         mountpoints = [self.mountpoints[m] for m in mountpoints]
         results = []
         # XXX: the merge will become *much* more complex in when
@@ -171,7 +170,7 @@ class DataStore(dbus.service.Object):
 
         # collect
         for mp in mountpoints:
-            result, count =  mp.find(kwargs)
+            result, count =  mp.find(query)
             results.append(result)
 
         # merge
@@ -224,7 +223,7 @@ class DataStore(dbus.service.Object):
 
         # distribute the search to all the mountpoints unless a
         # backingstore id set is specified
-        results, count = self._multiway_search(**kwargs)
+        results, count = self._multiway_search(kwargs)
 
         
         # ordering is difficult when we are dealing with sets from
@@ -264,7 +263,7 @@ class DataStore(dbus.service.Object):
             r.sort(comparator)
             results = r
         else:
-            results = results.itervalues()
+            results = results.values()
             
         d = []
         for r in results:

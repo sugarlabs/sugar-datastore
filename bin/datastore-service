@@ -50,7 +50,7 @@ bus = dbus.SessionBus()
 
 ds = DataStore(querymanager_sync_index=False)
 ds.registerBackend(backingstore.FileBackingStore)
-ds.mount(repo_dir)
+ds.mount(repo_dir, {'sync_index': False})
 
 # and run it 
 logger.info("Starting Datastore %s" % (repo_dir))

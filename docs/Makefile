@@ -4,8 +4,9 @@
 ## this file attempt to make this happen for some of the common doc
 ## systems.
 ######################################################################
+export PYTHON=python
 export PRODUCT_DIR=${CURDIR}/../
-export PYTHONPATH=`./getbuildpath.py`
+export PYTHONPATH=`${PYTHON} ./getbuildpath.py`
 
 # If you have epydoc installed feel free
 #DOC_TARGETS += epydoc_pdf

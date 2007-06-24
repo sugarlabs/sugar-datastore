@@ -13,12 +13,15 @@ __license__  = 'The GNU Public License V2+'
 import cPickle as pickle
 import sha
 import os
+import re
 import subprocess
 import time
 
 from olpc.datastore import query
 from olpc.datastore import utils
 
+# changing this pattern impacts _targetFile
+filename_attempt_pattern = re.compile('\(\d+\)$')
 
 class BackingStore(object):
     """Backing stores manage stable storage. We abstract out the
@@ -236,12 +239,17 @@ class FileBackingStore(BackingStore):
             # here we look for a non-colliding name
             # this is potentially a race and so we abort after a few
             # attempts
+            targetpath, ext = os.path.splitext(targetpath)
+            
+            if filename_attempt_pattern.search(targetpath):
+                targetpath = filename_attempt_pattern.sub('', targetpath)
+                
             attempt += 1
             if attempt > 9:
                 targetpath = "%s(%s).%s" % (targetpath, time.time(), ext)
                 break
-            targetpath, ext = os.path.splitext(targetpath)
-            targetpath = "%s(%s).%s" % (targetpath, attempt, ext)
+
+            targetpath = "%s(%s)%s" % (targetpath, attempt, ext)
 
         path = self._translatePath(uid)
         if subprocess.call(['cp', path, targetpath]):

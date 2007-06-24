@@ -102,9 +102,9 @@ class Converter(object):
         #encoding is passed its the known encoding of the
         #contents. When None is passed the encoding is guessed which
         #can result in unexpected or no output.
+        ext = os.path.splitext(filename)[1]
         if mimetype: mt = mimetype
         else:
-            ext = os.path.splitext(filename)[1]
             mt = mimetypes.guess_type(filename, False)
             if mt[0] is not None: mt = "%s/%s" % mt
             else:

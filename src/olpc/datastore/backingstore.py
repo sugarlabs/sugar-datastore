@@ -14,6 +14,7 @@ import cPickle as pickle
 import sha
 import os
 import subprocess
+import time
 
 from olpc.datastore import query
 from olpc.datastore import utils
@@ -216,10 +217,33 @@ class FileBackingStore(BackingStore):
 
     def _translatePath(self, uid):
         """translate a UID to a path name"""
+        # paths into the datastore
         return os.path.join(self.base, str(uid))
 
-    def _targetFile(self, uid, fp, path, env):
-        targetpath = os.path.join('/tmp/', path.replace('/', '_').replace('.', '__'))
+    def _targetFile(self, uid, target=None, ext=None, env=None):
+        # paths out of the datastore, working copy targets
+        if target: targetpath = target
+        else:
+            targetpath = uid.replace('/', '_').replace('.', '__')
+            if ext: targetpath = "%s.%s" % (targetpath, ext)
+
+        base = '/tmp'
+        if env: base = env.get('cwd', base)
+        
+        targetpath = os.path.join(base, targetpath)
+        attempt = 0
+        while os.path.exists(targetpath):
+            # here we look for a non-colliding name
+            # this is potentially a race and so we abort after a few
+            # attempts
+            attempt += 1
+            if attempt > 9:
+                targetpath = "%s(%s).%s" % (targetpath, time.time(), ext)
+                break
+            targetpath, ext = os.path.splitext(targetpath)
+            targetpath = "%s(%s).%s" % (targetpath, attempt, ext)
+
+        path = self._translatePath(uid)
         if subprocess.call(['cp', path, targetpath]):
             raise OSError("unable to create working copy")
         return open(targetpath, 'rw')
@@ -228,12 +252,16 @@ class FileBackingStore(BackingStore):
         """map a content object and the file in the repository to a
         working copy.
         """
+        # env would contain things like cwd if we wanted to map to a
+        # known space
+        
         content = self.querymanager.get(uid)
         # we need to map a copy of the content from the backingstore into the
         # activities addressable space.
         # map this to a rw file
         if fp:
-            targetfile = self._targetFile(uid, fp, path, env)
+            target, ext = content.suggestName()
+            targetfile = self._targetFile(uid, target, ext, env)
             content.file = targetfile
         
             if self.options.get('verify', False):
@@ -280,6 +308,7 @@ class FileBackingStore(BackingStore):
         if not content: raise KeyError(uid)
         path = self._translatePath(uid)
         fp = None
+        # not all content objects have a file
         if os.path.exists(path):
             fp = open(path, 'r')
             # now return a Content object from the model associated with

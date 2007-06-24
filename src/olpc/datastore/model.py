@@ -19,6 +19,8 @@ from sqlalchemy import MapperExtension, EXT_PASS
 from sqlalchemy.ext.sessioncontext import SessionContext
 
 import datetime
+import mimetypes
+import os
 import time
 
 # XXX: Open issues
@@ -68,6 +70,30 @@ class Content(object):
     @property
     def filename(self): return self.file.name
 
+    def suggestName(self):
+        # we look for certain known property names
+        # - filename
+        # - ext
+        # and create a base file name that will be used for the
+        # checkout name
+        filename = self.get_property('filename', None)
+        ext = self.get_property('ext', '')
+
+        if filename:
+            f, e = os.path.splitext(filename)
+            if e: return filename, None
+            if ext: return "%s.%s" % (filename, ext), None
+        elif ext:
+            return None, ext
+        else:
+            # try to get an extension from the mimetype if available
+            mt = self.get_property('mime_type', None)
+            if mt:
+                ext = mimetypes.guess_extension(mt)
+                if ext: return None, ext
+        return None, None
+
+        
 
     def get_data(self):
         f = self.file

@@ -1,0 +1,37 @@
+Once the datastore is running its important to be able to sort the
+results along the lines of various criteria. Lets create a sample
+datastore.
+
+First clean up from any other tests.
+>>> import os
+>>> assert os.system('rm -rf /tmp/test_ds/') == 0
+
+>>> from olpc.datastore import DataStore
+>>> from olpc.datastore import backingstore
+>>> ds = DataStore()
+>>> ds.registerBackend(backingstore.FileBackingStore)
+>>> assert ds.mount("/tmp/test_ds")
+
+>>> a = ds.create(dict(title="Content A", author="Bob", year=1999, month="Jan"), '')
+>>> b = ds.create(dict(title="Content B", author="Alice", year=2000, month="Jan"), '')
+
+Find should return both
+>>> def find2uids(results): return [i['uid'] for i in results[0]]
+>>> assert set(find2uids(ds.find({}))) == set([a,b])
+
+
+But what if we want the results ordered?
+>>> assert find2uids(ds.find(order_by=['title'])) == [a, b]
+>>> assert find2uids(ds.find(order_by=['author'])) == [b, a]
+
+By more than one key?
+
+>>> assert find2uids(ds.find(order_by=['month', 'year'])) == [a, b]
+
+and if we want to reverse order it?
+
+>>> assert find2uids(ds.find(order_by=['-title'])) == [b, a]
+>>> assert find2uids(ds.find(order_by=['-author'])) == [a, b]
+
+>>> ds.stop()
+>>> del ds

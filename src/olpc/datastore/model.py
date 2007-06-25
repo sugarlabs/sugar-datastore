@@ -81,6 +81,8 @@ class Content(object):
         ext = self.get_property('ext', '')
 
         if filename:
+            # some backingstores keep the full relative path
+            filename = os.path.split(filename)[1]
             f, e = os.path.splitext(filename)
             if e: return filename, None
             if ext: return "%s.%s" % (filename, ext), None

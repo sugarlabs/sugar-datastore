@@ -84,6 +84,10 @@ class subprocessconverter(object):
             if os.path.exists(target):
                 os.unlink(target)
 
+class noop(object):
+    def verify(self): return True
+    def __call__(self, filename):
+        return codecs.open(filename, 'r', 'utf-8')
         
 class Converter(object):
     __metaclass__ = Singleton
@@ -127,6 +131,12 @@ class Converter(object):
 # our global instance 
 converter = Converter()
 
+# TXT
+txt = noop()
+converter.registerConverter('.txt', txt)
+converter.registerConverter('.html', txt)
+converter.registerConverter('text/plain', txt)
+converter.registerConverter('text/html', txt)
 
 # PDF
 pdf2txt = subprocessconverter('/usr/bin/pdftotext -nopgbrk -enc UTF-8 %(source)s %(target)s')

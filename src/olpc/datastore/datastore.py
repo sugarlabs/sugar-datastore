@@ -169,10 +169,11 @@ class DataStore(dbus.service.Object):
 
 
         # collect
+        #  some queries mutate the query-dict so we pass a copy each time
         for mp in mountpoints:
-            result, count =  mp.find(query)
+            result, count =  mp.find(query.copy())
             results.append(result)
-
+            
         # merge
         d = {}
         for res in results:

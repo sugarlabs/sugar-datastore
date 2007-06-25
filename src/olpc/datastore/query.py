@@ -125,10 +125,11 @@ class QueryManager(object):
         
         self._bindProperties(c, props, creating=True, include_defaults=include_defaults)
         s.flush()
-
-        if self.sync_index and filelike:
-            self.fulltext_index(c.id, filelike)
         c.backingstore = self.backingstore
+        
+        if self.sync_index and filelike:
+            self.fulltext_index(c.id, filelike, mimetype=c.get_property('mime_type'))
+
         return c
     
     def update(self, content_or_uid, props=None, filelike=None):
@@ -138,6 +139,7 @@ class QueryManager(object):
         if props is not None:
             self._bindProperties(content, props, creating=False)
             self.model.session.flush()
+
         if self.sync_index and filelike:
             self.fulltext_index(content.id, filelike)
 
@@ -497,7 +499,8 @@ class XapianFulltext(object):
         piece = DocumentPiece
         if isinstance(fileobj, basestring):
             # treat it as a pathname
-            # use the global converter to try to get text from the file
+            # use the global converter to try to get text from the
+            # file            
             fp = converter(fileobj, mimetype=mimetype)
             #piece = XapianBinaryValue
         elif hasattr(fileobj, 'read'):
@@ -559,7 +562,7 @@ class XapianFulltext(object):
         if len(args) == 1:
             # workaround for api change
             args = (args[0], 0, 10)
-            
+
         res = self.index.performSearch(*args, **kwargs)
         est = max(1, res.estimatedResultCount())
         return res.getResults(0, est)

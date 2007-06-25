@@ -170,8 +170,6 @@ class FileBackingStore(BackingStore):
         pickle.dump(desc, fp)
         fp.close()
 
-    def get_id(self): return self.descriptor()['id']
-    id = property(get_id)
 
     @staticmethod
     def parse(uri):
@@ -194,7 +192,7 @@ class FileBackingStore(BackingStore):
             index_name = os.path.join(self.base, self.INDEX_NAME)
             options = utils.options_for(self.options, 'querymanager_')
             if 'fulltext_repo' not in options:
-                options['fulltext_repo'] = os.path.join(self.uri,
+                options['fulltext_repo'] = os.path.join(self.base,
                                                         query.DefaultQueryManager.FULLTEXT_NAME)
                 
             qm = query.DefaultQueryManager(index_name, **options)
@@ -211,7 +209,7 @@ class FileBackingStore(BackingStore):
             # in load
             index_name = os.path.join(self.base, self.INDEX_NAME)
             if 'fulltext_repo' not in self.options:
-                self.options['fulltext_repo'] = os.path.join(self.uri,
+                self.options['fulltext_repo'] = os.path.join(self.base,
                                                              query.DefaultQueryManager.FULLTEXT_NAME)
 
             qm = query.DefaultQueryManager(index_name, **self.options)
@@ -236,7 +234,9 @@ class FileBackingStore(BackingStore):
         if target: targetpath = target
         else:
             targetpath = uid.replace('/', '_').replace('.', '__')
-            if ext: targetpath = "%s.%s" % (targetpath, ext)
+            if ext:
+                if not ext.startswith('.'): ext = ".%s" % ext
+                targetpath = "%s%s" % (targetpath, ext)
 
         base = '/tmp'
         if env: base = env.get('cwd', base)
@@ -306,6 +306,14 @@ class FileBackingStore(BackingStore):
         if verify:
             content = self.querymanager.get(uid)
             content.checksum = c.hexdigest()
+
+    def _checksum(self, filename):
+        c  = sha.sha()
+        fp = open(filename, 'r')
+        for line in fp:
+            c.update(line)
+        fp.close()
+        return c.hexdigest()
         
     # File Management API
     def create(self, props, filelike):
@@ -360,3 +368,96 @@ class FileBackingStore(BackingStore):
 
     def stop(self):
         self.querymanager.stop()
+
+
+class InplaceFileBackingStore(FileBackingStore):
+    """Like the normal FileBackingStore this Backingstore manages the
+    storage of files, but doesn't move files into a repository. There
+    are no working copies. It simply adds index data through its
+    querymanager and provides fulltext ontop of a regular
+    filesystem. It does record its metadata relative to this mount
+    point.
+
+    This is intended for USB keys and related types of attachable
+    storage.
+    """
+
+    STORE_NAME = ".olpc.store"
+
+    def __init__(self, uri, **kwargs):
+        # remove the 'inplace:' scheme
+        uri = uri[len('inplace:'):]
+        super(InplaceFileBackingStore, self).__init__(uri, **kwargs)
+        # use the original uri
+        self.uri = uri
+
+    @staticmethod
+    def parse(uri):
+        return uri.startswith("inplace:")
+
+    def check(self):
+        if not os.path.exists(self.uri): return False
+        if not os.path.exists(self.base): return False
+        return True
+
+        
+    def load(self):
+        super(InplaceFileBackingStore, self).load()
+        # now map/update the existing data into the indexes
+        self._walk()
+
+    def _walk(self):
+        # XXX: a version that checked xattr for uid would be simple
+        # and faster
+        # scan the uri for all non self.base files and update their
+        # records in the db
+        for dirpath, dirname, filenames in os.walk(self.uri):
+            # see if there is an entry for the filename
+            if self.base in dirpath: continue
+            if self.STORE_NAME in dirname:
+                dirname.remove(self.STORE_NAME)
+                
+            for fn in filenames:
+                source = os.path.join(dirpath, fn)
+                relative = source[len(self.uri)+1:]
+                result, count = self.querymanager.find(dict(filename=relative))
+                if not count:
+                    # create a new record
+                    self.create(dict(filename=relative), source)
+                else:
+                    # update the object with the new content iif the
+                    # checksum is different
+                    # XXX: what if there is more than one? (shouldn't happen)
+                    content = result[0]
+                    uid = content
+                    # only if the checksum is different
+                    checksum = self._checksum(source)
+                    if checksum != content.checksum:
+                        self.update(uid, dict(filename=relative), source)
+                        
+        #self.querymanager.index.flush()
+                        
+
+    # File Management API
+    def create(self, props, filelike):
+        # the file would have already been changed inplace
+        # don't touch it
+        return self.querymanager.create(props, filelike)
+    
+    def get(self, uid, env=None, allowMissing=False):
+        content = self.querymanager.get(uid)
+        if not content: raise KeyError(uid)
+        return content.get_property('filename')
+
+    def update(self, uid, props, filelike=None):
+        # the file would have already been changed inplace
+        # don't touch it
+        self.querymanager.update(uid, props, filelike)
+        
+    def delete(self, uid, allowMissing=True):
+        c = self.querymanager.get(uid)
+        path = c.get_property('filename')
+        self.querymanager.delete(uid)
+        if os.path.exists(path):
+            os.unlink(path)
+        

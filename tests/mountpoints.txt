@@ -7,18 +7,21 @@ mounting a backingstore on the datastore.
 >>> import os
 >>> assert os.system('rm -rf /tmp/store1/') == 0
 >>> assert os.system('rm -rf /tmp/store2/') == 0
+>>> assert os.system('rm -rf /tmp/store3/') == 0
 
 
 >>> from olpc.datastore import DataStore
 >>> from olpc.datastore import backingstore
 >>> from testutils import tmpData
+>>> import os
+
 
 
 Here we create a datastore, and mount a backingstore on tmp. By
 default this will create a new directory in /tmp which will then be
 used for storage.
 
->>> ds = DataStore()
+>>> ds = DataStore(sync_index=True)
 >>> ds.registerBackend(backingstore.FileBackingStore)
 >>> mp1 = ds.mount("/tmp/store1", dict(title="Primary Storage"))
 
@@ -33,8 +36,8 @@ can be used to control the storage target or to filter results.
 
 Now lets create some content
 
->>> u1 = ds.create(dict(title="Document 1"), tmpData("""document one"""))
->>> u2 = ds.create(dict(title="Document 2"), tmpData("""document two"""))
+>>> u1 = ds.create(dict(title="Document 1", filename="one.txt"), tmpData("""document one"""))
+>>> u2 = ds.create(dict(title="Document 2", mime_type="text/plain"), tmpData("""document two"""))
 
 We can now, if we wish verify which mount point this content came
 from.
@@ -74,6 +77,37 @@ Now lets filter a find call to only selected mountpoints.
 
 >>> results, count = ds.find({})
 >>> assert count == 3
+
+We can see that filtering by mount point works as expected.
+
+Now we are going to create an inplace mount. This is designed around
+USB keys and the like. In this case we want to leave files in place,
+there will be no working copies.
+
+First lets create some inplace data that we expect to get imported and
+indexed.
+
+>>> os.makedirs("/tmp/store3/nested")
+>>> fp = open("/tmp/store3/doc4.txt", "w")
+>>> fp.write("This is document four")
+>>> fp.close()
+
+>>> fp = open("/tmp/store3/nested/doc5.txt", "w")
+>>> fp.write("This is document five")
+>>> fp.close()
+
+Register the filesystem type
+>>> ds.registerBackend(backingstore.InplaceFileBackingStore)
+
+>>> mp3 = ds.mount("inplace:/tmp/store3", dict(title="Fake USB"))
+
+If that worked it should have imported content on load().
+
+>>> result, count = ds.find(dict(fulltext="four"))
+>>> assert count == 1
+>>> assert result[0]['mountpoint'] == mp3
+
+
 
 
 >>> ds.stop(); del ds

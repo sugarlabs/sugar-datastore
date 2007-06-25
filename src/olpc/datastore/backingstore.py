@@ -41,6 +41,9 @@ class BackingStore(object):
         """
         pass
 
+    def __repr__(self):
+        return "<%s %s: %s %s>" % (self.__class__.__name__, self.id,
+                            self.title, self.uri)
     # Init phases
     @staticmethod
     def parse(uri):
@@ -88,6 +91,11 @@ class BackingStore(object):
               'uri' -- The uri which triggered the mount
         """
         pass
+
+    @property
+    def id(self): return self.descriptor()['id']
+    @property
+    def title(self): return self.descriptor()['title']
     
 
 class FileBackingStore(BackingStore):

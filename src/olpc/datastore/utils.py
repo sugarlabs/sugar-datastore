@@ -32,6 +32,19 @@ class partial:
 
         return self.fun(*(self.pending + args), **kw)
 
+def once(method):
+    "A decorator that runs a method only once."
+    attrname = "_called"
+    def decorated(self, *args, **kwargs):
+        try:
+            return getattr(method, attrname)
+        except AttributeError:
+            r = method(self, *args, **kwargs)
+            setattr(method, attrname, r)
+            return r
+    return decorated
+        
+
 
 def create_uid():
     # this is linux specific but easily changed

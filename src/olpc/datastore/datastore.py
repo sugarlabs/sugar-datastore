@@ -53,10 +53,10 @@ class DataStore(dbus.service.Object):
     ## MountPoint API
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature="sa{sv}",
-                         out_signature='b')
+                         out_signature='s')
     def mount(self, uri, options=None):
         """(re)Mount a new backingstore for this datastore.
-        Returns a Boolean indicating if it worked or not.
+        Returns the mountpoint id or an empty string to indicate failure.
         """
         # on some media we don't want to write the indexes back to the
         # medium (maybe an SD card for example) and we'd want to keep
@@ -64,7 +64,7 @@ class DataStore(dbus.service.Object):
         # little identifying information on the media itself.
         if not options: options = {}
         mp = self.connect_backingstore(uri, **options)
-        if not mp: return False
+        if not mp: return ''
         if mp.id in self.mountpoints:
             self.mountpoints[mp.id].stop()
 
@@ -72,7 +72,7 @@ class DataStore(dbus.service.Object):
         self.mountpoints[mp.id] = mp
         if self.root is None:
             self.root = mp
-        return True
+        return mp.id
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature="",
@@ -84,7 +84,7 @@ class DataStore(dbus.service.Object):
         'title' -- Human readable identifier for the mountpoint
         'uri' -- The uri which triggered the mount
         """
-        return [mp.descriptor() for mp in self.mountpoints]
+        return [mp.descriptor() for mp in self.mountpoints.itervalues()]
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature="s",
@@ -273,7 +273,10 @@ class DataStore(dbus.service.Object):
 
             if 'uid' not in props:
                 props['uid'] = r.id
-                
+
+            if 'mountpoint' not in props:
+                props['mountpoint'] = r.backingstore.id
+            
             filename = ''
             if include_files :
                 try: filename = self.backingstore.get(r.id).filename

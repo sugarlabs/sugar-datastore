@@ -1,0 +1,79 @@
+Mountpoints are very much like traditional *NIX filesystem mounts. The
+intention is to allow more than one backingstore (stable storage
+device) to become part of a datastore at runtime. This is done by
+mounting a backingstore on the datastore.
+
+(clean up)
+>>> import os
+>>> assert os.system('rm -rf /tmp/store1/') == 0
+>>> assert os.system('rm -rf /tmp/store2/') == 0
+
+
+>>> from olpc.datastore import DataStore
+>>> from olpc.datastore import backingstore
+>>> from testutils import tmpData
+
+
+Here we create a datastore, and mount a backingstore on tmp. By
+default this will create a new directory in /tmp which will then be
+used for storage.
+
+>>> ds = DataStore()
+>>> ds.registerBackend(backingstore.FileBackingStore)
+>>> mp1 = ds.mount("/tmp/store1", dict(title="Primary Storage"))
+
+This will list all the mount points. It returns a list of dicts with
+the minumum keyset of 'id', 'uri', and 'title'. Title is the Human
+readable name of the mount. 'Id' is the most important property this
+can be used to control the storage target or to filter results.
+
+>>> mps = ds.mounts()
+>>> mountpoint = mps[0]['id']
+
+
+Now lets create some content
+
+>>> u1 = ds.create(dict(title="Document 1"), tmpData("""document one"""))
+>>> u2 = ds.create(dict(title="Document 2"), tmpData("""document two"""))
+
+We can now, if we wish verify which mount point this content came
+from.
+
+
+>>> c1 = ds.get(u1)
+>>> assert c1.backingstore.id == mountpoint
+
+However this interface isn't available over DBus and objects are
+normally located and inspected using the find() method.
+
+>>> c1a = ds.find(dict(title="Document 1"))[0][0]
+>>> assert c1a['mountpoint'] == mountpoint
+
+We can see that the mountpoint property was mapped on the object and
+refers to the proper storage.
+
+Now lets add another mount point.
+
+>>> mp2 = ds.mount("/tmp/store2", dict(title="Secondary Storage"))
+
+Now lets create a new content item.
+>>> u3 = ds.create(dict(title="Document 3", mountpoint=mp2), tmpData("""document three"""))
+
+We explictly passed a mount point here. Lets examine the properties of
+the object and verify this.
+>>> c3 = ds.find(dict(title="Document 3"))[0][0]
+>>> assert c3['mountpoint'] == mp2
+
+Now lets filter a find call to only selected mountpoints.
+
+>>> results, count = ds.find(dict(mountpoints=[mp1]))
+>>> assert count == 2
+
+>>> results, count = ds.find(dict(mountpoints=[mp2]))
+>>> assert count == 1
+
+>>> results, count = ds.find({})
+>>> assert count == 3
+
+
+>>> ds.stop(); del ds

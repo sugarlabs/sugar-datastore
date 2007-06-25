@@ -38,14 +38,14 @@ Find will now return this object.
 We can examine the Properties of this object.
 
 >>> a.properties
-[... <Property title:'New Content' of <Content id:...>>, ...]
+[... <Property title:'New Content' of...>, ...]
 
 This returned a list of all properties on the Content object in which
 case we can find the property by enumeration. The other option is
 using the get_properties call on Content
 
 >>> a.get_properties(key='title')
-[<Property title:'New Content' of <Content id:...>>]
+[<Property title:'New Content' of ...>]
 
 Using the query manager API we are able to update the
 properties. Using this form automatically synchronizes with the
@@ -55,11 +55,11 @@ that this works lets attach another property.
 
 A request for title still returns only the title property.
 >>> a.get_properties(key='title')
-[<Property title:'New Content' of <Content id:...>>]
+[<Property title:'New Content' of ...>]
 
 And a request for author works as expected.
 >>> a.get_properties(key='author')
-[<Property author:'Benjamin' of <Content id:...>>]
+[<Property author:'Benjamin' of ...>]
 
 >>> qm.update(a, dict(foo='bar'))
 >>> set([p.key for p in a.properties]) == set(['title', 'mtime', 'ctime', 'language', 'mime_type', 'author', 'foo'])

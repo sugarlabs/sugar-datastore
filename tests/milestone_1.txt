@@ -17,8 +17,7 @@ First, create and connect the store.
 >>> from olpc.datastore import backingstore
 >>> ds = DataStore()
 >>> ds.registerBackend(backingstore.FileBackingStore)
->>> ds.mount("/tmp/test_ds")
-True
+>>> assert ds.mount("/tmp/test_ds")
 
 Because there is newly created we are going to quickly populate the
 datastore with some content.

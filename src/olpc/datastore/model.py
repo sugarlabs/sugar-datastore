@@ -15,8 +15,7 @@ from sqlalchemy import String, Integer, Unicode, PickleType
 from sqlalchemy import ForeignKey, Sequence, Index
 from sqlalchemy import mapper, relation
 from sqlalchemy import create_session
-from sqlalchemy import MapperExtension, EXT_PASS
-from sqlalchemy.ext.sessioncontext import SessionContext
+from sqlalchemy import MapperExtension, EXT_PASS, clear_mappers
 
 import datetime
 import mimetypes
@@ -31,18 +30,20 @@ import time
 
 
 # we have a global thread local session factory
-context = None
+context = {}
 
-def get_session(): return context.current
+def get_session(backingstore):
+    return context[backingstore]
 
 _marker = object()
+
 class Content(object):
     def __repr__(self):
         return "<Content id:%s>" % (self.id, )
 
     def get_property(self, key, default=_marker):
         # mapped to property keys
-        session = get_session()
+        session = get_session(self.backingstore)
         query = session.query(Property)
         p = query.get_by(content_id=self.id, key=key)
         if not p:
@@ -51,7 +52,7 @@ class Content(object):
         return p.value
 
     def get_properties(self, **kwargs):
-        session = get_session()
+        session = get_session(self.backingstore)
         query = session.query(Property)
         return query.select_by(content_id=self.id, **kwargs)
 
@@ -92,8 +93,6 @@ class Content(object):
                 ext = mimetypes.guess_extension(mt)
                 if ext: return None, ext
         return None, None
-
-        
 
     def get_data(self):
         f = self.file
@@ -152,7 +151,7 @@ class Property(object):
 
     def __repr__(self):
         return "<Property %s:%r of %s>" % (self.key, self.value,
-                                           self.content)
+                                           self.content.id)
     def marshall(self):
         """Return the value marshalled as a string"""
         return str(self.value)
@@ -223,17 +222,16 @@ class Model(object):
     def __getattr__(self, key): return self.tables[key]
     def __getitem__(self, key): return self.mappers[key]
 
-    @property
-    def session(self): return get_session()
-    
+
+
     def prepare(self, querymanager):
         self.querymanager = querymanager
 
         # a single session manages the exclusive access we keep to the
         # db.
         global context
-        def make_session(): return create_session(bind_to=self.querymanager.db)
-        context = SessionContext(make_session)
+        self.session = create_session(bind_to=self.querymanager.db)
+        context[self.querymanager.backingstore] = self.session
         
         # content object
         content = Table('content',
@@ -284,6 +282,13 @@ class Model(object):
         # Object Mapping
         # the query manager provides a mapping extension for
         # Content <-> BackingStore binding
+
+        # XXX gross and not what we want, we can only define mappers
+        # once but we may have more than one datastore.
+        # this can impact all sqla in the runtime though
+        clear_mappers()
+
+        
         content_mapper = mapper(Content, content,
                                 extension=self.querymanager.content_ext,
                                 properties = {

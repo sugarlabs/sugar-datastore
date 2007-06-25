@@ -17,7 +17,6 @@ from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 from olpc.datastore.converter import converter
 from olpc.datastore.model import DateProperty
 from olpc.datastore.model import Model, Content, Property
-from olpc.datastore.model import BackingStoreContentMapping
 from olpc.datastore.utils import create_uid
 
 from sqlalchemy import create_engine, BoundMetaData
@@ -335,6 +334,12 @@ class QueryManager(object):
         else:
             r = (q.select(), q.count())
 
+        # XXX: make sure the proper backingstore is mapped
+        # this currently forbids the use case of keeping index data
+        # for a read-only store.
+        for item in r[0]:
+            item.backingstore = self.backingstore
+
         return r
     
     # sqla util
@@ -453,7 +458,6 @@ class SQLiteQueryManager(QueryManager):
             # XXX: what is the ideal jffs2 page size
             # connection.execute("PRAGMA page_size 4096")
         
-    
     def connect_model(self, model=None):
         if model is None: model = Model()
         # take the model and connect it to us

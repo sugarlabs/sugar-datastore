@@ -163,7 +163,7 @@ class FileBackingStore(BackingStore):
             fp.close()
         if 'id' not in kwargs: desc['id'] = utils.create_uid()
         if 'uri' not in kwargs: desc['uri'] = self.uri
-        if not kwargs.get('title', None): desc['title'] = self.uri
+        if not kwargs.get('title', ''): desc['title'] = self.uri
 
         desc.update(kwargs)
         fp = open(fn, 'w')

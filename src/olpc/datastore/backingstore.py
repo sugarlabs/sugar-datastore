@@ -199,7 +199,7 @@ class FileBackingStore(BackingStore):
             # This will ensure the fulltext and so on are all assigned
             qm.bind_to(self)
             qm.prepare()
-            self.create_descriptor(title=self.options.get('title', None))
+            self.create_descriptor(title=self.options.get('title', ''))
             self.querymanager = qm
             
     def load(self):

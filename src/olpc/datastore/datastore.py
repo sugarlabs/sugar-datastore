@@ -10,9 +10,12 @@ __docformat__ = 'restructuredtext'
 __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
+
 import logging
 import dbus.service
 import dbus.mainloop.glib
+dbus.mainloop.glib.threads_init()
+
 from StringIO import StringIO
 
 # the name used by the logger
@@ -162,7 +165,7 @@ class DataStore(dbus.service.Object):
 
     def _multiway_search(self, query):
         mountpoints = query.pop('mountpoints', self.mountpoints)
-        mountpoints = [self.mountpoints[m] for m in mountpoints]
+        mountpoints = [self.mountpoints[str(m)] for m in mountpoints]
         results = []
         # XXX: the merge will become *much* more complex in when
         # distributed versioning is implemented.

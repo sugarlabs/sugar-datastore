@@ -14,7 +14,6 @@ __license__  = 'The GNU Public License V2+'
 import logging
 import dbus.service
 import dbus.mainloop.glib
-dbus.mainloop.glib.threads_init()
 
 from StringIO import StringIO
 

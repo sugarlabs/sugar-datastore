@@ -15,7 +15,7 @@ __license__  = 'The GNU Public License V2+'
 from datetime import datetime
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 from olpc.datastore.converter import converter
-from olpc.datastore.model import DateProperty, TextProperty
+from olpc.datastore.model import DateProperty
 from olpc.datastore.model import Model, Content, Property
 from olpc.datastore.utils import create_uid
 
@@ -155,7 +155,7 @@ class QueryManager(object):
         default = {
             'ctime' : DateProperty('ctime', now),
             'author' : Property('author', '', 'string'),
-            'title'  : TextProperty('title', '', 'text'),
+            'title'  : Property('title', '', 'string'),
             'mime_type' : Property('mime_type', '', 'string'),
             'language' : Property('language', '', 'string'),
         }

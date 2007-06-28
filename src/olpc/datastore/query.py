@@ -15,7 +15,7 @@ __license__  = 'The GNU Public License V2+'
 from datetime import datetime
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 from olpc.datastore.converter import converter
-from olpc.datastore.model import DateProperty
+from olpc.datastore.model import DateProperty, TextProperty
 from olpc.datastore.model import Model, Content, Property
 from olpc.datastore.utils import create_uid
 
@@ -128,7 +128,8 @@ class QueryManager(object):
         c.backingstore = self.backingstore
         
         if self.sync_index and filelike:
-            self.fulltext_index(c.id, filelike, mimetype=c.get_property('mime_type'))
+            self.fulltext_index(c.id, filelike,
+                                mimetype=c.get_property('mime_type'))
 
         return c
     
@@ -154,7 +155,7 @@ class QueryManager(object):
         default = {
             'ctime' : DateProperty('ctime', now),
             'author' : Property('author', '', 'string'),
-            'title'  : Property('title', '', 'string'),
+            'title'  : TextProperty('title', '', 'text'),
             'mime_type' : Property('mime_type', '', 'string'),
             'language' : Property('language', '', 'string'),
         }
@@ -387,7 +388,7 @@ class QueryManager(object):
         
         
     # fulltext interface
-    def fulltext_index(self, uid, fileobj):
+    def fulltext_index(self, uid, fileobj, mimetype=None):
         """Index the fileobj relative to uid which should be a
         olpc.datastore.model.Content object's uid. The fileobj can be
         either a pathname or an object implementing the Python file
@@ -470,7 +471,9 @@ class SQLiteQueryManager(QueryManager):
         
         self.model = model
 
-            
+
+    def stop(self):
+        self.db.dispose()
 
 # Full text support
 def flatten_unicode(value): return value.encode('utf-8')
@@ -515,12 +518,24 @@ class XapianFulltext(object):
             # into an indexable form.
             logging.debug("Unable to index %s %s" % (uid, fileobj))
             return False
-        
-        return self._ft_index(uid, fp, piece)
 
-    def _ft_index(self, content_id, fp, piece=DocumentPiece):
+        # text properties also get full text indexing
+        # currently this is still searched with the 'fulltext'
+        # parameter of find()
+        textprops = {}
+        content = self.get(uid)
+        for p in content.get_properties(type='text'):
+            textprops[p.key] = p.value
+        return self._ft_index(uid, fp, piece, **textprops)
+
+    def _ft_index(self, content_id, fp, piece=DocumentPiece, **fields):
         try:
             doc = [piece(fp.read())]
+            # add in properties that need extra fulltext like
+            # management
+            for key, value in fields.iteritems():
+                doc.append(DocumentPiece(value, key))
+                
             self.index.addDocument(doc, content_id)
             self.index.flush()
             return True
@@ -576,7 +591,10 @@ class XapianFulltext(object):
     def stop(self):
         if self.use_fulltext:
             self.index.close()
-
+            
 
 class DefaultQueryManager(XapianFulltext, SQLiteQueryManager):
-    pass
+
+    def stop(self):
+        XapianFulltext.stop(self)
+        SQLiteQueryManager.stop(self)

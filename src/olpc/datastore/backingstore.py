@@ -368,7 +368,7 @@ class FileBackingStore(BackingStore):
 
     def stop(self):
         self.querymanager.stop()
-
+        
 
 class InplaceFileBackingStore(FileBackingStore):
     """Like the normal FileBackingStore this Backingstore manages the

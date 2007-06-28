@@ -473,6 +473,7 @@ class SQLiteQueryManager(QueryManager):
 
 
     def stop(self):
+        # clean up
         self.db.dispose()
 
 # Full text support

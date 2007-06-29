@@ -56,7 +56,7 @@ class Content(object):
         query = session.query(Property)
         return query.select_by(content_id=self.id, **kwargs)
 
-
+    
 
     # Backingstore dependent bindings 
     def get_file(self):
@@ -152,11 +152,19 @@ class Property(object):
         self.type = type
 
     def __repr__(self):
-        return "<Property %s:%r of %s>" % (self.key, self.value,
-                                           self.content.id)
+        return "<%s %s:%r>" % (self.__class__.__name__,
+                                     self.key, self.value)
     def marshall(self):
         """Return the value marshalled as a string"""
         return str(self.value)
+
+class TextProperty(Property):
+    """A text property is one that will also get full automatic text
+    indexing when available. This is used for fields like title where
+    searching in the text is more important than doing a direct match
+    """
+    def __init__(self, key, value, type='text'):
+        Property.__init__(self, key, value, type)
     
 class DateProperty(Property):
     format = "%Y-%m-%dT%H:%M:%S"
@@ -316,6 +324,7 @@ class Model(object):
         # default Property types are mapped to classes here        
         self.addPropertyType(DateProperty, 'date')
         self.addPropertyType(NumberProperty, 'number')
+        self.addPropertyType(TextProperty, 'text')
 
         
         

@@ -13,8 +13,7 @@ mounting a backingstore on the datastore.
 >>> from olpc.datastore import DataStore
 >>> from olpc.datastore import backingstore
 >>> from testutils import tmpData
->>> import os
-
+>>> import dbus
 
 
 Here we create a datastore, and mount a backingstore on tmp. By
@@ -108,6 +107,22 @@ If that worked it should have imported content on load().
 >>> assert result[0]['mountpoint'] == mp3
 
 
+Let's unmount 'Fake USB' and then remount it with some options passed
+as DBus data.
+
+>>> ds.unmount(mp3)
+
+>>> mp3 = ds.mount("inplace:/tmp/store3", dict(title=dbus.String("Fake USB again")))
+
+>>> result, count = ds.find(dict(fulltext="four"))
+>>> assert count == 1
+>>> assert result[0]['mountpoint'] == mp3
+
+>>> mp = ds.mountpoints[mp3]
+
+Check for the new value in the descriptor
+
+>>> assert mp.descriptor()['title'] == 'Fake USB again'
 
 
 >>> ds.stop(); del ds

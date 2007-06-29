@@ -21,9 +21,9 @@ class Test(unittest.TestCase):
         bs.create_descriptor()
         desc = bs.descriptor()
         assert 'id' in desc
-        assert 'title' in desc
         assert 'uri' in desc
-
+        assert 'title' in desc
+        assert desc['title'] is not None
 
         d = """This is a test"""
         d2 = "Different"

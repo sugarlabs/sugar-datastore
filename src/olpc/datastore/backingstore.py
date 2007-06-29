@@ -161,11 +161,14 @@ class FileBackingStore(BackingStore):
             fp = open(fn, 'r')
             desc = pickle.load(fp)
             fp.close()
-        if 'id' not in kwargs: desc['id'] = utils.create_uid()
-        if 'uri' not in kwargs: desc['uri'] = self.uri
-        if not kwargs.get('title', ''): desc['title'] = self.uri
 
         desc.update(kwargs)
+        
+        if 'id' not in desc: desc['id'] = utils.create_uid()
+        if 'uri' not in desc: desc['uri'] = self.uri
+        if 'title' not in desc: desc['title'] = self.uri
+
+
         fp = open(fn, 'w')
         pickle.dump(desc, fp)
         fp.close()
@@ -199,7 +202,8 @@ class FileBackingStore(BackingStore):
             # This will ensure the fulltext and so on are all assigned
             qm.bind_to(self)
             qm.prepare()
-            self.create_descriptor(title=self.options.get('title', ''))
+
+            self.create_descriptor(**options)
             self.querymanager = qm
             
     def load(self):
@@ -208,12 +212,17 @@ class FileBackingStore(BackingStore):
             # otherwise we will connect the global manager
             # in load
             index_name = os.path.join(self.base, self.INDEX_NAME)
+            options = utils.options_for(self.options, 'querymanager_')
             if 'fulltext_repo' not in self.options:
-                self.options['fulltext_repo'] = os.path.join(self.base,
-                                                             query.DefaultQueryManager.FULLTEXT_NAME)
+                options['fulltext_repo'] = os.path.join(self.base,
+                                                        query.DefaultQueryManager.FULLTEXT_NAME)
+                
+            qm = query.DefaultQueryManager(index_name, **options)
 
-            qm = query.DefaultQueryManager(index_name, **self.options)
-
+            desc = utils.options_for(self.options,
+                                     'querymanager_', invert=True)
+            if desc: self.create_descriptor(**desc)
+                
             # This will ensure the fulltext and so on are all assigned
             qm.bind_to(self)
             qm.prepare()

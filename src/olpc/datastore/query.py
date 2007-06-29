@@ -15,7 +15,7 @@ __license__  = 'The GNU Public License V2+'
 from datetime import datetime
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 from olpc.datastore.converter import converter
-from olpc.datastore.model import DateProperty
+from olpc.datastore.model import DateProperty, TextProperty
 from olpc.datastore.model import Model, Content, Property
 from olpc.datastore.utils import create_uid
 
@@ -27,7 +27,71 @@ import os, sys
 
 _marker = object()
 
-class QueryManager(object):
+
+class SugarDomain(object):
+    """The underlying property set used for metadata in the sugar
+    system"""
+    def kind_by_key(self, key):
+        """resolves property names to the factory type that supports
+        them in the model
+        """
+        return {
+            'ctime' : DateProperty,
+            'mtime' : DateProperty,
+            'author' : Property,
+            'title'  : TextProperty,
+            'mime_type' : Property,
+            'language' : Property,
+            }.get(key, Property)
+
+    def propertyFactory(self, key, value='', dict=None):
+        k = self.kind_by_key(key)
+        p = k(key, value)
+        if dict is not None: dict[key] = p
+        return k
+    
+    def _automaticProperties(self):
+        d = {}
+        now = datetime.now()
+        self.propertyFactory('mtime', now, dict=d)
+        return d
+    
+    def _defaultProperties(self):
+        d = {}
+        now = datetime.now()
+        self.propertyFactory('ctime', now, dict=d)
+        self.propertyFactory('author', dict=d)
+        self.propertyFactory('title', dict=d)
+        self.propertyFactory('mime_type', dict=d)
+        self.propertyFactory('language', dict=d)
+
+        d.update(self._automaticProperties())
+        return d
+
+    def _normalizeProps(self, props, creating, include_defaults):
+        # return a dict of {name : property}
+        if isinstance(props, dict):
+            # convert it into a  dict of Property objects
+            d = {}
+            for k,v in props.iteritems():
+                kind = self.kind_by_key(k)
+                p = kind(k, v)
+                d[k] = p
+            if creating and include_defaults:
+                defaults = self._defaultProperties()
+                for k, v in defaults.iteritems():
+                    if k not in d: d[k] = v
+            props = d
+        else:
+            d = {}
+            for p in props:
+                d[p.key] = p
+            props = d
+        return props
+
+
+
+class QueryManager(SugarDomain):
     FULLTEXT_NAME = "fulltext"
     
     def __init__(self, metadata_uri, **options):
@@ -136,7 +200,6 @@ class QueryManager(object):
     def update(self, content_or_uid, props=None, filelike=None):
         content = self._resolve(content_or_uid)
         content.backingstore = self.backingstore
-        
         if props is not None:
             self._bindProperties(content, props, creating=False)
             self.model.session.flush()
@@ -144,43 +207,6 @@ class QueryManager(object):
         if self.sync_index and filelike:
             self.fulltext_index(content.id, filelike)
 
-    def _automaticProperties(self):
-        now = datetime.now()
-        return {
-            'mtime' : DateProperty('mtime', now),
-            }
-    
-    def _defaultProperties(self):
-        now = datetime.now()
-        default = {
-            'ctime' : DateProperty('ctime', now),
-            'author' : Property('author', '', 'string'),
-            'title'  : Property('title', '', 'string'),
-            'mime_type' : Property('mime_type', '', 'string'),
-            'language' : Property('language', '', 'string'),
-        }
-        default.update(self._automaticProperties())
-        return default
-
-    def _normalizeProps(self, props, creating, include_defaults):
-        # return a dict of {name : property}
-        if isinstance(props, dict):
-            # convert it into a list of properties
-            d = {}
-            for k,v in props.iteritems():
-                p = Property(k, v, 'string')
-                d[k] = p
-            if creating and include_defaults:
-                defaults = self._defaultProperties()
-                for k, v in defaults.iteritems():
-                    if k not in d: d[k] = v
-            props = d
-        else:
-            d = {}
-            for p in props:
-                d[p.key] = p
-            props = d
-        return props
     
     def _bindProperties(self, content, props, creating=False, include_defaults=False):
         """Handle either a dict of properties or a list of property
@@ -204,7 +230,6 @@ class QueryManager(object):
             props = auto
             # we have to check for the update case
             oldProps = dict([(p.key, p) for p in content.properties])
-
             for k, p in props.iteritems():
                 if k in oldProps:
                     oldProps[k].value = p.value
@@ -526,10 +551,11 @@ class XapianFulltext(object):
         textprops = {}
         content = self.get(uid)
         for p in content.get_properties(type='text'):
-            textprops[p.key] = p.value
-        return self._ft_index(uid, fp, piece, **textprops)
+            textprops[p.key] = p.value and p.value or ''
 
-    def _ft_index(self, content_id, fp, piece=DocumentPiece, **fields):
+        return self._ft_index(uid, fp, piece, textprops)
+
+    def _ft_index(self, content_id, fp, piece=DocumentPiece, fields=None):
         try:
             doc = [piece(fp.read())]
             # add in properties that need extra fulltext like

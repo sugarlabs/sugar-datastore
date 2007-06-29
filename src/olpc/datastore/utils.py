@@ -1,3 +1,4 @@
+import dbus
 
 class Singleton(type):
     """A singleton metaclass
@@ -52,17 +53,55 @@ def create_uid():
     return open('/proc/sys/kernel/random/uuid', 'r').read()[:-1]
 
 
-def options_for(dict, prefix):
+def options_for(dict, prefix, invert=False):
     """return a dict of the filtered properties for keys with prefix.
     prefix will be removed
 
+    If invert is True then only those keys not matching prefix are returned.
+    
     >>> assert options_for({'app.a.option' : 1, 'app.b.option' : 2}, 'app.b.')['option'] == 2
     """
     d = {}
     l = len(prefix)
     for k, v in dict.iteritems():
         if k.startswith(prefix):
-            d[k[l:]] = v
+            if invert is False:d[k[l:]] = v
+        elif invert is True:
+            d[k] = v
+            
     return d
     
     
+
+def _convert(arg):
+    # this recursively processes arguments sent over dbus and yields
+    # normalized versions
+    if isinstance(arg, (dbus.String, dbus.UTF8String)):
+        try: return arg.encode('utf-8')
+        except: return str(arg)
+
+    if isinstance(arg, (dbus.Dictionary, dict)):
+        d = {}
+        for k, v in arg.iteritems():
+            # here we call str on the lhs making it suitable for
+            # passing as keywords args
+            d[str(_convert(k))] = _convert(v)
+        return d
+
+    if isinstance(arg, dbus.Array):
+        a = []
+        for item in arg:
+            a.append(_convert(item))
+        return a
+    return arg
+
+    
+def sanitize_dbus(method):
+    # decorator to produce an alternative version of arguments based on pure Python
+    # types.
+    def decorator(self, *args, **kwargs):
+        n = []
+        for arg in args: n.append(_convert(arg))
+        kw = _convert(kwargs)
+        return method(self, *n, **kw)
+    return decorator

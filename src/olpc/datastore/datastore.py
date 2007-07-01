@@ -56,7 +56,7 @@ class DataStore(dbus.service.Object):
         self.backends.append(backendClass)
         
     ## MountPoint API
-    @utils.sanitize_dbus
+    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature="sa{sv}",
                          out_signature='s')
@@ -92,7 +92,7 @@ class DataStore(dbus.service.Object):
         """
         return [mp.descriptor() for mp in self.mountpoints.itervalues()]
 
-    @utils.sanitize_dbus
+    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature="s",
                          out_signature="")
@@ -132,7 +132,7 @@ class DataStore(dbus.service.Object):
         return mp
 
     # PUBLIC API
-    @utils.sanitize_dbus
+    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='a{sv}s',
                          out_signature='s')
@@ -174,7 +174,6 @@ class DataStore(dbus.service.Object):
         results = []
         # XXX: the merge will become *much* more complex in when
         # distributed versioning is implemented.
-        if len(mountpoints) > 1:import pdb;pdb.set_trace()
         # collect
         #  some queries mutate the query-dict so we pass a copy each time
         for mp in mountpoints:
@@ -191,11 +190,9 @@ class DataStore(dbus.service.Object):
                     # XXX: age/version check
                     d[hit.id] = hit
 
-        # ordering (when needed)
-        
         return d, len(d)
 
-    @utils.sanitize_dbus    
+    #@utils.sanitize_dbus    
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='a{sv}',
              out_signature='aa{sv}u')
@@ -304,7 +301,7 @@ class DataStore(dbus.service.Object):
                 if c: break
         return c
 
-    @utils.sanitize_dbus
+    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='s')
@@ -323,7 +320,7 @@ class DataStore(dbus.service.Object):
     def put_data(self, uid, data):
         self.update(uid, None, StringIO(data))
 
-    @utils.sanitize_dbus
+    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='s',
                          out_signature='a{sv}')
@@ -334,7 +331,8 @@ class DataStore(dbus.service.Object):
             dictionary[prop.key] = prop.marshall()
         return dictionary
 
-    @utils.sanitize_dbus
+
+    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='sa{sv}s',
              out_signature='')
@@ -352,7 +350,7 @@ class DataStore(dbus.service.Object):
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Updated(self, uid): pass
 
-    @utils.sanitize_dbus
+    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='')

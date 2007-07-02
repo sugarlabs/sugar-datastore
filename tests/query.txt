@@ -237,16 +237,16 @@ string its contents will be available to the text indexing engine as
 well.
 
 Searching for a direct match on the property works.
->>> #qm.find(title="titled indeed") == ([a], 1)
+>>> qm.find(title="titled indeed") == ([a], 1)
 True
 
 Doing a search for text internal to the title doesn't however. 
 
->>> #qm.find(title="indeed") == ([a], 1)
+>>> qm.find(title="indeed") == ([a], 1)
 False
 
 Searching for it in the fulltext index does return a result.
->>> #qm.find(fulltext="indeed") == ([a], 1)
+>>> qm.find(fulltext="indeed") == ([a], 1)
 True
 
 

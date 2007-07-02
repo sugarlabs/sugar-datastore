@@ -175,7 +175,8 @@ class DataStore(dbus.service.Object):
         # XXX: the merge will become *much* more complex in when
         # distributed versioning is implemented.
         # collect
-        #  some queries mutate the query-dict so we pass a copy each time
+        #  some queries mutate the query-dict so we pass a copy each
+        #  time
         for mp in mountpoints:
             result, count =  mp.find(query.copy())
             results.append(result)

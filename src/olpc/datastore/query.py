@@ -317,7 +317,6 @@ class QueryManager(SugarDomain):
         if limit: q = q.limit(limit)
         
         if query:
-            properties = self.model.properties
             where = []
             fulltext = query.pop('fulltext', None)
             threshold = query.pop('fulltext_threshold', 60)

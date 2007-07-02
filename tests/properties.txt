@@ -1,0 +1,43 @@
+This document shows off the range of features available for attaching
+properties to content and managing them.
+
+(clean up)
+>>> import os
+>>> assert os.system('rm -rf /tmp/store1/') == 0
+>>> assert os.system('rm -rf /tmp/store2/') == 0
+
+
+>>> from olpc.datastore import DataStore
+>>> from olpc.datastore import backingstore
+>>> from testutils import tmpData
+>>> import dbus
+
+Set up two mount points.
+
+>>> ds = DataStore(sync_index=True)
+>>> ds.registerBackend(backingstore.FileBackingStore)
+>>> mp1 = ds.mount("/tmp/store1", dict(title="Primary Storage"))
+>>> mp2 = ds.mount("/tmp/store2", dict(title="Secondary Storage"))
+
+Create some content on each.
+
+>>> u1 = ds.create({'title' : "Alpha doc", 'author' : "Ben", 'year:number' : 2000}, tmpData("""Document 1"""))
+>>> u2 = ds.create({'title' : "Beta doc", 'author' : "Ben", 'year:number' : 2001} , tmpData("""Document 2""")) 
+
+>>> u3 = ds.create({'title' : "Delta doc", 'author' :"HAL", 'year:number' : 2000, 'mountpoint' : mp2}, tmpData("""Document 3"""))
+>>> u4 = ds.create({'title' : "Gamma doc", 'author' : "HAL", 'year:number' : 2001, 'mountpoint' : mp2}, tmpData("""Document 4""")) 
+
+Now we should be able to discover things about the system properties.
+
+Here we test that we can extract the unique values for certain properties.
+>>> assert set(ds.get_uniquevaluesfor('author')) == set(['Ben', 'HAL'])
+
+Here we try to gather the values for the property year. We'd expect
+these values to come back as numbers, however in the current
+implementation they are stored as unicode values.
+
+>>> assert set(ds.get_uniquevaluesfor('year')) == set([u'2000', u'2001']) 
+
+
+
+>>> ds.stop(); del ds

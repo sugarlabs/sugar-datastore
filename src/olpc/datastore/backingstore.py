@@ -157,6 +157,7 @@ class FileBackingStore(BackingStore):
         # create the information descriptor for this store
         # defaults will be created if need be
         # passing limited values will leave existing keys in place
+        kwargs = utils._convert(kwargs)
         fn = os.path.join(self.base, self.DESCRIPTOR_NAME)
         desc = {}
         if os.path.exists(fn):

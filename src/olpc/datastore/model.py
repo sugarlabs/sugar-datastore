@@ -168,6 +168,11 @@ class TextProperty(Property):
     """
     def __init__(self, key, value, type='text'):
         Property.__init__(self, key, value, type)
+
+    def get_value(self): return self._value
+    def set_value(self, value): self._value = value
+    value = property(get_value, set_value)
+
     
 class DateProperty(Property):
     format = "%Y-%m-%dT%H:%M:%S"

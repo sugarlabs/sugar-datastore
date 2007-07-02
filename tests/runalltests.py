@@ -21,7 +21,8 @@ doctests = [
     resource_filename(__name__, "milestone_1.txt"),
     resource_filename(__name__, "sugar_demo_may17.txt"),
     resource_filename(__name__, "milestone_2.txt"),
-    resource_filename(__name__, "mountpoints.txt")
+    resource_filename(__name__, "mountpoints.txt"),
+    resource_filename(__name__, "properties.txt")
     
 ]
 

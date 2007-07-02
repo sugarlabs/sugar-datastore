@@ -82,7 +82,7 @@ class DataStore(dbus.service.Object):
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature="",
-                         out_signature="aa{ss}")
+                         out_signature="aa{sv}")
     def mounts(self):
         """return a list of mount point descriptiors where each
         descriptor is a dict containing atleast the following keys:

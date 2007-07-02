@@ -96,7 +96,9 @@ class BackingStore(object):
     def id(self): return self.descriptor()['id']
     @property
     def title(self): return self.descriptor()['title']
+
     
+
 
 class FileBackingStore(BackingStore):
     """ A backing store that directs maps the storage of content
@@ -370,6 +372,8 @@ class FileBackingStore(BackingStore):
             if not allowMissing:
                 raise KeyError("object for uid:%s missing" % uid)            
         
+    def get_uniquevaluesfor(self, propertyname):
+        return self.querymanager.get_uniquevaluesfor(propertyname)
     
 
     def find(self, query):
@@ -470,3 +474,4 @@ class InplaceFileBackingStore(FileBackingStore):
         if os.path.exists(path):
             os.unlink(path)
         
+

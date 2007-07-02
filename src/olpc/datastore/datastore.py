@@ -331,6 +331,20 @@ class DataStore(dbus.service.Object):
             dictionary[prop.key] = prop.marshall()
         return dictionary
 
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature='sa{sv}',
+                         out_signature='as')
+    def get_uniquevaluesfor(self, propertyname, query=None):
+        if not query: query = {}
+        mountpoints = query.pop('mountpoints', self.mountpoints)
+        mountpoints = [self.mountpoints[str(m)] for m in mountpoints]
+        results = set()
+        
+        for mp in mountpoints:
+            result = mp.get_uniquevaluesfor(propertyname)
+            results = results.union(result)
+        return results
+    
 
     #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,

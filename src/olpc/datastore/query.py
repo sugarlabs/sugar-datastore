@@ -16,7 +16,7 @@ from datetime import datetime
 from lemur.xapian.sei import DocumentStore, DocumentPiece, SortableValue
 from olpc.datastore.converter import converter
 from olpc.datastore.model import DateProperty, TextProperty
-from olpc.datastore.model import Model, Content, Property
+from olpc.datastore.model import Model, Content, Property, propertyByKind
 from olpc.datastore.utils import create_uid
 
 from sqlalchemy import create_engine, BoundMetaData
@@ -35,7 +35,14 @@ class SugarDomain(object):
         """resolves property names to the factory type that supports
         them in the model
         """
-        return {
+        # key may be a two part form directly indicating the property
+        # type
+        if ':' in key:
+            key, kind = key.split(':', 1)
+            # now resolve the kind to a property class
+            return key, propertyByKind(kind)
+        
+        return key, {
             'ctime' : DateProperty,
             'mtime' : DateProperty,
             'author' : Property,
@@ -45,10 +52,10 @@ class SugarDomain(object):
             }.get(key, Property)
 
     def propertyFactory(self, key, value='', dict=None):
-        k = self.kind_by_key(key)
-        p = k(key, value)
+        key, kind = self.kind_by_key(key)
+        p = kind(key, value)
         if dict is not None: dict[key] = p
-        return k
+        return kind
     
     def _automaticProperties(self):
         d = {}
@@ -74,7 +81,7 @@ class SugarDomain(object):
             # convert it into a  dict of Property objects
             d = {}
             for k,v in props.iteritems():
-                kind = self.kind_by_key(k)
+                k, kind = self.kind_by_key(k)
                 p = kind(k, v)
                 d[k] = p
             if creating and include_defaults:
@@ -244,6 +251,14 @@ class QueryManager(SugarDomain):
         c = self._resolve(content_or_uid)
         return self.model.session.query(Property).select_by(self.model.property.c.key.in_(keys),
                                                             content_id=c.id)
+
+
+    def get_uniquevaluesfor(self, propertyname):
+        properties = self.model.tables['properties']
+        return [r[0] for r in select([properties.c.value],
+                                     properties.c.key==propertyname,
+                                     distinct=True).execute().fetchall()]
+        
 
 
     def delete(self, content_or_uid):

@@ -11,7 +11,7 @@ __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
 from sqlalchemy import Table, Column, UniqueConstraint
-from sqlalchemy import String, Integer, Unicode, PickleType
+from sqlalchemy import String, Integer, Unicode
 from sqlalchemy import ForeignKey, Sequence, Index
 from sqlalchemy import mapper, relation
 from sqlalchemy import create_session
@@ -31,11 +31,15 @@ import time
 
 # we have a global thread local session factory
 context = {}
+propertyTypes = {}
+_marker = object()
 
 def get_session(backingstore):
     return context[backingstore]
 
-_marker = object()
+def registerPropertyType(kind, class_): propertyTypes[kind] = class_
+def propertyByKind(kind): return propertyTypes[kind]
+
 
 class Content(object):
     def __repr__(self):
@@ -56,7 +60,6 @@ class Content(object):
         query = session.query(Property)
         return query.select_by(content_id=self.id, **kwargs)
 
-    
 
     # Backingstore dependent bindings 
     def get_file(self):
@@ -206,6 +209,15 @@ class NumberProperty(Property):
     value = property(get_value, set_value)
     
 
+class BinaryProperty(Property):
+    # base64 encode binary data 
+    def __init__(self, key, value, type="binary"):
+        Property.__init__(self, key, value, type)
+
+    def get_value(self): return self._value.decode('base64')
+    def set_value(self, value): self._value = value.encode('base64')
+    value = property(get_value, set_value)
+
 
 class Model(object):
     """ Manages the global state of the metadata model index. This is
@@ -259,7 +271,7 @@ class Model(object):
                            Column('id', Integer, Sequence('property_id_seq'), primary_key=True),
                            Column('content_id', Integer, ForeignKey('content.id')),
                            Column('key', Unicode,  ),
-                           Column('value', PickleType, ),
+                           Column('value', Unicode, ),
                            Column('type', Unicode, ),
                            # unique key to content mapping
                            UniqueConstraint('content_id', 'key',
@@ -325,7 +337,7 @@ class Model(object):
         self.addPropertyType(DateProperty, 'date')
         self.addPropertyType(NumberProperty, 'number')
         self.addPropertyType(TextProperty, 'text')
-
+        self.addPropertyType(BinaryProperty, 'binary')
         
         
         
@@ -355,3 +367,6 @@ class Model(object):
                polymorphic_identity=typename,
                properties=properties
                )
+
+        registerPropertyType(typename, PropertyClass)
+

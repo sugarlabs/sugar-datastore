@@ -48,10 +48,10 @@ if not sys.stdin.isatty():
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 bus = dbus.SessionBus()
 
-ds = DataStore(querymanager_sync_index=False)
+ds = DataStore()
 ds.registerBackend(backingstore.FileBackingStore)
 ds.registerBackend(backingstore.InplaceFileBackingStore)
-ds.mount(repo_dir, {'sync_index': False})
+ds.mount(repo_dir, {'querymanager_sync_index': False})
 
 # and run it 
 logger.info("Starting Datastore %s" % (repo_dir))

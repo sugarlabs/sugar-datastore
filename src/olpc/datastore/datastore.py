@@ -68,8 +68,15 @@ class DataStore(dbus.service.Object):
         # medium (maybe an SD card for example) and we'd want to keep
         # that on the XO itself. In these cases their might be very
         # little identifying information on the media itself.
-        if not options: options = {}
-        mp = self.connect_backingstore(uri, **options)
+
+        uri = str(uri)
+
+        _options = {}
+        if options:
+            for key, value in options.iteritems():
+                _options[str(key)] = str(value)
+
+        mp = self.connect_backingstore(uri, **_options)
         if not mp: return ''
         if mp.id in self.mountpoints:
             self.mountpoints[mp.id].stop()

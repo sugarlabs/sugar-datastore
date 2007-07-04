@@ -200,7 +200,8 @@ class QueryManager(SugarDomain):
         
         if self.sync_index and filelike:
             self.fulltext_index(c.id, filelike,
-                                mimetype=c.get_property('mime_type'))
+                                mimetype=c.get_property('mime_type'),
+                                textprops=self.get_textprops(c))
 
         return c
     
@@ -212,7 +213,7 @@ class QueryManager(SugarDomain):
             self.model.session.flush()
 
         if self.sync_index and filelike:
-            self.fulltext_index(content.id, filelike)
+            self.fulltext_index(content.id, filelike, textprops=self.get_textprops(content))
 
     
     def _bindProperties(self, content, props, creating=False, include_defaults=False):
@@ -422,12 +423,20 @@ class QueryManager(SugarDomain):
 
         return s
 
-        
 
+    def get_textprops(self, uid_or_content):
+        # text properties also get full text indexing
+        # currently this is still searched with the 'fulltext'
+        # parameter of find()
+        content = self._resolve(uid_or_content)
+        textprops = {}
+        for p in content.get_properties(type='text'):
+            textprops[p.key] = p.value and p.value or ''
+        return textprops
         
         
     # fulltext interface
-    def fulltext_index(self, uid, fileobj, mimetype=None):
+    def fulltext_index(self, uid, fileobj, mimetype=None, textprops=None):
         """Index the fileobj relative to uid which should be a
         olpc.datastore.model.Content object's uid. The fileobj can be
         either a pathname or an object implementing the Python file
@@ -533,7 +542,7 @@ class XapianFulltext(object):
         self.index.registerFlattener(unicode, flatten_unicode)
         atexit.register(self.index.close)
         
-    def fulltext_index(self, uid, fileobj, mimetype=None):
+    def fulltext_index(self, uid, fileobj, mimetype=None, textprops=None):
         """Index the fileobj relative to uid which should be a
         olpc.datastore.model.Content's uid. The fileobj can be either
         a pathname or an object implementing the Python file ('read')
@@ -558,27 +567,17 @@ class XapianFulltext(object):
             # into an indexable form.
             logging.debug("Unable to index %s %s" % (uid, fileobj))
             return False
-
-        # text properties also get full text indexing
-        # currently this is still searched with the 'fulltext'
-        # parameter of find()
-        textprops = {}
-        """
-        content = self.get(uid)
-        for p in content.get_properties(type='text'):
-            textprops[p.key] = p.value and p.value or ''
-        """
-
         return self._ft_index(uid, fp, piece, textprops)
 
     def _ft_index(self, content_id, fp, piece=DocumentPiece, fields=None):
         try:
             doc = [piece(fp.read())]
-            # add in properties that need extra fulltext like
-            # management
-            for key, value in fields.iteritems():
-                doc.append(DocumentPiece(value, key))
-                
+            if fields:
+                # add in properties that need extra fulltext like
+                # management
+                for key, value in fields.iteritems():
+                    doc.append(DocumentPiece(value, key))
+
             self.index.addDocument(doc, content_id)
             self.index.flush()
             return True

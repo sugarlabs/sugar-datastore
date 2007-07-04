@@ -35,6 +35,8 @@ def main():
     print datastore.find(dict(fulltext="amazed"))
     datastore.get_properties(uid)
 
+    print "title in fulltext", datastore.find(dict(fulltext="another"))
+  
     datastore.delete(uid)
     
 if __name__ == '__main__':

@@ -44,3 +44,4 @@ class Indexer(dbus.service.Object, XapianFulltext):
         self.connect_fulltext(repo, read_only=False)
 
     
+

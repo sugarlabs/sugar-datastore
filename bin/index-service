@@ -75,6 +75,15 @@ class IndexService(Application):
 
         self.eventloop.run()
 
+    def get_textprops(self, uid):
+        # text properties also get full text indexing
+        # currently this is still searched with the 'fulltext'
+        # parameter of find()
+        textprops = {}
+        for p in self.ds.get_properties(uid, type='text'):
+            textprops[p.key] = p.value and p.value or ''
+        return textprops
+
     def created(self, uid):
         """An object was created on the bus and we want to index it"""
         # because the file isn't encoded anywhere accessible in the
@@ -84,7 +93,8 @@ class IndexService(Application):
         r = None
         if filename:
             mime_type = self.ds.get_properties(uid).get('mime_type', None)
-            r = self.fulltext.fulltext_index(uid, filename, mime_type)
+            r = self.fulltext.fulltext_index(uid, filename, mime_type,
+                                             **self.get_textprops(uid))
         if r is True:
             logger.debug("index creation of %s" % uid)
         elif r is False:
@@ -102,7 +112,8 @@ class IndexService(Application):
         if filename:
             mime_type = self.ds.get_properties(uid).get('mime_type', None)
             print uid, filename, mime_type
-            r = self.fulltext.fulltext_index(uid, filename, mime_type)
+            r = self.fulltext.fulltext_index(uid, filename, mime_type,
+                                             **self.get_textprops(uid))
         if r is True:
             logger.debug("index update of %s" % uid)
         elif r is False:
@@ -139,7 +150,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_shutdown)
 
     idx = IndexService()
-    ##idx()
+    #idx()
     # w/o ore.main
 
     import gobject 

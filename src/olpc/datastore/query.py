@@ -285,11 +285,6 @@ class QueryManager(SugarDomain):
         of content matching its parameters. see fulltext_search for
         additional details.
 
-        To order results by a given property you can specify:
-        >>> qm.find(order_by=['author', 'title'])
-
-        Order by must be a list of property names given in the order
-        of decreasing precedence.
 
         If 'limit' is passed it will be the maximum number of results
         to return and 'offset' will be the offset from 0 into the

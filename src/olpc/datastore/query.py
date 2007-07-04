@@ -339,9 +339,14 @@ class QueryManager(SugarDomain):
                 if ctime or mtime:
                     self._query_dates(ctime, mtime, where)
                 for k,v in query.iteritems():
+                    if isinstance(v, list):
+                        v = properties.c.value.in_(*v)
+                    else:
+                        v = properties.c.value==v
+                        
                     where.append(select([properties.c.content_id],
                                         and_( properties.c.key==k,
-                                              properties.c.value==v)))
+                                              v)))
                                  
                 statement = intersect(*where)
                 statement.distinct=True

@@ -255,6 +255,17 @@ used in the 'author' field.
 
 >>> assert set(qm.get_uniquevaluesfor('author')) == set(['Benjamin', 'Sarah'])
 
+Now that we can see a set of possible values it might be nice to
+select any content with properties from a known set. For example
+
+>>> r, c = qm.find(author=['Benjamin', 'Sarah'])
+>>> assert c == 3
+
+By putting the request value in a list we can ask that the value be
+'IN' this collection. All participating values are included in this
+way.
+
+
 Now for politeness we shut everything down
 >>> qm.stop()
 >>> import shutil, os

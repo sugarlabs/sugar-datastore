@@ -109,6 +109,24 @@ class DataStore(dbus.service.Object):
         self.mountpoints[mountpoint_id].stop()
         del self.mountpoints[mountpoint_id]
     ### End Mount Points
+
+    ### Buddy Management
+    ##  A single datastore typically refers to a single user
+    ##  this breaks down a little in the case of things like USB
+    ##  sticks and so on. We provide a facility for tracking
+    ##  co-authors of content
+    ##  there are associated changes to 'find' to resolve buddies
+    def addBuddy(self, id, name, fg_color, bg_color):
+        pass
+
+    def getBuddy(self, id):
+        pass
+    
+    def buddies(self):
+        pass
+    
+
+    ## end buddy api
     
     def connect_backingstore(self, uri, **kwargs):
         """
@@ -227,6 +245,13 @@ class DataStore(dbus.service.Object):
         don't want to generate them unless needed. In the case the
         the full properties set matches doing the single roundtrip
         to start an activity makes sense.
+
+        To order results by a given property you can specify:
+        >>> ds.find(order_by=['author', 'title'])
+
+        Order by must be a list of property names given in the order
+        of decreasing precedence.
+
         """
         # only goes to the primary now. Punting on the merge case
         if isinstance(query, dict):
@@ -234,7 +259,7 @@ class DataStore(dbus.service.Object):
 
         include_files = kwargs.pop('include_files', False)
         order_by = kwargs.pop('order_by', [])
-
+        
         # distribute the search to all the mountpoints unless a
         # backingstore id set is specified
         results, count = self._multiway_search(kwargs)
@@ -271,7 +296,6 @@ class DataStore(dbus.service.Object):
                     if r != 0: return r
                 return 0
             
-
 
             r = results.values()
             r.sort(comparator)
@@ -330,12 +354,13 @@ class DataStore(dbus.service.Object):
 
     #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature='s',
+                         in_signature='sa{sv}',
                          out_signature='a{sv}')
-    def get_properties(self, uid):
+    def get_properties(self, uid, query=None):
         content = self.get(uid)
         dictionary = {}
-        for prop in content.get_properties():
+        if not query: query = {}
+        for prop in content.get_properties(**query):
             dictionary[prop.key] = prop.marshall()
         return dictionary
 

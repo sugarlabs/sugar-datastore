@@ -568,9 +568,11 @@ class XapianFulltext(object):
         # currently this is still searched with the 'fulltext'
         # parameter of find()
         textprops = {}
+        """
         content = self.get(uid)
         for p in content.get_properties(type='text'):
             textprops[p.key] = p.value and p.value or ''
+        """
 
         return self._ft_index(uid, fp, piece, textprops)
 

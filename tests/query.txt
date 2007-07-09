@@ -249,6 +249,10 @@ Searching for it in the fulltext index does return a result.
 >>> qm.find(fulltext="indeed") == ([a], 1)
 True
 
+Searching for only title in fulltext index does return a result as well.
+>>> qm.find(fulltext="title:indeed") == ([a], 1)
+True
+
 
 Here we show off the get_uniquevaluesfor call examining all the values
 used in the 'author' field.

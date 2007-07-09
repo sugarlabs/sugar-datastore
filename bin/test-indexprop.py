@@ -4,10 +4,22 @@ import os
 
 def main():
     bus = dbus.SessionBus()
-    datastore = bus.get_object("org.laptop.sugar.DataStore",
-                               "/org/laptop/sugar/DataStore")
+    ds = bus.get_object("org.laptop.sugar.DataStore",
+                        "/org/laptop/sugar/DataStore")
+    datastore = dbus.Interface(ds, dbus_interface='org.laptop.sugar.DataStore')
+    
+    props = {'title:text': 'test activity',
+             'title_set_by_user': '0',
+             'buddies': '',
+             'keep': '0',
+             'icon-color': '#40011d,#79079a',
+             'activity': 'org.laptop.WebActivity',
+             'mime_type': ''}
 
-    props = {'title:text': 'title',
+    uid = datastore.create(props, '')
+    print "created uid", uid
+
+    props = {'title:text': 'test activity title changed',
              'title_set_by_user': '1',
              'buddies': '',
              'keep': '0',
@@ -15,10 +27,13 @@ def main():
              'activity': 'org.laptop.WebActivity',
              'mime_type': 'text/plain'}
     
-    uid = datastore.create(props, os.path.abspath('tests/web_data.json'))
-    print "created uid", uid
+    datastore.update(uid, props, os.path.abspath('tests/web_data.json'))
+    print "updated uid", uid
 
-    result, count = datastore.find(dict(fulltext='title'))
+    #import time;time.sleep(1.0)
+    
+    result, count = datastore.find(dict(fulltext='test'))
+    print result
     assert result[0]['uid'] == uid
     for k, v in result[0].items():
         print "\t", k, v

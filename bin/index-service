@@ -58,7 +58,8 @@ class IndexService(Application):
         self.fulltext = Indexer(self.options.fulltext_dir)
         self.fulltext.use_fulltext = True
         
-        self.ds = bus.get_object(DS_SERVICE, DS_OBJECT_PATH)
+        ds = bus.get_object(DS_SERVICE, DS_OBJECT_PATH)
+        self.ds = dbus.Interface(ds, dbus_interface=DS_DBUS_INTERFACE)
 
         self.ds.connect_to_signal("Created", self.created,
                                   dbus_interface=DS_DBUS_INTERFACE)
@@ -80,8 +81,8 @@ class IndexService(Application):
         # currently this is still searched with the 'fulltext'
         # parameter of find()
         textprops = {}
-        for p in self.ds.get_properties(uid, type='text'):
-            textprops[p.key] = p.value and p.value or ''
+        for k,v in self.ds.get_properties(uid, dict(type='text')).items():
+            textprops[str(k)] = v and str(v) or ''
         return textprops
 
     def created(self, uid):
@@ -92,9 +93,9 @@ class IndexService(Application):
         filename = self.ds.get_filename(uid)
         r = None
         if filename:
-            mime_type = self.ds.get_properties(uid).get('mime_type', None)
+            mime_type = self.ds.get_properties(uid, {}).get('mime_type', None)
             r = self.fulltext.fulltext_index(uid, filename, mime_type,
-                                             **self.get_textprops(uid))
+                                             self.get_textprops(uid))
         if r is True:
             logger.debug("index creation of %s" % uid)
         elif r is False:
@@ -110,10 +111,10 @@ class IndexService(Application):
         filename = self.ds.get_filename(uid)
         r = None
         if filename:
-            mime_type = self.ds.get_properties(uid).get('mime_type', None)
-            print uid, filename, mime_type
+            mime_type = self.ds.get_properties(uid, {}).get('mime_type',
+                                                        None)
             r = self.fulltext.fulltext_index(uid, filename, mime_type,
-                                             **self.get_textprops(uid))
+                                             self.get_textprops(uid))
         if r is True:
             logger.debug("index update of %s" % uid)
         elif r is False:

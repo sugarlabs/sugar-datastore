@@ -41,7 +41,7 @@ class DataStoreApplication(Application):
                                action="store_true", default=False,
                                help="""Dump database work""")
 
-        self.parser.add_option("--olpc.fulltext.sync", dest="sync_index",
+        self.parser.add_option("--olpc.fulltext.sync", dest="querymanager_sync_index",
                                action="store_true", default=False,
                                help="""Force the indexer in-process in
                                synchronous mode.""")
@@ -60,7 +60,7 @@ class DataStoreApplication(Application):
 
         self.ds = DataStore(self.options.repo_dir,
                             self.options.md_db,
-                            querymanager_sync_index=self.options.sync_index)
+                            querymanager_sync_index=self.options.querymanager_sync_index)
 
         if self.options.sync_index is False and self.options.start_indexer:
             # trigger the index service

@@ -1,4 +1,4 @@
-SUBDIRS = bin etc src
+SUBDIRS = bin etc secore src
 
 test:
 	@cd tests

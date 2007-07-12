@@ -1,21 +1,21 @@
 import unittest
-from StringIO import StringIO
+from testutils import tmpData, waitforindex
 
 from olpc.datastore import backingstore
-from sqlalchemy import clear_mappers
 import os
 
 DEFAULT_STORE = '/tmp/_bs_test'
 
 class Test(unittest.TestCase):
-    def tearDown(self):
+    def setUp(self):
         if os.path.exists(DEFAULT_STORE):
             os.system("rm -rf %s" % DEFAULT_STORE)
 
-        clear_mappers()
+    def tearDown(self):
+        if os.path.exists(DEFAULT_STORE):
+            os.system("rm -rf %s" % DEFAULT_STORE)
             
     def test_fsstore(self):
-        clear_mappers()
         bs = backingstore.FileBackingStore(DEFAULT_STORE)
         bs.initialize_and_load()
         bs.create_descriptor()
@@ -28,20 +28,27 @@ class Test(unittest.TestCase):
         d = """This is a test"""
         d2 = "Different"
         
-        c = bs.create(dict(title="A"), StringIO(d))
-        obj = bs.get(c.id)
+        uid = bs.create(dict(title="A"), tmpData(d))
+
+        waitforindex(bs)
+        
+        obj = bs.get(uid)
+
         assert obj.get_property('title') == "A"
         got = obj.file.read()
         assert got == d
 
-        bs.update(c.id, dict(title="B"), StringIO(d2))
-        obj = bs.get(c.id)
+        bs.update(uid, dict(title="B"), tmpData(d2))
+
+        waitforindex(bs)
+        
+        obj = bs.get(uid)
         assert obj.get_property('title') == "B"
         got = obj.file.read()
         assert got == d2
 
-        bs.delete(c.id)
-        self.failUnlessRaises(KeyError, bs.get, c.id)
+        bs.delete(uid)
+        self.failUnlessRaises(KeyError, bs.get, uid)
         
 def test_suite():
     suite = unittest.TestSuite()

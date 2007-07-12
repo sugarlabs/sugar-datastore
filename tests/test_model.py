@@ -1,35 +1,56 @@
 import unittest
-from testutils import tmpData
+from testutils import tmpData, waitforindex
 
 from olpc.datastore import DataStore
 from olpc.datastore import model, backingstore
 import datetime
 import os
 
+
+DEFAULT_STORE = '/tmp/test_ds'
+
 class Test(unittest.TestCase):
+    def setUp(self): os.system('rm -rf %s' % DEFAULT_STORE)
+    def tearDown(self): os.system('rm -rf %s' % DEFAULT_STORE)
+        
     def test_dateproperty(self):
         n = datetime.datetime.now()
         # we have to kill the microseconds as
         # time.strptime which we must use in 2.4 doesn't parse it
         n = n.replace(microsecond=0)
-        p = model.DateProperty('ctime', n)
+        p = model.Property('ctime', n, 'date')
         assert p.key == "ctime"
-        assert p.value.isoformat() == n.isoformat()
+        # XXX: the 'date()' is a work around for a missing secore
+        # feature right now
+        assert p.value == n.date().isoformat()
 
+        
     def test_binaryproperty(self):
         ds = DataStore()
         ds.registerBackend(backingstore.FileBackingStore)
-        ds.mount('/tmp/test_ds')
+
+        #add a custom field to the model 
+        dm = model.defaultModel.addField('thumbnail',
+                                         store=True,
+                                         exact=False,
+                                         sortable=False)
         
+        ds.mount(DEFAULT_STORE, {'indexmanager.model' : dm})
+
+
         data = open('test.jpg', 'r').read()
         # binary data with \0's in it can cause dbus errors here
-        uid = ds.create({'title' : "Document 1", 'thumbnail:binary' : data},
-                        tmpData("with image\0\0 prop"))
+        fn = tmpData("with image\0\0 prop")
+        uid = ds.create({'title' : "Document 1", 'thumbnail:binary' : data}, fn)
+        
+        waitforindex(ds)
+
         c = ds.get(uid)
         assert c.get_property('thumbnail') == data
+
         ds.stop()
 
-        os.system('rm -rf /tmp/test_ds')
+
         
 def test_suite():
     suite = unittest.TestSuite()

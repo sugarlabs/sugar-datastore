@@ -18,8 +18,6 @@ import dbus.mainloop.glib
 
 from olpc.datastore import utils
 
-from StringIO import StringIO
-
 # the name used by the logger
 DS_LOG_CHANNEL = 'org.laptop.sugar.DataStore'
 
@@ -68,14 +66,11 @@ class DataStore(dbus.service.Object):
         # medium (maybe an SD card for example) and we'd want to keep
         # that on the XO itself. In these cases their might be very
         # little identifying information on the media itself.
-
         uri = str(uri)
 
-        _options = {}
-        if options:
-            for key, value in options.iteritems():
-                _options[str(key)] = str(value)
-
+        _options = utils._convert(options)
+        if _options is None: _options = {}
+        
         mp = self.connect_backingstore(uri, **_options)
         if not mp: return ''
         if mp.id in self.mountpoints:
@@ -116,14 +111,28 @@ class DataStore(dbus.service.Object):
     ##  sticks and so on. We provide a facility for tracking
     ##  co-authors of content
     ##  there are associated changes to 'find' to resolve buddies
-    def addBuddy(self, id, name, fg_color, bg_color):
-        pass
+    def addBuddy(self, id, name, fg_color, bg_color, mountpoint=None):
+        mp = None
+        if mountpoint is None: mp = self.root
+        else: mp = self.mountpoints.get(mountpoint)
+        if mp is None: raise ValueError("Invalid mountpoint")
+        mp.addBuddy(id, name, fg_color, bg_color)
 
-    def getBuddy(self, id):
-        pass
+    def getBuddy(self, bid):
+        """Get a buddy by its id"""
+        b = None
+        for mp in self.mountpoints.itervalues():
+            b = mp.getBuddy(bid)
+            if b: break
+        return b
+
     
     def buddies(self):
-        pass
+        buddies = set()
+        for mp in self.mountpoints.itervalues():
+            buddies = buddies.union(mp.getBuddies())
+        return buddies
+        
     
 
     ## end buddy api
@@ -173,26 +182,15 @@ class DataStore(dbus.service.Object):
         over this process can come at a later time.
         """
         mp = self._resolveMountpoint(props)
-        content = mp.create(props, filelike)
-        self.Created(content.id)
-        logging.debug("created %s" % content.id)
+        uid = mp.create(props, filelike)
+        self.Created(uid)
+        logging.debug("created %s" % uid)
         
-        return content.id
+        return uid
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Created(self, uid): pass
         
-    
-    @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='',
-             out_signature='as')
-    def all(self):
-        # workaround for not having optional args or None in
-        # DBus ..  blah
-        results = self.querymanager.find()
-        return [r.id for r in results]
-
-
     def _multiway_search(self, query):
         mountpoints = query.pop('mountpoints', self.mountpoints)
         mountpoints = [self.mountpoints[str(m)] for m in mountpoints]
@@ -306,9 +304,8 @@ class DataStore(dbus.service.Object):
         d = []
         for r in results:
             props =  {}
-            for prop in r.get_properties():
-                props[prop.key] = prop.marshall()
-
+            props.update(r.properties)
+            
             if 'uid' not in props:
                 props['uid'] = r.id
 
@@ -317,7 +314,7 @@ class DataStore(dbus.service.Object):
             
             filename = ''
             if include_files :
-                try: filename = self.backingstore.get(r.id).filename
+                try: filename = r.filename
                 except KeyError: pass
                 props['filename'] = filename
             d.append(props)
@@ -344,14 +341,6 @@ class DataStore(dbus.service.Object):
             except AttributeError: pass
         return ''
         
-    def get_data(self, uid):
-        content = self.get(uid)
-        if content:
-            return content.get_data()
-
-    def put_data(self, uid, data):
-        self.update(uid, None, StringIO(data))
-
     #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='sa{sv}',
@@ -360,7 +349,7 @@ class DataStore(dbus.service.Object):
         content = self.get(uid)
         dictionary = {}
         if not query: query = {}
-        for prop in content.get_properties(**query):
+        for prop in content.get_properties(query):
             dictionary[prop.key] = prop.marshall()
         return dictionary
 

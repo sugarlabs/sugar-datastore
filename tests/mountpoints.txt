@@ -12,7 +12,7 @@ mounting a backingstore on the datastore.
 
 >>> from olpc.datastore import DataStore
 >>> from olpc.datastore import backingstore
->>> from testutils import tmpData
+>>> from testutils import tmpData, waitforindex
 >>> import dbus
 
 
@@ -41,6 +41,7 @@ Now lets create some content
 We can now, if we wish verify which mount point this content came
 from.
 
+>>> waitforindex(ds)
 
 >>> c1 = ds.get(u1)
 >>> assert c1.backingstore.id == mountpoint
@@ -60,6 +61,8 @@ Now lets add another mount point.
 
 Now lets create a new content item.
 >>> u3 = ds.create(dict(title="Document 3", mountpoint=mp2), tmpData("""document three"""))
+
+>>> waitforindex(ds)
 
 We explictly passed a mount point here. Lets examine the properties of
 the object and verify this.
@@ -102,6 +105,8 @@ Register the filesystem type
 
 If that worked it should have imported content on load().
 
+>>> waitforindex(ds)
+
 >>> result, count = ds.find(dict(fulltext="four"))
 >>> assert count == 1
 >>> assert result[0]['mountpoint'] == mp3
@@ -113,6 +118,8 @@ as DBus data.
 >>> ds.unmount(mp3)
 
 >>> mp3 = ds.mount("inplace:/tmp/store3", dict(title=dbus.String("Fake USB again")))
+
+>>> waitforindex(ds)
 
 >>> result, count = ds.find(dict(fulltext="four"))
 >>> assert count == 1

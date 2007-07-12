@@ -16,20 +16,11 @@ First clean up any old test data.
 >>> im = IndexManager()
 >>> im.connect(index_home)
 
-A small utility method for wrapping a normal dict into proper property
-objects.
-
->>> def propsdict(**kwargs):
-...    d = {}
-...    for k,v in kwargs.iteritems(): 
-...        d[k] = model.Property(k, v)
-...    return d
-
 
 Now add the file to the index.
 
->>> props = propsdict(title="PDF Document",
-...                   mimetype="application/pdf")
+>>> props = dict(title="PDF Document",
+...              mimetype="application/pdf")
 
 
 >>> uid = im.index(props, "test.pdf")
@@ -41,36 +32,42 @@ left, when it has none we expect our content to be indexed and searchable.
 
 
 Searching on an property of the content works.
->>> assert im.search("PDF")[0] == uid
+>>> def expect(r, count=None):
+...    if count: assert r[1] == count
+...    return list(r[0])
+>>> def expect_single(r):
+...    assert r[1] == 1
+...    return r[0].next()
+>>> def expect_none(r):
+...    assert r[1] == 0
+...    assert list(r[0]) == []
+
+
+>>> assert expect_single(im.search("PDF")).id == uid
 
 Searching into the binary content of the object works as well.
->>> assert im.search("peek")[0] == uid
+>>> assert expect_single(im.search("peek")).id == uid
 
 Specifying a search that demands a document term be found only in the
 title works as well.
 
->>> assert im.search('title:PDF')[0] == uid
->>> im.search('title:peek')
-[]
+>>> assert expect_single(im.search('title:PDF')).id == uid
+>>> expect_none(im.search('title:peek'))
 
 Searching for documents that are PDF works as expected here. Here we
 use the dictionary form of the query where each field name is given
 and creates a search.
->>> assert im.search(dict(mimetype='application/pdf'))[0] == uid
-
-
-#Likewise excluding the match works as expected
-#>>> im.search('-title:PDF')
-#[]
-
+>>> assert expect_single(im.search(dict(mimetype='application/pdf'))).id == uid
 
 Punctuation is fine.
 
->>> assert im.search("Don't peek")[0] == uid
+>>> assert expect_single(im.search("Don't peek")).id == uid
 
 As well as quoted strings
 
->>> assert im.search(r'''"Don't peek"''')[0] == uid
+>>> assert expect_single(im.search(r'''"Don't peek"''')).id == uid
 
 Cleanly shut down.
 >>> im.stop()
+
+>>> assert os.system('rm -rf %s' % index_home) == 0

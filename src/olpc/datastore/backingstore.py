@@ -17,7 +17,7 @@ import re
 import subprocess
 import time
 
-from olpc.datastore import query
+from olpc.datastore.xapianindex import IndexManager
 from olpc.datastore import utils
 
 # changing this pattern impacts _targetFile
@@ -75,7 +75,7 @@ class BackingStore(object):
     def load(self):
         """load the index for a given mount-point, then initialize its
         fulltext subsystem. This is the routine that will bootstrap
-        the querymanager (though create() may have just created it)
+        the indexmanager (though create() may have just created it)
         """
         pass
 
@@ -121,11 +121,11 @@ class FileBackingStore(BackingStore):
         """ FileSystemStore(path=<root of managed storage>)
         """
         self.options = kwargs
-        self.local_querymanager = self.options.get('local_querymanager', True)
+        self.local_indexmanager = self.options.get('local_indexmanager', True)
 
         self.uri = uri
         self.base = os.path.join(uri, self.STORE_NAME)
-        self.querymanager = None
+        self.indexmanager = None
         
     # Informational
     def descriptor(self):
@@ -190,47 +190,40 @@ class FileBackingStore(BackingStore):
         if not os.path.exists(self.base):
             os.makedirs(self.base)
 
-        # examine options and see what the querymanager plan is
-        if self.local_querymanager:
-            # create a local storage using the querymanager
+        # examine options and see what the indexmanager plan is
+        if self.local_indexmanager:
+            # create a local storage using the indexmanager
             # otherwise we will connect the global manager
             # in load
             index_name = os.path.join(self.base, self.INDEX_NAME)
-            options = utils.options_for(self.options, 'querymanager_')
-            if 'fulltext_repo' not in options:
-                options['fulltext_repo'] = os.path.join(self.base,
-                                                        query.DefaultQueryManager.FULLTEXT_NAME)
-                
-            qm = query.DefaultQueryManager(index_name, **options)
+            options = utils.options_for(self.options, 'indexmanager.')
+            im = IndexManager()
             # This will ensure the fulltext and so on are all assigned
-            qm.bind_to(self)
-            qm.prepare()
+            im.bind_to(self)
+            im.connect(index_name, **options)
 
             self.create_descriptor(**options)
-            self.querymanager = qm
+            self.indexmanager = im
             
     def load(self):
-        if not self.querymanager and self.local_querymanager:
-            # create a local storage using the querymanager
+        if not self.indexmanager and self.local_indexmanager:
+            # create a local storage using the indexmanager
             # otherwise we will connect the global manager
             # in load
             index_name = os.path.join(self.base, self.INDEX_NAME)
-            options = utils.options_for(self.options, 'querymanager_')
-            if 'fulltext_repo' not in self.options:
-                options['fulltext_repo'] = os.path.join(self.base,
-                                                        query.DefaultQueryManager.FULLTEXT_NAME)
-                
-            qm = query.DefaultQueryManager(index_name, **options)
+            options = utils.options_for(self.options, 'indexmanager.')
+            im = IndexManager()
 
             desc = utils.options_for(self.options,
-                                     'querymanager_', invert=True)
+                                     'indexmanager.',
+                                     invert=True)
             if desc: self.create_descriptor(**desc)
                 
             # This will ensure the fulltext and so on are all assigned
-            qm.bind_to(self)
-            qm.prepare()
+            im.bind_to(self)
+            im.connect(index_name)
 
-            self.querymanager = qm
+            self.indexmanager = im
             
     def bind_to(self, datastore):
         ## signal from datastore that we are being bound to it
@@ -283,7 +276,7 @@ class FileBackingStore(BackingStore):
         # env would contain things like cwd if we wanted to map to a
         # known space
         
-        content = self.querymanager.get(uid)
+        content = self.indexmanager.get(uid)
         # we need to map a copy of the content from the backingstore into the
         # activities addressable space.
         # map this to a rw file
@@ -316,7 +309,7 @@ class FileBackingStore(BackingStore):
             fp.write(line)
         fp.close()
         if verify:
-            content = self.querymanager.get(uid)
+            content = self.indexmanager.get(uid)
             content.checksum = c.hexdigest()
 
     def _checksum(self, filename):
@@ -329,18 +322,18 @@ class FileBackingStore(BackingStore):
         
     # File Management API
     def create(self, props, filelike):
-        content = self.querymanager.create(props, filelike)
+        uid = self.indexmanager.index(props, filelike)
         filename = filelike
         if filelike:
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
                 filelike = open(filelike, "r")
             filelike.seek(0)
-            self._writeContent(content.id, filelike, replace=False)
-        return content
+            self._writeContent(uid, filelike, replace=False)
+        return uid
     
     def get(self, uid, env=None, allowMissing=False):
-        content = self.querymanager.get(uid)
+        content = self.indexmanager.get(uid)
         if not content: raise KeyError(uid)
         path = self._translatePath(uid)
         fp = None
@@ -352,7 +345,9 @@ class FileBackingStore(BackingStore):
         return self._mapContent(uid, fp, path, env)
 
     def update(self, uid, props, filelike=None):
-        self.querymanager.update(uid, props, filelike)
+        if 'uid' not in props: props['uid'] = uid
+            
+        self.indexmanager.index(props, filelike)
         filename = filelike
         if filelike:
             if isinstance(filelike, basestring):
@@ -365,7 +360,7 @@ class FileBackingStore(BackingStore):
         self._writeContent(uid, filelike)
 
     def delete(self, uid, allowMissing=True):
-        self.querymanager.delete(uid)
+        self.indexmanager.delete(uid)
         path = self._translatePath(uid)
         if os.path.exists(path):
             os.unlink(path)
@@ -374,21 +369,21 @@ class FileBackingStore(BackingStore):
                 raise KeyError("object for uid:%s missing" % uid)            
         
     def get_uniquevaluesfor(self, propertyname):
-        return self.querymanager.get_uniquevaluesfor(propertyname)
+        return self.indexmanager.get_uniquevaluesfor(propertyname)
     
 
     def find(self, query):
-        return self.querymanager.find(query)
+        return self.indexmanager.search(query)
 
     def stop(self):
-        self.querymanager.stop()
+        self.indexmanager.stop()
         
 
 class InplaceFileBackingStore(FileBackingStore):
     """Like the normal FileBackingStore this Backingstore manages the
     storage of files, but doesn't move files into a repository. There
     are no working copies. It simply adds index data through its
-    querymanager and provides fulltext ontop of a regular
+    indexmanager and provides fulltext ontop of a regular
     filesystem. It does record its metadata relative to this mount
     point.
 
@@ -434,7 +429,7 @@ class InplaceFileBackingStore(FileBackingStore):
             for fn in filenames:
                 source = os.path.join(dirpath, fn)
                 relative = source[len(self.uri)+1:]
-                result, count = self.querymanager.find(dict(filename=relative))
+                result, count = self.indexmanager.search(dict(filename=relative))
                 if not count:
                     # create a new record
                     self.create(dict(filename=relative), source)
@@ -449,30 +444,29 @@ class InplaceFileBackingStore(FileBackingStore):
                     if checksum != content.checksum:
                         self.update(uid, dict(filename=relative), source)
                         
-        #self.querymanager.index.flush()
                         
 
     # File Management API
     def create(self, props, filelike):
         # the file would have already been changed inplace
         # don't touch it
-        return self.querymanager.create(props, filelike)
+        return self.indexmanager.index(props, filelike)
     
     def get(self, uid, env=None, allowMissing=False):
-        content = self.querymanager.get(uid)
+        content = self.indexmanager.get(uid)
         if not content: raise KeyError(uid)
         return content.get_property('filename')
 
     def update(self, uid, props, filelike=None):
         # the file would have already been changed inplace
         # don't touch it
-        self.querymanager.update(uid, props, filelike)
+        self.indexmanager.index(uid, props, filelike)
         
-    def delete(self, uid, allowMissing=True):
-        c = self.querymanager.get(uid)
-        path = c.get_property('filename')
-        self.querymanager.delete(uid)
-        if os.path.exists(path):
+    def delete(self, uid):
+        c = self.indexmanager.get(uid)
+        path = c.get_property('filename', None)
+        self.indexmanager.delete(uid)
+        if path and os.path.exists(path):
             os.unlink(path)
         
 

@@ -28,10 +28,26 @@ from olpc.datastore.utils import create_uid
 # Setup Logger
 logger = logging.getLogger('org.sugar.datastore.xapianindex')
 
+class ContentMappingIter(object):
+    """An iterator over a set of results from a search.
+
+    """
+    def __init__(self, results, backingstore):
+        self._results = results
+        self._backingstore = backingstore
+        self._iter = iter(results)
+
+    def __iter__(self): return self
+    
+    def next(self):
+        searchresult = self._iter.next()
+        return model.Content(searchresult, self._backingstore)
+
 
 class IndexManager(object):
-
-    def __init__(self, language='en'):
+    DEFAULT_DATABASE_NAME = 'index'
+    
+    def __init__(self, default_language='en'):
         # We will maintain two connections to the database
         # we trigger automatic flushes to the read_index
         # after any write operation        
@@ -39,30 +55,52 @@ class IndexManager(object):
         self.read_index = None
         self.queue = Queue(0)
         self.indexer_running = False
-        self.language = language
+        self.language = default_language
 
+        self.backingstore = None
+        
         self.fields = set()
         
     #
     # Initialization
-    def connect(self, repo):
+    def connect(self, repo, **kwargs):
         if self.write_index is not None:
-            warnings.warn('''Requested redundant connect''', RuntimeWarning)
-            
+            warnings.warn('''Requested redundant connect to index''',
+                          RuntimeWarning)
+
+        self.repo = repo
         self.write_index = secore.IndexerConnection(repo)
-        self.setupFields()
+
+        # configure the database according to the model
+        datamodel = kwargs.get('model', model.defaultModel)
+        datamodel.apply(self)
+
+        # store a reference
+        self.datamodel = datamodel
         
         self.read_index = secore.SearchConnection(repo)
-        
+
+        self.flush()        
+
         # by default we start the indexer now
         self.startIndexer()
 
+    def bind_to(self, backingstore):
+        # signal from backingstore that its our parent
+        self.backingstore = backingstore
+
+    # flow control
+    def flush(self):
+        """Called after any database mutation"""
+        self.write_index.flush()
+        self.read_index.reopen()
+    
     def stop(self):
         self.stopIndexer()
         self.write_index.close()
         self.read_index.close()
 
-
+    # Index thread management
     def startIndexer(self):
         self.indexer_running = True
         self.indexer = threading.Thread(target=self.indexThread,
@@ -76,33 +114,53 @@ class IndexManager(object):
         self.indexer_running = False
         self.indexer.join()
 
-    def enque(self, uid, vid, doc):
-        self.queue.put((uid, vid, doc))
+    def enque(self, uid, vid, doc, created):
+        self.queue.put((uid, vid, doc, created))
 
     def indexThread(self):
         # process the queue
+        # XXX: there is currently no way to remove items from the queue
+        # for example if a USB stick is added and quickly removed
+        # the mount should however get a stop() call which would
+        # request that the indexing finish
+        logger = logging.getLogger('org.sugar.datastore.xapianindex.indexThread')
         while self.indexer_running:
             # include timeout here to ease shutdown of the thread
             # if this is a non-issue we can simply allow it to block
             try:
-                uid, vid, doc = self.queue.get(timeout=0.5)
-                self.write_index.add(doc)
+                uid, vid, doc, created = self.queue.get(timeout=0.5)
+
+                if created: self.write_index.add(doc)
+                else: self.write_index.replace(doc)
+
+                # XXX: if there is still work in the queue we could
+                # delay the flush()
                 self.flush()
+                
                 logger.info("Indexed Content %s:%s" % (uid, vid))
                 self.queue.task_done()
             except Empty:
                 pass
-            
+            except:
+                logger.exception("Error in index thread. Attempting recovery")
+                try: self.write_index.close()
+                except: pass
+                self.write_index = secore.IndexerConnection(self.repo)
+                self.read_index.reopen()
+
+                
+
     @property
     def working(self):
         """Does the indexer have work"""
-        return not self.queue.empty()
-    
-    def flush(self):
-        """Called after any database mutation"""
-        self.write_index.flush()
-        self.read_index.reopen()
+        return self.indexer_running and not self.queue.empty()
 
+    def complete_indexing(self):
+        """Intentionally block until the indexing is complete. Used
+        primarily in testing.
+        """
+        self.queue.join()
+    
     #
     # Field management
     def addField(self, key, store=True, exact=False, sortable=False,
@@ -127,35 +185,29 @@ class IndexManager(object):
 
         # track this to find missing field configurations
         self.fields.add(key)
-        
-    def setupFields(self):
-        # add standard fields
-        # text is content objects information
-        self.addField('text', store=False, exact=False)
 
-        # vid is version id
-        self.addField('vid', store=True, exact=True, sortable=True, type="float")
-
-        # Title has additional weight 
-        self.addField('title', store=True, exact=False, weight=2, sortable=True)
-
-        self.addField('mimetype', store=True, exact=True)
-        self.addField('author', store=True, exact=True)
-        self.addField('language', store=True, exact=True)
-
-
-        self.addField('ctime', store=True, exact=True, sortable=True, type='date')
-        self.addField('mtime', store=True, exact=True, sortable=True, type='date')
-        
     #
     # Index Functions
+    def mapProperties(self, props):
+        """data normalization function, maps dicts of key:kind->value
+        to Property objects
+        """
+        d = {}
+        for k,v in props.iteritems():
+            p = model.Property.fromstring(k, v)
+            d[p.key] = p
+        return d
+
     def index(self, props, filename=None):
         """Index the content of an object.
         Props must contain the following:
             key -> Property()
         """
+        props = self.mapProperties(props)
         doc = secore.UnprocessedDocument()
         add = doc.fields.append
+        fp = None
+        created = False
         
         if filename:
             mimetype = props.get("mimetype")
@@ -177,7 +229,10 @@ class IndexManager(object):
         vid = props.pop('vid', None)
 
         if uid: uid = uid.value
-        else: uid = create_uid()
+        else:
+            uid = create_uid()
+            created = True
+            
         if vid: vid = vid.value
         else: vid = "1.0"
         
@@ -187,19 +242,32 @@ class IndexManager(object):
         #
         # Property indexing
         for k, prop in props.iteritems():
-            if isinstance(prop, model.BinaryProperty): continue
             value = prop.value
+
             if k not in self.fields:
                 warnings.warn("""Missing field configuration for %s""" % k,
-                             RuntimeWarning)
+                              RuntimeWarning)
                 continue
+            
             add(secore.Field(k, value))
-
+            
         # queue the document for processing
-        self.enque(uid, vid, doc)
+        self.enque(uid, vid, doc, created)
 
         return uid
 
+    def get(self, uid):
+        doc = self.read_index.get_document(uid)
+        if not doc: raise KeyError(uid)
+        return model.Content(doc, self.backingstore)
+
+    def delete(self, uid):
+        # does this need queuing?
+        # the higher level abstractions have to handle interaction
+        # with versioning policy and so on
+        self.write_index.delete(uid)
+        self.flush()
+        
     #
     # Search
     def search(self, query, start_index=0, end_index=50):
@@ -210,10 +278,10 @@ class IndexManager(object):
         preceded by a "+" sign to indicate that the term is required, or a "-"
         to indicate that is is required to be absent.
         """
-        # this will return the [(id, relevance), ...], estimated
-        # result count
         ri = self.read_index
-        if isinstance(query, dict):
+        if not query:
+            q = self.read_index.query_all()
+        elif isinstance(query, dict):
             queries = []
             # each term becomes part of the query join
             for k, v in query.iteritems():
@@ -221,11 +289,40 @@ class IndexManager(object):
             q = ri.query_composite(ri.OP_AND, queries)
         else:
             q = self.parse_query(query)
-
             
         results = ri.search(q, start_index, end_index)
-        return [r.id for r in results]
+        count = results.matches_estimated
+
+        # map the result set to model.Content items
+        return ContentMappingIter(results, self.backingstore), count
+    
+
+    def get_uniquevaluesfor(self, property):
+        # XXX: this is very sketchy code
+        # try to get the searchconnection to support this directly
+        # this should only apply to EXACT fields
+        r = set()
+        prefix = self.read_index._field_mappings.get_prefix(property)
+        plen = len(prefix)
+        termiter = self.read_index._index.allterms(prefix)
+        for t in termiter:
+            term = t.term
+            if len(term) > plen:
+                term = term[plen:]
+                if term.startswith(':'): term = term[1:]
+                r.add(term)
+
+        # r holds the textual representation of the fields value set
+        # if the type of field or property needs conversion to a
+        # different python type this has to happen now
+        descriptor = self.datamodel.fields.get(property)
+        if descriptor:
+            kind = descriptor[1].get('type', 'string')
+            impl = model.propertyByKind(kind)
+            r = set([impl.get(i) for i in r])
             
+        return r
+                                                         
     def parse_query(self, query):
         # accept standard web query like syntax
         # 'this' -- match this

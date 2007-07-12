@@ -14,10 +14,9 @@ import unittest
 import doctest
 from pkg_resources import resource_filename
 
-from sqlalchemy import clear_mappers
 
 doctests = [
-    resource_filename(__name__, "query.txt"),
+    resource_filename(__name__, "xapianindex.txt"),
     resource_filename(__name__, "milestone_1.txt"),
     resource_filename(__name__, "sugar_demo_may17.txt"),
     resource_filename(__name__, "milestone_2.txt"),
@@ -44,13 +43,14 @@ sys.path.insert(0, test_lib)
 
 
 def tearDownDS(test):
-    # reset the module global mappers used in SQLAlchemy between tests
-    clear_mappers()
     # and remove the test repository used in some tests
     os.system('rm -rf /tmp/test_ds')
     
 def test_suite():
     suite = unittest.TestSuite()
+    if len(sys.argv) > 1:
+        doctests = sys.argv[1:]
+        
     for dt in doctests:
         suite.addTest(doctest.DocFileSuite(dt,
     optionflags=doctest_options, tearDown=tearDownDS))
@@ -68,5 +68,6 @@ def test_suite():
 
 if __name__ == "__main__":
     runner = unittest.TextTestRunner(verbosity=1)
-    runner.run(test_suite())
+    suite = test_suite()
+    runner.run(suite)
                         

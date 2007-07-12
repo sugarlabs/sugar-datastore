@@ -47,7 +47,7 @@ This returned a list of all properties on the Content object in which
 case we can find the property by enumeration. The other option is
 using the get_properties call on Content
 
->>> a.get_properties(key='title')
+>>> a.get_properties(dict(key='title'))
 [<TextProperty title:'New Content'>]
 
 Using the query manager API we are able to update the
@@ -57,11 +57,11 @@ that this works lets attach another property.
 >>> qm.update(a, dict(author='Benjamin'))
 
 A request for title still returns only the title property.
->>> a.get_properties(key='title')
+>>> a.get_properties(dict(key='title'))
 [<TextProperty title:'New Content'>]
 
 And a request for author works as expected.
->>> a.get_properties(key='author')
+>>> a.get_properties(dict(key='author'))
 [<Property author:'Benjamin'>]
 
 >>> qm.update(a, dict(foo='bar'))
@@ -91,11 +91,9 @@ Here we want to show that certain types of Properties map to
 specialized implemenations automatically based on their type. 'ctime'
 is a DateTime Property and we can verify that it is returned properly
 from the mapping layer with the following.
->>> ctimeProp = a.get_properties(key='ctime')[0]
->>> ctimeProp.type == "date"
+>>> ctimeProp = a.get_properties(dict(key='ctime'))[0]
+>>> ctimeProp.kind == "date"
 True
->>> type(ctimeProp)
-<class 'olpc.datastore.model.DateProperty'>
 
 Special support is needed to make dates easily addressable within the
 datastore. The properties 'ctime', creation time, and 'mtime',
@@ -144,7 +142,7 @@ refers. This is available through the 'content' attrbiute of
 properties. Only properties bound to content and synchronized with the
 database have this property.
 
->>> p = a.get_properties(key='author')[0]
+>>> p = a.get_properties(dict(key='author'))[0]
 >>> p.content
 <Content id:...>
 

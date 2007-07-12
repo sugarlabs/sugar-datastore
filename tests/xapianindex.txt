@@ -1,0 +1,76 @@
+The xapian index module can be used directly as follows
+
+First clean up any old test data.
+
+>>> index_home = "/tmp/xi"
+>>> import os, sys, time, logging
+>>> assert os.system('rm -rf %s' % index_home) == 0
+
+# >>> logging.basicConfig(level=logging.DEBUG,
+# ...                    format="%(asctime)-15s %(name)s %(levelname)s: %(message)s",
+# ...                    stream=sys.stderr)
+     
+
+>>> from olpc.datastore.xapianindex import IndexManager
+>>> from olpc.datastore import model
+>>> im = IndexManager()
+>>> im.connect(index_home)
+
+A small utility method for wrapping a normal dict into proper property
+objects.
+
+>>> def propsdict(**kwargs):
+...    d = {}
+...    for k,v in kwargs.iteritems(): 
+...        d[k] = model.Property(k, v)
+...    return d
+
+
+Now add the file to the index.
+
+>>> props = propsdict(title="PDF Document",
+...                   mimetype="application/pdf")
+
+
+>>> uid = im.index(props, "test.pdf")
+
+Let the async indexer do its thing. We ask the indexer if it has work
+left, when it has none we expect our content to be indexed and searchable.
+
+>>> while im.working: time.sleep(0.5)
+
+
+Searching on an property of the content works.
+>>> assert im.search("PDF")[0] == uid
+
+Searching into the binary content of the object works as well.
+>>> assert im.search("peek")[0] == uid
+
+Specifying a search that demands a document term be found only in the
+title works as well.
+
+>>> assert im.search('title:PDF')[0] == uid
+>>> im.search('title:peek')
+[]
+
+Searching for documents that are PDF works as expected here. Here we
+use the dictionary form of the query where each field name is given
+and creates a search.
+>>> assert im.search(dict(mimetype='application/pdf'))[0] == uid
+
+
+#Likewise excluding the match works as expected
+#>>> im.search('-title:PDF')
+#[]
+
+
+Punctuation is fine.
+
+>>> assert im.search("Don't peek")[0] == uid
+
+As well as quoted strings
+
+>>> assert im.search(r'''"Don't peek"''')[0] == uid
+
+Cleanly shut down.
+>>> im.stop()

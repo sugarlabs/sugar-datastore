@@ -28,6 +28,12 @@ from olpc.datastore.utils import create_uid
 # Setup Logger
 logger = logging.getLogger('org.sugar.datastore.xapianindex')
 
+# Indexer Operations
+CREATE = 1
+UPDATE = 2
+DELETE = 3
+
+
 class ContentMappingIter(object):
     """An iterator over a set of results from a search.
 
@@ -103,8 +109,7 @@ class IndexManager(object):
     # Index thread management
     def startIndexer(self):
         self.indexer_running = True
-        self.indexer = threading.Thread(target=self.indexThread,
-                                        name="XapianIndexer")
+        self.indexer = threading.Thread(target=self.indexThread)
         self.indexer.setDaemon(True)
         self.indexer.start()
         
@@ -114,8 +119,8 @@ class IndexManager(object):
         self.indexer_running = False
         self.indexer.join()
 
-    def enque(self, uid, vid, doc, created):
-        self.queue.put((uid, vid, doc, created))
+    def enque(self, uid, vid, doc, operation):
+        self.queue.put((uid, vid, doc, operation))
 
     def indexThread(self):
         # process the queue
@@ -123,31 +128,40 @@ class IndexManager(object):
         # for example if a USB stick is added and quickly removed
         # the mount should however get a stop() call which would
         # request that the indexing finish
-        logger = logging.getLogger('org.sugar.datastore.xapianindex.indexThread')
         while self.indexer_running:
             # include timeout here to ease shutdown of the thread
             # if this is a non-issue we can simply allow it to block
             try:
-                uid, vid, doc, created = self.queue.get(timeout=0.5)
+                uid, vid, doc, operation = self.queue.get(timeout=0.5)
 
-                if created: self.write_index.add(doc)
-                else: self.write_index.replace(doc)
+                if operation is CREATE: self.write_index.add(doc)
+                elif operation is UPDATE: self.write_index.replace(doc)
+                elif operation is DELETE: self.write_index.delete(uid)
+                else:
+                    logger.warning("Unknown indexer operation ( %s: %s)" % \
+                                   (uid, operation))
+                    continue
 
                 # XXX: if there is still work in the queue we could
                 # delay the flush()
-                self.flush()
+                #if self.queue.empty(): self.flush()
                 
                 logger.info("Indexed Content %s:%s" % (uid, vid))
                 self.queue.task_done()
             except Empty:
                 pass
-            except:
-                logger.exception("Error in index thread. Attempting recovery")
-                try: self.write_index.close()
-                except: pass
-                self.write_index = secore.IndexerConnection(self.repo)
-                self.read_index.reopen()
-
+##             except:
+##                 try: self.write_index.close()
+##                 except: pass
+##                 try:
+##                     self.write_index = secore.IndexerConnection(self.repo)
+##                     self.read_index.reopen()
+##                 except:
+##                     # Shut down the indexer
+##                     logger.critical("Indexer Failed, Shutting it down")
+##                     self.indexer_running = False
+                    
+                
                 
 
     @property
@@ -160,6 +174,7 @@ class IndexManager(object):
         primarily in testing.
         """
         self.queue.join()
+        self.flush()
     
     #
     # Field management
@@ -188,7 +203,7 @@ class IndexManager(object):
 
     #
     # Index Functions
-    def mapProperties(self, props):
+    def _mapProperties(self, props):
         """data normalization function, maps dicts of key:kind->value
         to Property objects
         """
@@ -203,11 +218,11 @@ class IndexManager(object):
         Props must contain the following:
             key -> Property()
         """
-        props = self.mapProperties(props)
+        props = self._mapProperties(props)
         doc = secore.UnprocessedDocument()
         add = doc.fields.append
         fp = None
-        created = False
+        operation = UPDATE
         
         if filename:
             mimetype = props.get("mimetype")
@@ -231,9 +246,9 @@ class IndexManager(object):
         if uid: uid = uid.value
         else:
             uid = create_uid()
-            created = True
+            operation = CREATE
             
-        if vid: vid = vid.value
+        if vid: vid = str(float(vid.value) + 1.0)
         else: vid = "1.0"
         
         doc.id = uid
@@ -252,7 +267,7 @@ class IndexManager(object):
             add(secore.Field(k, value))
             
         # queue the document for processing
-        self.enque(uid, vid, doc, created)
+        self.enque(uid, vid, doc, operation)
 
         return uid
 
@@ -265,8 +280,7 @@ class IndexManager(object):
         # does this need queuing?
         # the higher level abstractions have to handle interaction
         # with versioning policy and so on
-        self.write_index.delete(uid)
-        self.flush()
+        self.enque(uid, None, None, DELETE)
         
     #
     # Search
@@ -317,10 +331,10 @@ class IndexManager(object):
         # different python type this has to happen now
         descriptor = self.datamodel.fields.get(property)
         if descriptor:
-            kind = descriptor[1].get('type', 'string')
+            kind = descriptor[1]
             impl = model.propertyByKind(kind)
-            r = set([impl.get(i) for i in r])
-            
+            r = set([impl.set(i) for i in r])
+        
         return r
                                                          
     def parse_query(self, query):

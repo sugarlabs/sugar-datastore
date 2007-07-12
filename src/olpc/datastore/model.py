@@ -76,66 +76,6 @@ class Property(object):
     value = property(get_value, set_value)
 
     def __str__(self): return str(self.value)
-    
-def noop(value): return value
-
-# Xapian doesn't have real binary storage, rather these keys will get
-# indexed it its database. If the key size is too large the indexing
-# will fail
-# there are two solutions -- divert the storage to the backingstore
-# and retain a key reference to recover it (this is the correct
-# solution long term as it participates in versioning) and what I do
-# now which is to insert and remove spaces into the base64 stream
-# every fixed amount of characters
-import re
-base64hack = re.compile("(\S{212})")
-def base64enc(value): return ' '.join(base64hack.split(value.encode('base64')))
-def base64dec(value): return value.replace(' ', '').decode('base64')
-
-dateformat = "%Y-%m-%dT%H:%M:%S"
-def datedec(value, dateformat=dateformat):
-    ti = time.strptime(value, dateformat)
-    dt = datetime.datetime(*(ti[:-2]))
-    dt = dt.replace(microsecond=0)
-    return dt
-
-def dateenc(value, dateformat=dateformat):
-    if isinstance(value, basestring):
-        # XXX: there  is an issue with microseconds not getting parsed
-        ti = time.strptime(value, dateformat)
-        value = datetime.datetime(*(ti[:-2]))
-    value = value.replace(microsecond=0)
-    # XXX: drop time for now, this is a xapian issue
-    value = value.date()
-    return value.isoformat()
-
-# syntactic sugar for the below
-def p(key, kind, **kwargs): return (key, kind, kwargs)
-
-# type, get, set, xapian sort type [string|float|date], defaults
-# defaults are the default options to addField in IndexManager
-# these can be overridden on model assignment
-registerPropertyType('string', noop, noop, 'string', {'store' : True,
-                                                      'exact' : True,
-                                                      'sortable' : True})
-
-registerPropertyType('text', noop, noop, 'string', {'store' : True,
-                                                    'exact' : False,
-                                                    'sortable' : False})
-
-registerPropertyType('binary', noop, noop, None, {'store' : True,
-                                                  'exact' : False,
-                                                  'sortable' : False})
-
-registerPropertyType('number', str, float, 'float', {'store' : True,
-                                                     'exact' : True,
-                                                     'sortable' : True})
-
-registerPropertyType('date', dateenc, datedec, 'date', {'store' : True,
-                                                        'exact' : True,
-                                                        'sortable' : True
-                                                        })
-
 
 class Model(object):
     """Object containing the field/property model used by the
@@ -145,7 +85,7 @@ class Model(object):
         self.fields = {}
         self.fieldnames = []
 
-    def addField(self, key, kind, **kwargs):
+    def addField(self, key, kind, overrides=None):
         """ Add a field to the model.
         key     -- field name
         kind    -- type by name (registered with registerPropertyType)
@@ -158,7 +98,7 @@ class Model(object):
 
         impl = propertyByKind(kind)
         options = impl.defaults.copy()
-        if kwargs: options.update(kwargs)
+        if overrides: options.update(overrides)
         if impl.xapian_sort_type:
             if 'type' not in options:
                 options['type'] = impl.xapian_sort_type
@@ -169,7 +109,7 @@ class Model(object):
     
     def addFields(self, *args):
         """ List of arguments to addField """
-        for arg in args: self.addField(arg[0], arg[1], **arg[2])
+        for arg in args: self.addField(*arg)
         return self        
 
     def apply(self, indexmanager):
@@ -178,27 +118,6 @@ class Model(object):
             args = self.fields[fn]
             addField(args[0], **args[2])
 
-
-defaultModel = Model().addFields(    
-    p('text', 'text'),
-    # vid is version id
-    p('vid', store=True, exact=True, sortable=True, type="float"),
-    p('filename', store=True, exact=True),
-    # Title has additional weight 
-    p('title', store=True, exact=False, weight=2, sortable=True),
-    p('url', store=True, exact=True, sortable=True),
-    p('mimetype', store=True, exact=True),
-    p('author', store=True, exact=True),
-    p('language', store=True, exact=True),
-    p('ctime', store=True, exact=True, sortable=True, type='date'),
-    p('mtime', store=True, exact=True, sortable=True, type='date'),
-    # this will just be a space delimited list of tags
-    # indexed with the content
-    # I give them high weight as they have user given semantic value.
-    p('tags', store=True, exact=False, weight=3, sortable=True),
-    )
-
-        
 class Content(object):
     """A light weight proxy around Xapian Documents from secore.
     This provides additional methods which are used in the
@@ -283,4 +202,87 @@ class Content(object):
 ##     pass
 
 
-            
+
+def noop(value): return value
+
+# Xapian doesn't have real binary storage, rather these keys will get
+# indexed it its database. If the key size is too large the indexing
+# will fail
+# there are two solutions -- divert the storage to the backingstore
+# and retain a key reference to recover it (this is the correct
+# solution long term as it participates in versioning) and what I do
+# now which is to insert and remove spaces into the base64 stream
+# every fixed amount of characters
+import re
+base64hack = re.compile("(\S{212})")
+def base64enc(value): return ' '.join(base64hack.split(value.encode('base64')))
+def base64dec(value): return value.replace(' ', '').decode('base64')
+
+dateformat = "%Y-%m-%dT%H:%M:%S"
+def datedec(value, dateformat=dateformat):
+    ti = time.strptime(value, dateformat)
+    dt = datetime.datetime(*(ti[:-2]))
+    dt = dt.replace(microsecond=0)
+    return dt
+
+def dateenc(value, dateformat=dateformat):
+    if isinstance(value, basestring):
+        # XXX: there  is an issue with microseconds not getting parsed
+        ti = time.strptime(value, dateformat)
+        value = datetime.datetime(*(ti[:-2]))
+    value = value.replace(microsecond=0)
+    # XXX: drop time for now, this is a xapian issue
+    value = value.date()
+    return value.isoformat()
+
+# type, get, set, xapian sort type [string|float|date], defaults
+# defaults are the default options to addField in IndexManager
+# these can be overridden on model assignment
+registerPropertyType('string', noop, noop, 'string', {'store' : True,
+                                                      'exact' : True,
+                                                      'sortable' : True})
+
+registerPropertyType('text', noop, noop, 'string', {'store' : True,
+                                                    'exact' : False,
+                                                    'sortable' : False})
+
+registerPropertyType('binary', noop, noop, None, {'store' : True,
+                                                  'exact' : False,
+                                                  'sortable' : False})
+
+registerPropertyType('int', str, int, 'float', {'store' : True,
+                                                'exact' : True,
+                                                'sortable' : True})
+
+registerPropertyType('number', str, float, 'float', {'store' : True,
+                                                     'exact' : True,
+                                                     'sortable' : True})
+
+registerPropertyType('date', dateenc, datedec, 'date', {'store' : True,
+                                                        'exact' : True,
+                                                        'sortable' : True
+                                                        })
+
+
+
+defaultModel = Model().addFields(    
+    ('text', 'text'),
+    # vid is version id
+    ('vid', 'number'),
+    ('checksum', 'string'),
+    ('filename', 'string'),
+    # Title has additional weight 
+    ('title', 'text', {'weight' : 2 }),
+    ('url', 'string'),
+    ('mimetype', 'string'),
+    ('author', 'string'),
+    ('language', 'string'),
+    ('ctime', 'date'),
+    ('mtime', 'date'),
+    # this will just be a space delimited list of tags
+    # indexed with the content
+    # I give them high weight as they have user given semantic value.
+    ('tags', 'text', {'weight' :3 } ),
+    )
+
+        

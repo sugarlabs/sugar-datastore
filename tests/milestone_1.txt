@@ -87,6 +87,4 @@ We can also remove the file from the repository.
 This is the basis of milestone 1.
 
 >>> ds.stop()
->>> del ds
-
 >>> assert os.system('rm -rf /tmp/test_ds') == 0

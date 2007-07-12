@@ -7,17 +7,22 @@ First clean up from any other tests.
 >>> assert os.system('rm -rf /tmp/test_ds/') == 0
 
 >>> from olpc.datastore import DataStore
->>> from olpc.datastore import backingstore
+>>> from olpc.datastore import backingstore, model
 >>> ds = DataStore()
 >>> ds.registerBackend(backingstore.FileBackingStore)
->>> assert ds.mount("/tmp/test_ds")
+>>> dm = model.defaultModel.addField('year', 'int').addField('month', 'string')
 
->>> a = ds.create(dict(title="Content A", author="Bob", year=1999, month="Jan"), '')
->>> b = ds.create(dict(title="Content B", author="Alice", year=2000, month="Jan"), '')
+>>> assert ds.mount("/tmp/test_ds", {'indexmanager.model' : dm})
+
+>>> a = ds.create(dict(title="Content A", author="Bob", year="1999", month="Jan"), '')
+>>> b = ds.create(dict(title="Content B", author="Alice", year="2000", month="Jan"), '')
 
 Find should return both
 >>> def find2uids(results): return [i['uid'] for i in results[0]]
->>> assert set(find2uids(ds.find({}))) == set([a,b])
+
+>>> ds.complete_indexing()
+
+>>> assert set(find2uids(ds.find())) == set([a,b])
 
 
 But what if we want the results ordered?
@@ -35,3 +40,4 @@ and if we want to reverse order it?
 
 >>> ds.stop()
 >>> del ds
+>>> assert os.system('rm -rf /tmp/test_ds/') == 0

@@ -155,7 +155,7 @@ class DataStore(dbus.service.Object):
 
     def _resolveMountpoint(self, mountpoint=None):
         if isinstance(mountpoint, dict):
-            mountpoint = mountpoint.get('mountpoint')
+            mountpoint = mountpoint.pop('mountpoint', None)
             
         if mountpoint is not None:
             # this should be the id of a mount point
@@ -361,7 +361,7 @@ class DataStore(dbus.service.Object):
         mountpoints = query.pop('mountpoints', self.mountpoints)
         mountpoints = [self.mountpoints[str(m)] for m in mountpoints]
         results = set()
-        
+
         for mp in mountpoints:
             result = mp.get_uniquevaluesfor(propertyname)
             results = results.union(result)
@@ -394,8 +394,8 @@ class DataStore(dbus.service.Object):
         content = self.get(uid)
         if content:
             content.backingstore.delete(uid)
-            self.Deleted(content.id)
-            logger.debug("deleted %s" % content.id)
+            self.Deleted(uid)
+            logger.debug("deleted %s" % uid)
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Deleted(self, uid): pass
@@ -411,3 +411,8 @@ class DataStore(dbus.service.Object):
     def Stopped(self): pass
 
         
+    def complete_indexing(self):
+        """Block waiting for all queued indexing operations to complete"""
+        for mp in self.mountpoints.itervalues():
+            mp.complete_indexing()
+            

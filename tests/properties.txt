@@ -19,7 +19,7 @@ Set up two mount points.
 
 Extend the model to retain a 'year' property used below.
 
->>> dm = model.defaultModel.addField('year', store=True, exact=True, sortable=True, type="float")
+>>> dm = model.defaultModel.addField('year', "int")
 
 Mount a couple of stores.
 
@@ -35,15 +35,14 @@ Create some content on each.
 >>> u4 = ds.create({'title' : "Gamma doc", 'author' : "HAL", 'year:number' : 2001, 'mountpoint' : mp2}, tmpData("""Document 4""")) 
 
 Now we should be able to discover things about the system properties.
+>>> ds.complete_indexing()
 
 Here we test that we can extract the unique values for certain properties.
 >>> assert set(ds.get_uniquevaluesfor('author')) == set(['Ben', 'HAL'])
 
-Here we try to gather the values for the property year. We'd expect
-these values to come back as numbers, however in the current
-implementation they are stored as unicode values.
+Here we try to gather the values for the property year.
 
->>> assert set(ds.get_uniquevaluesfor('year')) == set([u'2000', u'2001']) 
+>>> assert set(ds.get_uniquevaluesfor('year')) == set([2000, 2001]) 
 
 
 

@@ -30,10 +30,8 @@ class Test(unittest.TestCase):
         ds.registerBackend(backingstore.FileBackingStore)
 
         #add a custom field to the model 
-        dm = model.defaultModel.addField('thumbnail',
-                                         store=True,
-                                         exact=False,
-                                         sortable=False)
+        dm = model.defaultModel.addField('thumbnail', 'binary')
+                                         
         
         ds.mount(DEFAULT_STORE, {'indexmanager.model' : dm})
 
@@ -41,6 +39,7 @@ class Test(unittest.TestCase):
         data = open('test.jpg', 'r').read()
         # binary data with \0's in it can cause dbus errors here
         fn = tmpData("with image\0\0 prop")
+        # XXX: We should be able to remove:binary now
         uid = ds.create({'title' : "Document 1", 'thumbnail:binary' : data}, fn)
         
         waitforindex(ds)

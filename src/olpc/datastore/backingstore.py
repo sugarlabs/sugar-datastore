@@ -377,7 +377,9 @@ class FileBackingStore(BackingStore):
 
     def stop(self):
         self.indexmanager.stop()
-        
+
+    def complete_indexing(self):
+        self.indexmanager.complete_indexing()
 
 class InplaceFileBackingStore(FileBackingStore):
     """Like the normal FileBackingStore this Backingstore manages the
@@ -429,6 +431,7 @@ class InplaceFileBackingStore(FileBackingStore):
             for fn in filenames:
                 source = os.path.join(dirpath, fn)
                 relative = source[len(self.uri)+1:]
+
                 result, count = self.indexmanager.search(dict(filename=relative))
                 if not count:
                     # create a new record
@@ -436,13 +439,14 @@ class InplaceFileBackingStore(FileBackingStore):
                 else:
                     # update the object with the new content iif the
                     # checksum is different
-                    # XXX: what if there is more than one? (shouldn't happen)
-                    content = result[0]
-                    uid = content
+                    # XXX: what if there is more than one? (shouldn't
+                    # happen)
+                    content = result.next()
+                    uid = content.id
                     # only if the checksum is different
-                    checksum = self._checksum(source)
-                    if checksum != content.checksum:
-                        self.update(uid, dict(filename=relative), source)
+                    #checksum = self._checksum(source)
+                    #if checksum != content.checksum:
+                    self.update(uid, dict(filename=relative), source)
                         
                         
 
@@ -460,7 +464,8 @@ class InplaceFileBackingStore(FileBackingStore):
     def update(self, uid, props, filelike=None):
         # the file would have already been changed inplace
         # don't touch it
-        self.indexmanager.index(uid, props, filelike)
+        props['uid'] = uid
+        self.indexmanager.index(props, filelike)
         
     def delete(self, uid):
         c = self.indexmanager.get(uid)

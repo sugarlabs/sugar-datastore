@@ -21,7 +21,7 @@ doctests = [
     resource_filename(__name__, "sugar_demo_may17.txt"),
     resource_filename(__name__, "milestone_2.txt"),
     resource_filename(__name__, "mountpoints.txt"),
-    resource_filename(__name__, "properties.txt")
+    resource_filename(__name__, "properties.txt"),
     
 ]
 
@@ -29,40 +29,25 @@ doctest_options = doctest.ELLIPSIS
 doctest_options |= doctest.REPORT_ONLY_FIRST_FAILURE
 
 
-# IF YOU ARE NOT GETTING THE RESULTS YOU EXPECT WHILE TESTING
-# THIS IS THE LIKELY CAUSE
-# :: Use distutils to modify the pythonpath for inplace testing
-# using the build directory
-from distutils.util import get_platform
-plat_specifier = ".%s-%s" % (get_platform(), sys.version[0:3])
-build_platlib = os.path.join("build", 'lib' + plat_specifier)
-test_lib = os.path.join(os.path.abspath(".."), build_platlib)
-sys.path.insert(0, test_lib)
-# END PATH ADJUSTMENT CODE
-
-
-
-def tearDownDS(test):
-    # and remove the test repository used in some tests
-    os.system('rm -rf /tmp/test_ds')
-    
 def test_suite():
+    global doctests
     suite = unittest.TestSuite()
     if len(sys.argv) > 1:
         doctests = sys.argv[1:]
         
     for dt in doctests:
         suite.addTest(doctest.DocFileSuite(dt,
-    optionflags=doctest_options, tearDown=tearDownDS))
+    optionflags=doctest_options))
 
-    tests = os.listdir(os.curdir)
-    tests = [n[:-3] for n in tests if n.startswith('test') and
-             n.endswith('.py')]
+    if len(sys.argv) <= 1:
+        tests = os.listdir(os.curdir)
+        tests = [n[:-3] for n in tests if n.startswith('test') and
+                 n.endswith('.py')]
 
-    for test in tests:
-        m = __import__(test)
-        if hasattr(m, 'test_suite'):
-            suite.addTest(m.test_suite())
+        for test in tests:
+            m = __import__(test)
+            if hasattr(m, 'test_suite'):
+                suite.addTest(m.test_suite())
     return suite
 
 

@@ -134,7 +134,11 @@ class Content(object):
         self._doc = xapdoc
         self._backingstore = backingstore
         self._file = None
-        
+
+    def __repr__(self):
+        return "<%s %s>" %(self.__class__.__name__,
+                           self.properties)
+    
     def get_property(self, key, default=_marker):
         result = self._doc.data.get(key, default)
         if result is _marker: raise KeyError(key)
@@ -210,14 +214,6 @@ class Content(object):
 
 def noop(value): return value
 
-# Xapian doesn't have real binary storage, rather these keys will get
-# indexed it its database. If the key size is too large the indexing
-# will fail
-# there are two solutions -- divert the storage to the backingstore
-# and retain a key reference to recover it (this is the correct
-# solution long term as it participates in versioning) and what I do
-# now which is to insert and remove spaces into the base64 stream
-# every fixed amount of characters
 import re
 base64hack = re.compile("(\S{212})")
 def base64enc(value): return ' '.join(base64hack.split(value.encode('base64')))

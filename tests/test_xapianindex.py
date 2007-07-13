@@ -1,5 +1,3 @@
-from testutils import waitforindex
-
 from olpc.datastore.xapianindex import IndexManager
 import os
 from datetime import datetime
@@ -70,7 +68,7 @@ class Test(unittest.TestCase):
         #print "%s in %s %s/sec" % (count, delta, count/delta)
 
         # wait for indexing to finish
-        waitforindex(im)
+        im.complete_indexing()
 
         # test basic search performance
         results = list(im.search('peek')[0])
@@ -78,7 +76,8 @@ class Test(unittest.TestCase):
         # this indicates that we found text inside binary content that
         # we expected 
         assert 'test.pdf' in set(r.get_property('filename') for r in results)
-        
+
+        assert im.search('mimetype:application/pdf filename:test.pdf peek')[1] == 1
         
         
 def test_suite():

@@ -20,7 +20,7 @@ First clean up any old test data.
 Now add the file to the index.
 
 >>> props = dict(title="PDF Document",
-...              mimetype="application/pdf")
+...              mime_type="application/pdf")
 
 
 >>> uid = im.index(props, "test.pdf")
@@ -57,7 +57,7 @@ title works as well.
 Searching for documents that are PDF works as expected here. Here we
 use the dictionary form of the query where each field name is given
 and creates a search.
->>> assert expect_single(im.search(dict(mimetype='application/pdf'))).id == uid
+>>> assert expect_single(im.search(dict(mime_type='application/pdf'))).id == uid
 
 Punctuation is fine.
 

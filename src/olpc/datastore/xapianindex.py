@@ -239,7 +239,7 @@ class IndexManager(object):
             # enque async file processing
             # XXX: to make sure the file is kept around we could keep
             # and open fp?
-            mimetype = props.get("mimetype")
+            mimetype = props.get("mime_type")
             mimetype = mimetype and mimetype.value or 'text/plain'
             filestuff = (filename, mimetype)
 

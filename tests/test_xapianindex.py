@@ -24,7 +24,7 @@ def index_file(iconn, filepath):
 
 
 
-    props = {'mimetype' : mimetype, 'mtime:date' : mtime,
+    props = {'mime_type' : mimetype, 'mtime:date' : mtime,
              'ctime:date' : ctime,}
 
     if filepath:
@@ -77,7 +77,7 @@ class Test(unittest.TestCase):
         # we expected 
         assert 'test.pdf' in set(r.get_property('filename') for r in results)
 
-        assert im.search('mimetype:application/pdf filename:test.pdf peek')[1] == 1
+        assert im.search('mime_type:application/pdf filename:test.pdf peek')[1] == 1
         
         
 def test_suite():

@@ -276,7 +276,7 @@ defaultModel = Model().addFields(
     # Title has additional weight 
     ('title', 'text', {'weight' : 2 }),
     ('url', 'string'),
-    ('mimetype', 'string'),
+    ('mime_type', 'string'),
     ('author', 'string'),
     ('language', 'string'),
     ('ctime', 'date'),

@@ -8,7 +8,7 @@ def main():
                         "/org/laptop/sugar/DataStore")
     datastore = dbus.Interface(ds, dbus_interface='org.laptop.sugar.DataStore')
     
-    props = {'title:text': 'test activity',
+    props = {'title': 'test activity',
              'title_set_by_user': '0',
              'buddies': '',
              'keep': '0',
@@ -18,8 +18,8 @@ def main():
 
     uid = datastore.create(props, '')
     print "created uid", uid
-
-    props = {'title:text': 'test activity title changed',
+    datastore.complete_indexing()
+    props = {'title': 'test activity title changed',
              'title_set_by_user': '1',
              'buddies': '',
              'keep': '0',
@@ -29,10 +29,10 @@ def main():
     
     datastore.update(uid, props, os.path.abspath('tests/web_data.json'))
     print "updated uid", uid
-
-    #import time;time.sleep(1.0)
+    datastore.complete_indexing()
     
-    result, count = datastore.find(dict(fulltext='test'))
+    
+    result, count = datastore.find(dict(title='test'))
     print result
     assert result[0]['uid'] == uid
     for k, v in result[0].items():

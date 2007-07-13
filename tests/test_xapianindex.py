@@ -78,7 +78,7 @@ class Test(unittest.TestCase):
         assert 'test.pdf' in set(r.get_property('filename') for r in results)
 
         assert im.search('mime_type:application/pdf filename:test.pdf peek')[1] == 1
-        
+
         
 def test_suite():
     suite = unittest.TestSuite()

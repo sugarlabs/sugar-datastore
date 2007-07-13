@@ -36,7 +36,7 @@ can be used to control the storage target or to filter results.
 Now lets create some content
 
 >>> u1 = ds.create(dict(title="Document 1", filename="one.txt"), tmpData("""document one"""))
->>> u2 = ds.create(dict(title="Document 2", mimetype="text/plain"), tmpData("""document two"""))
+>>> u2 = ds.create(dict(title="Document 2", mime_type="text/plain"), tmpData("""document two"""))
 
 We can now, if we wish verify which mount point this content came
 from.

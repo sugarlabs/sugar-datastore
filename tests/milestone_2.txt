@@ -10,7 +10,7 @@ First clean up from any other tests.
 >>> from olpc.datastore import backingstore, model
 >>> ds = DataStore()
 >>> ds.registerBackend(backingstore.FileBackingStore)
->>> dm = model.defaultModel.addField('year', 'int').addField('month', 'string')
+>>> dm = model.defaultModel.copy().addField('year', 'int').addField('month', 'string')
 
 >>> assert ds.mount("/tmp/test_ds", {'indexmanager.model' : dm})
 

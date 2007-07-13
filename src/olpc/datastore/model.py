@@ -85,6 +85,12 @@ class Model(object):
         self.fields = {}
         self.fieldnames = []
 
+    def copy(self):
+        m = Model()
+        m.fields = self.fields.copy()
+        m.fieldnames = self.fieldnames[:]
+        return m
+    
     def addField(self, key, kind, overrides=None):
         """ Add a field to the model.
         key     -- field name
@@ -93,8 +99,7 @@ class Model(object):
                    arguments supplied by kind
          """
         if key in self.fields:
-            raise KeyError("""Another source tried to add %s field to
-            the model""" % key)
+            raise KeyError("""Another source tried to add %s field to the model""" % key)
 
         impl = propertyByKind(kind)
         options = impl.defaults.copy()
@@ -266,7 +271,7 @@ registerPropertyType('date', dateenc, datedec, 'date', {'store' : True,
 
 
 defaultModel = Model().addFields(    
-    ('text', 'text'),
+    ('fulltext', 'text'),
     # vid is version id
     ('vid', 'number'),
     ('checksum', 'string'),

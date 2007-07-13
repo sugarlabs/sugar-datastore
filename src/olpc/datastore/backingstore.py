@@ -448,8 +448,9 @@ class InplaceFileBackingStore(FileBackingStore):
                     #if checksum != content.checksum:
                     self.update(uid, dict(filename=relative), source)
                         
-                        
-
+        if self.options.get('sync_mount', False):
+            self.complete_indexing()
+            
     # File Management API
     def create(self, props, filelike):
         # the file would have already been changed inplace

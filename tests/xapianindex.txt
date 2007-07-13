@@ -28,7 +28,7 @@ Now add the file to the index.
 Let the async indexer do its thing. We ask the indexer if it has work
 left, when it has none we expect our content to be indexed and searchable.
 
->>> while im.working: time.sleep(0.5)
+>>> im.complete_indexing()
 
 
 Searching on an property of the content works.

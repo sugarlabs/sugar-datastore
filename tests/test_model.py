@@ -30,7 +30,7 @@ class Test(unittest.TestCase):
         ds.registerBackend(backingstore.FileBackingStore)
 
         #add a custom field to the model 
-        dm = model.defaultModel.addField('thumbnail', 'binary')
+        dm = model.defaultModel.copy().addField('thumbnail', 'binary')
                                          
         
         ds.mount(DEFAULT_STORE, {'indexmanager.model' : dm})

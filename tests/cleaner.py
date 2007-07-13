@@ -5,10 +5,11 @@ from ore.main import Application
 
 filepattern = re.compile("(\w{8})\-(\w{4})\-(\w{4})\-(\w{4})\-(\w{12})")
 tmppattern = re.compile("tmp\S{6}")
+onepattern = re.compile("one.*\.txt")
 
 staticdirs = re.compile('test_ds|store\d')
 
-filepatterns = [filepattern, tmppattern]
+filepatterns = [filepattern, tmppattern, onepattern]
 dirpatterns = [staticdirs]
 
 class Cleaner(Application):

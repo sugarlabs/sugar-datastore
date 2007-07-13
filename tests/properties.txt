@@ -19,7 +19,7 @@ Set up two mount points.
 
 Extend the model to retain a 'year' property used below.
 
->>> dm = model.defaultModel.addField('year', "int")
+>>> dm = model.defaultModel.copy().addField('year', "int")
 
 Mount a couple of stores.
 

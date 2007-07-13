@@ -119,8 +119,8 @@ class IndexManager(object):
         self.indexer_running = False
         self.indexer.join()
 
-    def enque(self, uid, vid, doc, operation):
-        self.queue.put((uid, vid, doc, operation))
+    def enque(self, uid, vid, doc, operation, filestuff=None):
+        self.queue.put((uid, vid, doc, operation, filestuff))
 
     def indexThread(self):
         # process the queue
@@ -132,25 +132,39 @@ class IndexManager(object):
             # include timeout here to ease shutdown of the thread
             # if this is a non-issue we can simply allow it to block
             try:
-                uid, vid, doc, operation = self.queue.get(timeout=0.5)
+                uid, vid, doc, operation, filestuff = self.queue.get(timeout=0.5)
+                if operation is DELETE: self.write_index.delete(uid)
+                elif operation in (CREATE, UPDATE):
+                    # Here we handle the conversion of binary
+                    # documents to plain text for indexing. This is
+                    # done in the thread to keep things async and
+                    # latency lower.
+                    if filestuff:
+                        filename, mimetype = filestuff
+                        fp = converter(filename, mimetype)
+                        if fp:
+                            doc.fields.append(secore.Field('fulltext',
+                                                           fp.read()))
+                            
+                    if operation is CREATE: self.write_index.add(doc)
+                    elif operation is UPDATE: self.write_index.replace(doc)
 
-                if operation is CREATE: self.write_index.add(doc)
-                elif operation is UPDATE: self.write_index.replace(doc)
-                elif operation is DELETE: self.write_index.delete(uid)
                 else:
                     logger.warning("Unknown indexer operation ( %s: %s)" % \
                                    (uid, operation))
                     continue
 
-                # XXX: if there is still work in the queue we could
-                # delay the flush()
-                #if self.queue.empty(): self.flush()
-                
+                # XXX: this isn't quite true, we haven't called flush
+                # yet so the document might not be on disk
                 logger.info("Indexed Content %s:%s" % (uid, vid))
+                # but we still tell the queue its complete 
                 self.queue.task_done()
+                
             except Empty:
                 pass
 ##             except:
+##                 import traceback
+##                 traceback.print_exc()
 ##                 try: self.write_index.close()
 ##                 except: pass
 ##                 try:
@@ -164,10 +178,6 @@ class IndexManager(object):
                 
                 
 
-    @property
-    def working(self):
-        """Does the indexer have work"""
-        return self.indexer_running and not self.queue.empty()
 
     def complete_indexing(self):
         """Intentionally block until the indexing is complete. Used
@@ -223,17 +233,15 @@ class IndexManager(object):
         add = doc.fields.append
         fp = None
         operation = UPDATE
-        
+
+        filestuff = None
         if filename:
+            # enque async file processing
+            # XXX: to make sure the file is kept around we could keep
+            # and open fp?
             mimetype = props.get("mimetype")
             mimetype = mimetype and mimetype.value or 'text/plain'
-            fp = converter(filename, mimetype)
-
-        #
-        # File contents
-        if fp:
-            # add the (converted) document contents
-            add(secore.Field('text', fp.read()))
+            filestuff = (filename, mimetype)
 
         #
         # Version handling
@@ -267,7 +275,7 @@ class IndexManager(object):
             add(secore.Field(k, value))
             
         # queue the document for processing
-        self.enque(uid, vid, doc, operation)
+        self.enque(uid, vid, doc, operation, filestuff)
 
         return uid
 

@@ -270,6 +270,7 @@ defaultModel = Model().addFields(
     ('fulltext', 'text'),
     # vid is version id
     ('vid', 'number'),
+    ('activity', 'string'),
     ('checksum', 'string'),
     ('filename', 'string'),
     # Title has additional weight 

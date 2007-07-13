@@ -48,6 +48,7 @@ class Test(unittest.TestCase):
         assert got == d2
 
         bs.delete(uid)
+        bs.complete_indexing()
         self.failUnlessRaises(KeyError, bs.get, uid)
         
 def test_suite():

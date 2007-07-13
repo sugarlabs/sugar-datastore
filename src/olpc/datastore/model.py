@@ -291,6 +291,7 @@ defaultModel = Model().addFields(
     ('keep', 'int'),
     ('icon-color', 'string'),
     ('preview', 'binary'),
+    ('buddies', 'text'),
     )
 
         

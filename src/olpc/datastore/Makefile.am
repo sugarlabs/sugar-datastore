@@ -4,8 +4,7 @@ datastore_PYTHON = 		\
 	backingstore.py 	\
 	converter.py 		\
 	datastore.py		\
-	indexer.py        \
 	model.py		\
-	query.py		\
+	xapianindex.py		\
 	utils.py		\
 	__version__.py

@@ -12,10 +12,12 @@ class Test(unittest.TestCase):
             'test.pdf' : 'Don\'t',
             'test.doc' : 'amazed.',
             'test.odt' : 'amazed.',
-            'plugger.pdf' : 'Plugger'
+            'plugger.pdf' : 'Plugger',
+            'funkyabi.odt' : 'vaca'
             }
         for fn, expect in fn_expectations.iteritems():
             assert expect in converter(fn).read()
+
 
         
 def test_suite():

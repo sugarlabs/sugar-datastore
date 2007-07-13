@@ -59,7 +59,20 @@ def main():
     else:
         print "Found deleted value... oops"
         raise  KeyError(uid)
+
+
+    uid2 = datastore.create(dict(title="cows",
+                          mime_type="application/vnd.oasis.opendocument.text"),
+                          os.path.abspath('tests/funkyabi.odt'))
+
+    datastore.complete_indexing()
     
+    assert datastore.find(dict(fulltext="vaca"))[0][0]['uid'] == uid2
+    print "found in binary file :: ODT"
+
+    datastore.delete(uid2)
+    datastore.complete_indexing()
+
     print "ALL GOOD"
     
 if __name__ == '__main__':

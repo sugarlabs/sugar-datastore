@@ -154,14 +154,18 @@ class IndexManager(object):
                                    (uid, operation))
                     continue
 
-                # XXX: this isn't quite true, we haven't called flush
-                # yet so the document might not be on disk
+                # we do flush on each record now
+                self.flush()
+                
                 logger.info("Indexed Content %s:%s" % (uid, vid))
                 # but we still tell the queue its complete 
                 self.queue.task_done()
                 
             except Empty:
                 pass
+            except:
+                logger.exception("Error in indexer")
+                
 ##             except:
 ##                 import traceback
 ##                 traceback.print_exc()

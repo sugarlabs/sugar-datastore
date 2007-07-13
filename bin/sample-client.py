@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from ore.main import Application
 import dbus
 import os
 
@@ -37,6 +36,7 @@ def main():
     datastore.complete_indexing()
     
 if __name__ == '__main__':
+    #from ore.main import Application
     #a = Application("client", main)
     #a.plugins.append('ore.main.profile_support.ProfileSupport')
     #a()

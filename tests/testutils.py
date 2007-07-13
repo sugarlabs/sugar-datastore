@@ -7,3 +7,8 @@ def tmpData(data):
     os.write(fd, data)
     os.close(fd)
     return fn
+
+def waitforindex(obj):
+    # wait for any/all index managers associated with object to finish
+    # indexing so that tests can do there thing
+    obj.complete_indexing()

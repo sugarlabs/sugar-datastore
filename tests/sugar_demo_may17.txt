@@ -2,6 +2,7 @@ How Sugar will interact with the DS for the May 17th demo in Argentina:
 
 >>> from olpc.datastore import DataStore
 >>> from olpc.datastore import backingstore
+>>> from testutils import waitforindex
 >>> ds = DataStore()
 >>> ds.registerBackend(backingstore.FileBackingStore)
 >>> assert ds.mount("/tmp/test_ds")
@@ -9,11 +10,14 @@ How Sugar will interact with the DS for the May 17th demo in Argentina:
 
 Create an entry without data:
 >>> uid = ds.create(dict(title="New entry"), '')
+>>> waitforindex(ds)
+
 >>> ds.get_filename(uid)
 ''
 
 Update an entry without data:
 >>> ds.update(uid, dict(title="New entry still without content"), '')
+>>> waitforindex(ds)
  
 >>> ds.get_filename(uid)
 ''
@@ -23,6 +27,7 @@ Add some data to the same entry:
 >>> print >>fp, "some content"
 >>> fp.close()
 >>> ds.update(uid, dict(title="Same entry now with some content"), fp.name)
+>>> waitforindex(ds)
 
 Retrieve that data:
 >>> fn = ds.get_filename(uid)
@@ -36,6 +41,7 @@ Update again:
 >>> print >>fp, "some other content"
 >>> fp.close()
 >>> ds.update(uid, dict(title="Same entry with some other content"), fp.name)
+>>> waitforindex(ds)
 
 And retrieve again:
 >>> fn = ds.get_filename(uid)
@@ -60,6 +66,7 @@ Set content as pdf:
 >>> ds.update(uid, dict(title="Same entry with some content in pdf"), 'test.pdf')
 >>> ds.update(uid, dict(title="Same entry with some content in doc"), 'test.doc')
 >>> ds.update(uid, dict(title="Same entry with some content in odt"), 'test.odt')
+>>> waitforindex(ds)
 
 >>> ds.stop()
 >>> del ds

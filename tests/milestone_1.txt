@@ -12,6 +12,10 @@ datastore.
 
 
 First, create and connect the store.
+>>> from testutils import waitforindex
+>>> import os
+>>> assert os.system('rm -rf /tmp/test_ds') == 0
+
 
 >>> from olpc.datastore import DataStore
 >>> from olpc.datastore import backingstore
@@ -35,11 +39,13 @@ Note that we retain no reference to the created documents.
 Now we should be able to test the first requirement.
 * Get the unique ids of all the objects in the store.
 
+>>> waitforindex(ds)
+
 >>> results, count = ds.find()
 
 A find command with out any parameters will return everything in the store.
 
-* Get an object from the store given his uid.
+* Get an object from the store given its uid.
 
 Here we manually cycle through the results looking for the title we
 want.
@@ -51,30 +57,24 @@ want.
 
 * Get the object metadata.
 >>> c1.properties
-[...]
+{...}
 
 * Get the object file.
 >>> c1.filename
 '/tmp/...'
 
->>> c1.data
+>>> c1.contents
 'this is the first document'
 >>> c1.file
 <open file ...>
 
-
-Or if you prefer access through the datastore (which is how DBus would
-use it)
-
->>> fn = ds.get_filename(first_uid)
->>> ds.get_data(first_uid)
-'this is the first document'
 
 
 Now we can modify that file and then 
 * Push the changes made to the file back to the store.
 * Update the metadata of an object.
 
+>>> fn = c1.filename
 >>> fp = open(fn, 'a')
 >>> print >>fp, "more content"
 >>> fp.close()
@@ -87,6 +87,4 @@ We can also remove the file from the repository.
 This is the basis of milestone 1.
 
 >>> ds.stop()
->>> del ds
-
-
+>>> assert os.system('rm -rf /tmp/test_ds') == 0

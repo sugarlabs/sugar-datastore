@@ -8,16 +8,23 @@ properties to content and managing them.
 
 
 >>> from olpc.datastore import DataStore
->>> from olpc.datastore import backingstore
+>>> from olpc.datastore import backingstore, model
 >>> from testutils import tmpData
 >>> import dbus
 
 Set up two mount points.
 
->>> ds = DataStore(sync_index=True)
+>>> ds = DataStore()
 >>> ds.registerBackend(backingstore.FileBackingStore)
->>> mp1 = ds.mount("/tmp/store1", dict(title="Primary Storage"))
->>> mp2 = ds.mount("/tmp/store2", dict(title="Secondary Storage"))
+
+Extend the model to retain a 'year' property used below.
+
+>>> dm = model.defaultModel.copy().addField('year', "int")
+
+Mount a couple of stores.
+
+>>> mp1 = ds.mount("/tmp/store1", {'title' : "Primary Storage", 'indexmanager.model' : dm})
+>>> mp2 = ds.mount("/tmp/store2", {'title' : "Secondary Storage", 'indexmanager.model' : dm})
 
 Create some content on each.
 
@@ -28,15 +35,14 @@ Create some content on each.
 >>> u4 = ds.create({'title' : "Gamma doc", 'author' : "HAL", 'year:number' : 2001, 'mountpoint' : mp2}, tmpData("""Document 4""")) 
 
 Now we should be able to discover things about the system properties.
+>>> ds.complete_indexing()
 
 Here we test that we can extract the unique values for certain properties.
 >>> assert set(ds.get_uniquevaluesfor('author')) == set(['Ben', 'HAL'])
 
-Here we try to gather the values for the property year. We'd expect
-these values to come back as numbers, however in the current
-implementation they are stored as unicode values.
+Here we try to gather the values for the property year.
 
->>> assert set(ds.get_uniquevaluesfor('year')) == set([u'2000', u'2001']) 
+>>> assert set(ds.get_uniquevaluesfor('year')) == set([2000, 2001]) 
 
 
 

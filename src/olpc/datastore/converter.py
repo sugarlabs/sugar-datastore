@@ -95,11 +95,13 @@ class Converter(object):
         # maps both extension -> plugin
         # and mimetype -> plugin
         self._converters = {}
+        self._default = None
         self.logger = logging.getLogger('org.laptop.sugar.Indexer')
     
     def registerConverter(self, ext_or_mime, plugin):
         if plugin.verify():
             self._converters[ext_or_mime] = plugin
+            if self._default is None: self._default = plugin
 
     def __call__(self, filename, encoding=None, mimetype=None):
         """Convert filename's content to utf-8 encoded text."""        
@@ -119,6 +121,8 @@ class Converter(object):
         converter = self._converters.get(mt)
         if not converter:
             converter = self._converters.get(ext)
+            if not converter:
+                converter = self._default
         if converter:
             try:
                 return converter(filename)

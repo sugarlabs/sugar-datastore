@@ -2,10 +2,9 @@
 # its not an option to configure
 PYTHON=python
 
-all: test
+all: clean test
 
 test: 
-	@rm -rf fulltext 
 	@${PYTHON} runalltests.py 
 
 valgrind:
@@ -17,6 +16,7 @@ profile:
 	@${PYTHON} ./profilealltests.py
 
 clean: 
+	@${PYTHON} ./cleaner.py
 	@find . -name "*.pyc" -exec rm {} \;
 	@find . -name "*~" -exec rm {} \;
 	@find . -name "hotspot*" -exec rm {} \;

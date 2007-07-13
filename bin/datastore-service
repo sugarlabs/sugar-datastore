@@ -4,7 +4,6 @@ import gobject
 import dbus.service
 import dbus.mainloop.glib
 from olpc.datastore import DataStore, DS_LOG_CHANNEL, backingstore
-from olpc.datastore.indexer import INDEX_SERVICE, INDEX_OBJECT_PATH
 import logging
 
 SYNC_INDEX = True
@@ -32,8 +31,6 @@ logging.basicConfig(level=logging.DEBUG,
                     filename = filename,
                     )
 # disable subsystem logging except where critical
-logging.getLogger('sqlalchemy').setLevel(logging.CRITICAL)
-logging.getLogger('lemur').setLevel(logging.CRITICAL)
 logger = logging.getLogger(DS_LOG_CHANNEL)
 
 # check for old lockfiles, the rules here are that we can't be
@@ -68,9 +65,6 @@ signal.signal(signal.SIGHUP, handle_shutdown)
 signal.signal(signal.SIGTERM, handle_shutdown)
 
 def main():
-    if SYNC_INDEX is False:
-        indexer = bus.get_object(INDEX_SERVICE, INDEX_OBJECT_PATH)
-        
     try: mainloop.run()
     except KeyboardInterrupt:
         ds.stop()

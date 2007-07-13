@@ -2,7 +2,6 @@
 from ore.main import Application
 import dbus
 import os
-import time
 
 def main():
     bus = dbus.SessionBus()
@@ -12,13 +11,8 @@ def main():
     uid = datastore.create(dict(title="from dbus", author="Benjamin"), os.path.abspath('tests/test.pdf'))
     print "created uid", uid
     
-    
-    #for u in datastore.find()[0]:
-    #        datastore.delete(u['uid'])
-    #return
-    # let the async indexer run
-    time.sleep(1.2)
-    #import pdb;pdb.set_trace()
+    datastore.complete_indexing()
+
     print "find", datastore.find(dict(author="Benjamin", title="from"))
     res, count = datastore.find(dict(fulltext="peek"))
     if not res:
@@ -33,11 +27,14 @@ def main():
     print datastore.find(dict(fulltext="inside"))
     datastore.update(uid, dict(title="another updated title", mime_type="application/vnd.oasis.opendocument.text"), os.path.abspath('tests/test.odt'))
     print datastore.find(dict(fulltext="amazed"))
+
+    datastore.complete_indexing()
     datastore.get_properties(uid)
 
-    print "title in fulltext", datastore.find(dict(fulltext="another"))
+    print "title in fulltext", datastore.find(dict(title="another"))
   
     datastore.delete(uid)
+    datastore.complete_indexing()
     
 if __name__ == '__main__':
     #a = Application("client", main)

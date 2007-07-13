@@ -343,15 +343,11 @@ class DataStore(dbus.service.Object):
         
     #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature='sa{sv}',
+                         in_signature='s',
                          out_signature='a{sv}')
-    def get_properties(self, uid, query=None):
+    def get_properties(self, uid):
         content = self.get(uid)
-        dictionary = {}
-        if not query: query = {}
-        for prop in content.get_properties(query):
-            dictionary[prop.key] = prop.marshall()
-        return dictionary
+        return content.properties
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='sa{sv}',
@@ -410,9 +406,12 @@ class DataStore(dbus.service.Object):
     @dbus.service.signal(DS_DBUS_INTERFACE)
     def Stopped(self): pass
 
-        
+    @dbus.service.method(DS_DBUS_INTERFACE,
+             in_signature='',
+             out_signature='')
     def complete_indexing(self):
-        """Block waiting for all queued indexing operations to complete"""
+        """Block waiting for all queued indexing operations to
+        complete. Used mostly in testing"""
         for mp in self.mountpoints.itervalues():
             mp.complete_indexing()
             

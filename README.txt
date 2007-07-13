@@ -18,17 +18,12 @@ For developer information see the doc tests in:
 Dependencies 
 ------------
 
-sqlalchemy -- database connectivity
-
 xapian     -- integrated full text indexing
            svn co svn://svn.xapian.org/xapian/trunk xapian
            currently this requires a checkout
 
-pyxapian   -- Python bindings
-           svn co http://pyxapian.googlecode.com/svn/trunk/lemur.sei
-           the lemur package must be installed 
-           
-sqllite    -- metadata database tuned to work in embedded systems 
+secore     -- pythonic xapian binding -- include in disto but from 
+		http://flaxcode.googlecode.com/svn/trunk/libs/secore
 
 dbus       -- command and control
 
@@ -46,10 +41,6 @@ odt2txt       http://stosberg.net/odt2txt/
 pdftotext     from poppler-utils
 abiword/write
 
-Future Directions
------------------
-
-see NOTES.txt
 
 Benjamin Saller
 Copyright ObjectRealms, LLC. 2007

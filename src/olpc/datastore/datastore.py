@@ -353,6 +353,8 @@ class DataStore(dbus.service.Object):
                          in_signature='sa{sv}',
                          out_signature='as')
     def get_uniquevaluesfor(self, propertyname, query=None):
+        propertyname = str(propertyname)
+        
         if not query: query = {}
         mountpoints = query.pop('mountpoints', self.mountpoints)
         mountpoints = [self.mountpoints[str(m)] for m in mountpoints]

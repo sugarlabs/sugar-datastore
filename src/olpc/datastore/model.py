@@ -270,7 +270,6 @@ defaultModel = Model().addFields(
     ('fulltext', 'text'),
     # vid is version id
     ('vid', 'number'),
-    ('activity', 'string'),
     ('checksum', 'string'),
     ('filename', 'string'),
     # Title has additional weight 
@@ -285,6 +284,13 @@ defaultModel = Model().addFields(
     # indexed with the content
     # I give them high weight as they have user given semantic value.
     ('tags', 'text', {'weight' :3 } ),
+
+    # olpc specific
+    ('activity', 'string'),
+    ('title_set_by_user', 'text'),
+    ('keep', 'int'),
+    ('icon-color', 'string'),
+    ('preview', 'binary'),
     )
 
         

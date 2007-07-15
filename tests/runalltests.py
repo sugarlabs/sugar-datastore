@@ -13,6 +13,11 @@ import os, sys
 import unittest
 import doctest
 from pkg_resources import resource_filename
+import logging
+
+logging.basicConfig(level=logging.DEBUG,
+                    format="%(asctime)-15s %(name)s %(levelname)s: %(message)s",
+                    stream=sys.stderr)
 
 
 doctests = [

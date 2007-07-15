@@ -132,8 +132,12 @@ class IndexManager(object):
         # happen in the thread
         if operation in (CREATE, UPDATE):
             with self._write_lock:
-                if operation is CREATE: self.write_index.add(doc)
-                elif operation is UPDATE: self.write_index.replace(doc)
+                if operation is CREATE:
+                    self.write_index.add(doc)
+                    logger.info("created %s:%s" % (uid, vid))
+                elif operation is UPDATE:
+                    self.write_index.replace(doc)
+                    logger.info("updated %s:%s" % (uid, vid))
             self.flush()
             # now change CREATE to UPDATE as we set the
             # properties already
@@ -162,7 +166,7 @@ class IndexManager(object):
                 with self._write_lock:
                     if operation is DELETE:
                         self.write_index.delete(uid)
-                        logger.info("Deleted Content %s" % (uid,))
+                        logger.info("deleted content %s" % (uid,))
                     elif operation is UPDATE:
                         # Here we handle the conversion of binary
                         # documents to plain text for indexing. This is
@@ -175,15 +179,17 @@ class IndexManager(object):
                         if fp:
                             doc.fields.append(secore.Field('fulltext', fp.read()))
                             self.write_index.replace(doc)
-                            logger.info("Update Content %s:%s" % (uid, vid))
+                            logger.info("update file content %s:%s" % (uid, vid))
                         else:
                             logger.warning("""Conversion process failed for document %s %s""" % (uid, filename))
                     else:
                         logger.warning("Unknown indexer operation ( %s: %s)" % (uid, operation))
+
+                    # tell the queue its complete 
+                    self.queue.task_done()
+
                 # we do flush on each record now
                 self.flush()
-                # tell the queue its complete 
-                self.queue.task_done()
             except:
                 logger.exception("Error in indexer")
                 

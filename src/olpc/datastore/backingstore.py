@@ -14,6 +14,7 @@ import cPickle as pickle
 import sha
 import os
 import re
+import shutil
 import subprocess
 import time
 
@@ -299,15 +300,19 @@ class FileBackingStore(BackingStore):
         if replace is False and os.path.exists(path):
             raise KeyError("objects with path:%s for uid:%s exists" %(
                             path, uid))
-        fp = open(path, 'w')
+
         verify = self.options.get('verify', False)
         c = None
-        if verify: c  = sha.sha()
-        filelike.seek(0)
-        for line in filelike:
-            if verify:c.update(line)
-            fp.write(line)
-        fp.close()
+        if verify:
+            fp = open(path, 'w')
+            filelike.seek(0)
+            c  = sha.sha()
+            for line in filelike:
+                if verify:c.update(line)
+                fp.write(line)
+            fp.close()
+        else:
+            shutil.copyfile(filelike.name, path)
         if verify:
             content = self.indexmanager.get(uid)
             content.checksum = c.hexdigest()

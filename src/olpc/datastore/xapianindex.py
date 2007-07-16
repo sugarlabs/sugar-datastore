@@ -236,7 +236,9 @@ class IndexManager(object):
         """
         d = {}
         for k,v in props.iteritems():
-            p = self.datamodel.fromstring(k, v)
+            p, added = self.datamodel.fromstring(k, v,
+                                                 allowAddition=True)
+            if added is True: self.fields.add(p.key)
             d[p.key] = p
         return d
 
@@ -245,6 +247,7 @@ class IndexManager(object):
         Props must contain the following:
             key -> Property()
         """
+        operation = UPDATE
         #
         # Version handling
         #
@@ -265,7 +268,7 @@ class IndexManager(object):
         doc = secore.UnprocessedDocument()
         add = doc.fields.append
         fp = None
-        operation = UPDATE
+
 
         filestuff = None
         if filename:

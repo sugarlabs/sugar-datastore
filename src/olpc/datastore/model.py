@@ -108,19 +108,31 @@ class Model(object):
         m.fieldnames = self.fieldnames[:]
         return m
 
-    def fromstring(self, key, value):
+    def fromstring(self, key, value, allowAddition=False):
         """create a property from the key name by looking it up in the
         model."""
         kind = None
         if ':' in key: key, kind = key.split(':', 1)
-        
-        mkind = self.fields[key][1]
+        added = False
+        field = self.fields.get(key)
+        if field: mkind = field[1]
+        elif allowAddition:
+            # create a new field, this will force a change in the
+            # model
+            # and in turn should add a new field action
+            if not kind: kind = "string"
+            self.addField(key,kind)
+            mkind = kind
+            added = True
+        else:
+            raise KeyError("no field specification for %s" % key)
+            
         if kind and mkind:
             if kind != mkind: raise ValueError("""Specified wire
             encoding for property %s was %s, expected %s""" %(key, kind, mkind)) 
         kind = mkind
             
-        return Property(key, value, kind)
+        return Property(key, value, kind), added
 
     
     def addField(self, key, kind, overrides=None):

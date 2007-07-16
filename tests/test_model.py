@@ -92,6 +92,30 @@ class Test(unittest.TestCase):
         c = ds.get(uid)
         assert c.get_property('keep') == 0
 
+        ds.stop()
+        
+    def test_randomproperty(self):
+        # specifying items not in the model, with and w/o type
+        # qualifiers
+        ds = DataStore()
+        ds.registerBackend(backingstore.FileBackingStore)
+        
+        ds.mount(DEFAULT_STORE)
+
+        uid = ds.create({'title' : 'Random Extras', 'foobar' : 'baz',
+                         'incept:date' : datetime.datetime.now().isoformat()})
+
+        ds.complete_indexing()
+        
+        ds.update(uid, {'title' : 'Random Extras the sequel', 'foobar' : 'whodofoodo',
+                        'incept:date' : datetime.datetime.now().isoformat()})
+
+        ds.complete_indexing()
+
+        assert ds.find('whodofoodo')[1] == 1
+        
+        ds.stop()
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(Test))

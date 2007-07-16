@@ -1,3 +1,4 @@
+* Allow activities to specify custom metadata properties. (bcsaller)
 * Fix the problems with content indexing end reenable it. (bcsaller)
 
 Snapshot 18b7951026

@@ -122,7 +122,7 @@ def timeparse(t, format):
     microseconds in the time string.
     """
     try:
-        return datetime.datetime(*time.strptime(t, format)[0:6]).time()
+        return datetime.datetime(*time.strptime(t, format)[0:6])
     except ValueError, msg:
         if "%S" in format:
             msg = str(msg)

@@ -235,7 +235,7 @@ class IndexManager(object):
         """
         d = {}
         for k,v in props.iteritems():
-            p = model.Property.fromstring(k, v)
+            p = self.datamodel.fromstring(k, v)
             d[p.key] = p
         return d
 
@@ -244,6 +244,22 @@ class IndexManager(object):
         Props must contain the following:
             key -> Property()
         """
+        #
+        # Version handling
+        #
+        # we implicitly create new versions of documents the version
+        # id should have been set by the higher level system
+        uid = props.pop('uid', None)
+        vid = props.pop('vid', None)
+
+        if not uid:
+            uid = create_uid()
+            operation = CREATE
+            
+        if vid: vid = str(float(vid.value) + 1.0)
+        else: vid = "1.0"
+        
+        # Property mapping via model
         props = self._mapProperties(props)
         doc = secore.UnprocessedDocument()
         add = doc.fields.append
@@ -259,22 +275,6 @@ class IndexManager(object):
             mimetype = mimetype and mimetype.value or 'text/plain'
             filestuff = (filename, mimetype)
 
-        #
-        # Version handling
-        #
-        # we implicitly create new versions of documents the version
-        # id should have been set by the higher level system
-        uid = props.pop('uid', None)
-        vid = props.pop('vid', None)
-
-        if uid: uid = uid.value
-        else:
-            uid = create_uid()
-            operation = CREATE
-            
-        if vid: vid = str(float(vid.value) + 1.0)
-        else: vid = "1.0"
-        
         doc.id = uid
         add(secore.Field('vid', vid))
         

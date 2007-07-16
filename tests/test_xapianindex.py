@@ -16,16 +16,15 @@ def index_file(iconn, filepath):
     main, subtype = mimetype.split('/',1)
 
     stat = os.stat(filepath)
-    ctime = datetime.fromtimestamp(stat.st_ctime)
-    mtime = datetime.fromtimestamp(stat.st_mtime)
+    ctime = datetime.fromtimestamp(stat.st_ctime).isoformat()
+    mtime = datetime.fromtimestamp(stat.st_mtime).isoformat()
     
     if main in ['image']: filepath = None
     if subtype in ['x-trash', 'x-python-bytecode']: filepath = None
 
 
 
-    props = {'mime_type' : mimetype, 'mtime:date' : mtime,
-             'ctime:date' : ctime,}
+    props = {'mime_type' : mimetype, 'mtime' : mtime, 'ctime' : ctime,}
 
     if filepath:
         fn = os.path.split(filepath)[1]

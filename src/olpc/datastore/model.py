@@ -60,14 +60,16 @@ class Property(object):
     >>> b = Property(key, value, 'binary')
     """
     def __init__(self, key, value, kind=None):
-        self.key = key
-        self._value = value
+
         self.kind = kind
         if kind not in propertyTypes:
             warnings.warn("Unknown property type: %s on key %s" % \
                           (kind, key), RuntimeWarning)
         else: self._impl = propertyTypes[kind]
 
+        self.key = key
+        self.value = value
+        
     @classmethod
     def fromstring(cls, key, value=''):
         kind = 'string'
@@ -105,6 +107,21 @@ class Model(object):
         m.fields = self.fields.copy()
         m.fieldnames = self.fieldnames[:]
         return m
+
+    def fromstring(self, key, value):
+        """create a property from the key name by looking it up in the
+        model."""
+        kind = None
+        if ':' in key: key, kind = key.split(':', 1)
+        
+        mkind = self.fields[key][1]
+        if kind and mkind:
+            if kind != mkind: raise ValueError("""Specified wire
+            encoding for property %s was %s, expected %s""" %(key, kind, mkind)) 
+        kind = mkind
+            
+        return Property(key, value, kind)
+
     
     def addField(self, key, kind, overrides=None):
         """ Add a field to the model.
@@ -256,19 +273,13 @@ def decode_datetime(value):
     return datetime.datetime.fromtimestamp(float(value)).isoformat()
 
 def datedec(value, dateformat=DATEFORMAT):
-    ti = time.strptime(value, dateformat)
-    dt = datetime.datetime(*(ti[:-2]))
-    dt = dt.replace(microsecond=0)
-    return dt
+    return timeparse(value, DATEFORMAT)
 
 def dateenc(value, dateformat=DATEFORMAT):
     if isinstance(value, basestring):
         # XXX: there  is an issue with microseconds not getting parsed
-        ti = time.strptime(value, dateformat)
-        value = datetime.datetime(*(ti[:-2]))
+        value = timeparse(value, DATEFORMAT)
     value = value.replace(microsecond=0)
-    # XXX: drop time for now, this is a xapian issue
-    value = value.date()
     return value.isoformat()
 
         

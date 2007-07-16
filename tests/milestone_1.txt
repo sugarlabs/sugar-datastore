@@ -12,7 +12,6 @@ datastore.
 
 
 First, create and connect the store.
->>> from testutils import waitforindex
 >>> import os
 >>> assert os.system('rm -rf /tmp/test_ds') == 0
 
@@ -39,7 +38,7 @@ Note that we retain no reference to the created documents.
 Now we should be able to test the first requirement.
 * Get the unique ids of all the objects in the store.
 
->>> waitforindex(ds)
+>>> ds.complete_indexing()
 
 >>> results, count = ds.find()
 

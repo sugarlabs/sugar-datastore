@@ -1,5 +1,5 @@
 import unittest
-from testutils import tmpData, waitforindex
+from testutils import tmpData
 
 from olpc.datastore import backingstore
 import os
@@ -30,7 +30,7 @@ class Test(unittest.TestCase):
         
         uid = bs.create(dict(title="A"), tmpData(d))
 
-        waitforindex(bs)
+        bs.complete_indexing()
         
         obj = bs.get(uid)
 
@@ -40,7 +40,7 @@ class Test(unittest.TestCase):
 
         bs.update(uid, dict(title="B"), tmpData(d2))
 
-        waitforindex(bs)
+        bs.complete_indexing()
         
         obj = bs.get(uid)
         assert obj.get_property('title') == "B"

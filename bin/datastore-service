@@ -6,8 +6,6 @@ import dbus.mainloop.glib
 from olpc.datastore import DataStore, DS_LOG_CHANNEL, backingstore
 import logging
 
-SYNC_INDEX = True
-
 # Path handling
 profile = os.environ.get('SUGAR_PROFILE', 'default')
 base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
@@ -50,7 +48,7 @@ bus = dbus.SessionBus()
 ds = DataStore()
 ds.registerBackend(backingstore.FileBackingStore)
 ds.registerBackend(backingstore.InplaceFileBackingStore)
-ds.mount(repo_dir, {'indexmanager.sync_index': SYNC_INDEX})
+ds.mount(repo_dir)
 
 # and run it 
 logger.info("Starting Datastore %s" % (repo_dir))

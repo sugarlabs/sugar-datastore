@@ -311,7 +311,7 @@ registerPropertyType('number', str, float, 'float', {'store' : True,
 registerPropertyType('date', dateenc, datedec, 'float', {'store' : True,
                                                          'exact' : True,
                                                          'sortable' : True
-                                                        },
+                                                         },
                      for_xapian=encode_datetime,
                      from_xapain=decode_datetime)
 

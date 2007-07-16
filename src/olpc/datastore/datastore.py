@@ -376,6 +376,7 @@ class DataStore(dbus.service.Object):
         example. You must create it
         """
         content = self.get(uid)
+        mountpoint = props.pop('mountpoint', None)
         content.backingstore.update(uid, props, filelike)
         if filelike:
             self.Updated(content.id)

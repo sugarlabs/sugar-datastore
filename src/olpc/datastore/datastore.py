@@ -27,6 +27,8 @@ DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
 
 logger = logging.getLogger(DS_LOG_CHANNEL)
 
+DEFAULT_LIMIT = 65536
+
 class DataStore(dbus.service.Object):
 
     def __init__(self, **options):
@@ -259,7 +261,7 @@ class DataStore(dbus.service.Object):
         order_by = kwargs.pop('order_by', [])
 
         # XXX: this is a workaround, deal properly with n backends
-        limit = kwargs.pop('limit', 50)
+        limit = kwargs.pop('limit', DEFAULT_LIMIT)
         offset = kwargs.pop('offset', 0)
 
         # distribute the search to all the mountpoints unless a

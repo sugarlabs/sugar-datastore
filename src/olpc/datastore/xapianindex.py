@@ -16,6 +16,7 @@ __license__  = 'The GNU Public License V2+'
 from Queue import Queue, Empty
 import logging
 import re
+import sys
 
 import threading
 import warnings
@@ -308,7 +309,7 @@ class IndexManager(object):
         
     #
     # Search
-    def search(self, query, start_index=0, end_index=50):
+    def search(self, query, start_index=0, end_index=4096):
         """search the xapian store.
         query is a string defining the serach in standard web search syntax.
 

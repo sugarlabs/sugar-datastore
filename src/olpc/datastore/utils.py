@@ -1,4 +1,8 @@
+import datetime
 import dbus
+import re
+import time
+
 
 class Singleton(type):
     """A singleton metaclass
@@ -105,3 +109,43 @@ def sanitize_dbus(method):
         kw = _convert(kwargs)
         return method(self, *n, **kw)
     return decorator
+
+def timeparse(t, format):
+    """Parse a time string that might contain fractions of a second.
+
+    Fractional seconds are supported using a fragile, miserable hack.
+    Given a time string like '02:03:04.234234' and a format string of
+    '%H:%M:%S', time.strptime() will raise a ValueError with this
+    message: 'unconverted data remains: .234234'.  If %S is in the
+    format string and the ValueError matches as above, a datetime
+    object will be created from the part that matches and the
+    microseconds in the time string.
+    """
+    try:
+        return datetime.datetime(*time.strptime(t, format)[0:6]).time()
+    except ValueError, msg:
+        if "%S" in format:
+            msg = str(msg)
+            mat = re.match(r"unconverted data remains:"
+                           " \.([0-9]{1,6})$", msg)
+            if mat is not None:
+                # fractional seconds are present - this is the style
+                # used by datetime's isoformat() method
+                frac = "." + mat.group(1)
+                t = t[:-len(frac)]
+                t = datetime.datetime(*time.strptime(t, format)[0:6])
+                microsecond = int(float(frac)*1e6)
+                return t.replace(microsecond=microsecond)
+            else:
+                mat = re.match(r"unconverted data remains:"
+                               " \,([0-9]{3,3})$", msg)
+                if mat is not None:
+                    # fractional seconds are present - this is the style
+                    # used by the logging module
+                    frac = "." + mat.group(1)
+                    t = t[:-len(frac)]
+                    t = datetime.datetime(*time.strptime(t, format)[0:6])
+                    microsecond = int(float(frac)*1e6)
+                    return t.replace(microsecond=microsecond)
+
+        raise

@@ -15,6 +15,8 @@ import mimetypes
 import os
 import time
 import warnings
+from olpc.datastore.utils import timeparse
+
 
 # XXX: Open issues
 # list properties - Contributors (a, b, c)
@@ -25,21 +27,30 @@ import warnings
 propertyTypes = {}
 _marker = object()
 
-def registerPropertyType(kind, get, set, xapian_sort_type=None, defaults=None):
-    propertyTypes[kind] = PropertyImpl(get, set, xapian_sort_type, defaults)
+def registerPropertyType(kind, get, set, xapian_sort_type=None,
+    defaults=None, for_xapian=None, from_xapain=None):
+    propertyTypes[kind] = PropertyImpl(get, set, xapian_sort_type,
+                                       defaults, for_xapian=for_xapian, from_xapain=from_xapain)
 
 def propertyByKind(kind): return propertyTypes[kind]
 
 class PropertyImpl(object):
-    __slots__ = ('_get', '_set', 'xapian_sort_type', 'defaults')
+    __slots__ = ('_get', '_set', 'xapian_sort_type', 'defaults', '_for_xapian', '_from_xapian')
     
-    def __init__(self, get, set, xapian_sort_type=None, defaults=None):
+    def __init__(self, get, set, xapian_sort_type=None, defaults=None,
+                 for_xapian=None, from_xapain=None):
         self._get, self._set = get, set
         self.xapian_sort_type = xapian_sort_type
         self.defaults = defaults
+        if not for_xapian: for_xapian = self._get
+        self._for_xapian = for_xapian
+        if not from_xapain: from_xapain = self._set
+        self._from_xapian = from_xapain
         
     def get(self, value): return self._get(value)
     def set(self, value): return self._set(value)
+    def for_xapian(self, value): return self._for_xapian(value)
+    def from_xapian(self, value): return self._from_xapian(value)
     
 class Property(object):
     """Light-weight property implementation.
@@ -74,6 +85,10 @@ class Property(object):
     def get_value(self): return self._impl.get(self._value)
     def set_value(self, value): self._value = self._impl.set(value)
     value = property(get_value, set_value)
+
+    @property
+    def for_xapian(self): return self._impl.for_xapian(self._value)
+
 
     def __str__(self): return str(self.value)
 
@@ -128,12 +143,13 @@ class Content(object):
     This provides additional methods which are used in the
     backingstore to assist in storage
     """
-    __slots__ = ('_doc', '_backingstore', '_file')
+    __slots__ = ('_doc', '_backingstore', '_file', '_model')
     
-    def __init__(self, xapdoc, backingstore=None):
+    def __init__(self, xapdoc, backingstore=None, model=None):
         self._doc = xapdoc
         self._backingstore = backingstore
         self._file = None
+        self._model = model
 
     def __repr__(self):
         return "<%s %s>" %(self.__class__.__name__,
@@ -143,8 +159,11 @@ class Content(object):
         result = self._doc.data.get(key, default)
         if result is _marker: raise KeyError(key)
         if isinstance(result, list) and len(result) == 1:
-            return result[0]
-        return result
+            result = result[0]
+        field = self._model.fields.get(key)
+        kind = propertyByKind(field[1])
+        return kind.from_xapian(result)
+
 
     @property
     def properties(self):
@@ -152,6 +171,9 @@ class Content(object):
         for k, v in self.data.iteritems():
             if isinstance(v, list) and len(v) == 1:
                 v = v[0]
+            field = self._model.fields.get(k)
+            kind = propertyByKind(field[1])
+            v = kind.from_xapian(v)
             d[k] = v
         return d
     
@@ -219,14 +241,27 @@ base64hack = re.compile("(\S{212})")
 def base64enc(value): return ' '.join(base64hack.split(value.encode('base64')))
 def base64dec(value): return value.replace(' ', '').decode('base64')
 
-dateformat = "%Y-%m-%dT%H:%M:%S"
-def datedec(value, dateformat=dateformat):
+DATEFORMAT = "%Y-%m-%dT%H:%M:%S"
+def date2string(value): return value.replace(microsecond=0).isoformat()
+def string2date(value): return timeparse(value, DATEFORMAT)
+
+def encode_datetime(value):
+    # encode datetime to timestamp (float)
+    # parse the typelib form to a datetime first
+    if isinstance(value, basestring): value = string2date(value)
+    return str(time.mktime(value.timetuple()))
+    
+def decode_datetime(value):
+    # convert a float to a local datetime
+    return datetime.datetime.fromtimestamp(float(value)).isoformat()
+
+def datedec(value, dateformat=DATEFORMAT):
     ti = time.strptime(value, dateformat)
     dt = datetime.datetime(*(ti[:-2]))
     dt = dt.replace(microsecond=0)
     return dt
 
-def dateenc(value, dateformat=dateformat):
+def dateenc(value, dateformat=DATEFORMAT):
     if isinstance(value, basestring):
         # XXX: there  is an issue with microseconds not getting parsed
         ti = time.strptime(value, dateformat)
@@ -235,6 +270,8 @@ def dateenc(value, dateformat=dateformat):
     # XXX: drop time for now, this is a xapian issue
     value = value.date()
     return value.isoformat()
+
+        
 
 # type, get, set, xapian sort type [string|float|date], defaults
 # defaults are the default options to addField in IndexManager
@@ -259,10 +296,12 @@ registerPropertyType('number', str, float, 'float', {'store' : True,
                                                      'exact' : True,
                                                      'sortable' : True})
 
-registerPropertyType('date', dateenc, datedec, 'date', {'store' : True,
-                                                        'exact' : True,
-                                                        'sortable' : True
-                                                        })
+registerPropertyType('date', dateenc, datedec, 'float', {'store' : True,
+                                                         'exact' : True,
+                                                         'sortable' : True
+                                                        },
+                     for_xapian=encode_datetime,
+                     from_xapain=decode_datetime)
 
 
 
@@ -272,6 +311,8 @@ defaultModel = Model().addFields(
     ('vid', 'number'),
     ('checksum', 'string'),
     ('filename', 'string'),
+    ('ext', 'string'), # its possible we don't store a filename, but
+                       # only an extension we are interested in
     # Title has additional weight 
     ('title', 'text', {'weight' : 2 }),
     ('url', 'string'),

@@ -40,16 +40,17 @@ class ContentMappingIter(object):
     """An iterator over a set of results from a search.
 
     """
-    def __init__(self, results, backingstore):
+    def __init__(self, results, backingstore, model):
         self._results = results
         self._backingstore = backingstore
         self._iter = iter(results)
+        self._model = model
 
     def __iter__(self): return self
     
     def next(self):
         searchresult = self._iter.next()
-        return model.Content(searchresult, self._backingstore)
+        return model.Content(searchresult, self._backingstore, self._model)
 
 
 class IndexManager(object):
@@ -280,7 +281,7 @@ class IndexManager(object):
         #
         # Property indexing
         for k, prop in props.iteritems():
-            value = prop.value
+            value = prop.for_xapian
 
             if k not in self.fields:
                 warnings.warn("""Missing field configuration for %s""" % k,
@@ -297,7 +298,7 @@ class IndexManager(object):
     def get(self, uid):
         doc = self.read_index.get_document(uid)
         if not doc: raise KeyError(uid)
-        return model.Content(doc, self.backingstore)
+        return model.Content(doc, self.backingstore, self.datamodel)
 
     def delete(self, uid):
         # does this need queuing?
@@ -331,7 +332,7 @@ class IndexManager(object):
         count = results.matches_estimated
 
         # map the result set to model.Content items
-        return ContentMappingIter(results, self.backingstore), count
+        return ContentMappingIter(results, self.backingstore, self.datamodel), count
     
 
     def get_uniquevaluesfor(self, property):

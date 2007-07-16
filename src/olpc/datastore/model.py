@@ -301,7 +301,8 @@ registerPropertyType('binary', noop, noop, None, {'store' : True,
 
 registerPropertyType('int', str, int, 'float', {'store' : True,
                                                 'exact' : True,
-                                                'sortable' : True})
+                                                'sortable' : True},
+                     for_xapian=str)
 
 registerPropertyType('number', str, float, 'float', {'store' : True,
                                                      'exact' : True,

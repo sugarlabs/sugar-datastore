@@ -256,7 +256,7 @@ class IndexManager(object):
             uid = create_uid()
             operation = CREATE
             
-        if vid: vid = str(float(vid.value) + 1.0)
+        if vid: vid = str(float(vid) + 1.0)
         else: vid = "1.0"
         
         # Property mapping via model

@@ -52,7 +52,46 @@ class Test(unittest.TestCase):
         ds.stop()
 
 
+    def test_intproperty(self):
+        p = model.Property('keep', 1, 'int')
+        assert p.value == '1'
         
+        p.value = 0
+        assert p.value == '0'
+
+        p.value = '1'
+        assert p.value == '1'
+        
+        p.value = '0'
+        assert p.value == '0'
+        
+        
+        ds = DataStore()
+        ds.registerBackend(backingstore.FileBackingStore)
+        
+        ds.mount(DEFAULT_STORE)
+
+        uid = ds.create({'title' : "Document 1", 'keep' : 1},)
+        ds.complete_indexing()
+        c = ds.get(uid)
+        assert c.get_property('keep') == 1
+
+        ds.update(uid, {'title' : "Document 1", 'keep' : 0})
+        ds.complete_indexing()
+        c = ds.get(uid)
+        assert c.get_property('keep') == 0
+        
+
+        ds.update(uid, {'title' : "Document 1", 'keep' : '1'})
+        ds.complete_indexing()
+        c = ds.get(uid)
+        assert c.get_property('keep') == 1
+
+        ds.update(uid, {'title' : "Document 1", 'keep' : '0'})
+        ds.complete_indexing()
+        c = ds.get(uid)
+        assert c.get_property('keep') == 0
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(Test))

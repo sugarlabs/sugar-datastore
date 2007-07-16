@@ -257,7 +257,11 @@ class DataStore(dbus.service.Object):
 
         include_files = kwargs.pop('include_files', False)
         order_by = kwargs.pop('order_by', [])
-        
+
+        # XXX: this is a workaround, deal properly with n backends
+        limit = kwargs.pop('limit', 50)
+        offset = kwargs.pop('offset', 0)
+
         # distribute the search to all the mountpoints unless a
         # backingstore id set is specified
         results, count = self._multiway_search(kwargs)
@@ -319,6 +323,9 @@ class DataStore(dbus.service.Object):
                 props['filename'] = filename
             d.append(props)
 
+        if limit:
+            d = d[offset: offset+limit]
+            
         return (d, len(results))
 
     def get(self, uid):

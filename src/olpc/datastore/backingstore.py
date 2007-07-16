@@ -378,7 +378,9 @@ class FileBackingStore(BackingStore):
     
 
     def find(self, query):
-        return self.indexmanager.search(query)
+        limit = query.pop('limit', 50)
+        offset = query.pop('offset', 0)
+        return self.indexmanager.search(query, offset, limit)
 
     def stop(self):
         self.indexmanager.stop()

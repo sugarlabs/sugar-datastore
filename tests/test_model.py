@@ -113,6 +113,12 @@ class Test(unittest.TestCase):
         ds.complete_indexing()
 
         assert ds.find('whodofoodo')[1] == 1
+        c = ds.get_properties(uid)
+        assert 'foobar' in c
+        assert 'title' in c
+        # maps back w/o the type
+        assert 'incept' in c
+        
         
         ds.stop()
 

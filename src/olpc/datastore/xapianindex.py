@@ -235,11 +235,19 @@ class IndexManager(object):
         to Property objects
         """
         d = {}
+        add_anything = False
         for k,v in props.iteritems():
             p, added = self.datamodel.fromstring(k, v,
                                                  allowAddition=True)
-            if added is True: self.fields.add(p.key)
+            if added is True:
+                self.fields.add(p.key)
+                add_anything = True
             d[p.key] = p
+
+        if add_anything:
+            with self._write_lock:
+                self.datamodel.apply(self)
+            
         return d
 
     def index(self, props, filename=None):

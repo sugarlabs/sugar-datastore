@@ -1,3 +1,7 @@
+Snapshot 535d9835e2
+
+* #2252 Fix custom metadata properties. (bcsaller)
+
 Snapshot 2978ff86bd
 
 * Allow activities to specify custom metadata properties. (bcsaller)

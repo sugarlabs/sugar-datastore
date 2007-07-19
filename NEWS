@@ -1,5 +1,7 @@
 Snapshot 9aabdfb24b
 
+* Guess the mime types using gnomevfs. (bcsaller)
+
 Snapshot 535d9835e2
 
 * #2252 Fix custom metadata properties. (bcsaller)

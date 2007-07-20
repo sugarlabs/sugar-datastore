@@ -360,6 +360,7 @@ defaultModel = Model().addFields(
 
     # olpc specific
     ('activity', 'string'),
+    ('activity_id', 'string'),
     ('title_set_by_user', 'text'),
     ('keep', 'int'),
     ('icon-color', 'string'),

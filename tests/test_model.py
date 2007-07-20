@@ -107,12 +107,16 @@ class Test(unittest.TestCase):
 
         ds.complete_indexing()
         
-        ds.update(uid, {'title' : 'Random Extras the sequel', 'foobar' : 'whodofoodo',
+        ds.update(uid, {'title' : 'Random Extras the sequel',
+                        'foobar' : 'whodofoodo',
                         'incept:date' : datetime.datetime.now().isoformat()})
 
         ds.complete_indexing()
 
-        assert ds.find('whodofoodo')[1] == 1
+        # ignored w/o prefix
+        assert ds.find('whodofoodo')[1] == 0
+        # found with it
+        assert ds.find('foobar:whodofoodo')[1] == 1
         c = ds.get_properties(uid)
         assert 'foobar' in c
         assert 'title' in c

@@ -343,7 +343,7 @@ class IndexManager(object):
             q = query.pop('query', None)
             if q:
                 queries.append(self.parse_query(q))
-            if not query:
+            if not query and not queries:
                 # we emptied it 
                 q = self.read_index.query_all()
             else:

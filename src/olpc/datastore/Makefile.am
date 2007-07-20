@@ -2,6 +2,7 @@ datastoredir = $(pythondir)/olpc/datastore
 datastore_PYTHON = 		\
 	__init__.py		\
 	backingstore.py 	\
+	bin_copy.py		\
 	converter.py 		\
 	datastore.py		\
 	model.py		\

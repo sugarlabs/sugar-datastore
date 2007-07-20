@@ -191,9 +191,10 @@ class Content(object):
             result = result[0]
         field = self._model.fields.get(key)
         kind = propertyByKind(field[1])
+        # Errors here usually property request for a missing field
         return kind.from_xapian(result)
-
-
+    
+        
     @property
     def properties(self):
         d = {}
@@ -305,7 +306,9 @@ registerPropertyType('string', noop, noop, 'string', {'store' : True,
 
 registerPropertyType('text', noop, noop, 'string', {'store' : True,
                                                     'exact' : False,
-                                                    'sortable' : False})
+                                                    'sortable' : False,
+                                                    'collapse' : True,
+                                                    })
 
 registerPropertyType('binary', noop, noop, None, {'store' : True,
                                                   'exact' : False,

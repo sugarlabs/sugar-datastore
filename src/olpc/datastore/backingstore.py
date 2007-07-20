@@ -11,14 +11,15 @@ __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
 import cPickle as pickle
-import sha
+import gnomevfs
 import os
 import re
-import shutil
+import sha
 import subprocess
 import time
 
 from olpc.datastore.xapianindex import IndexManager
+from olpc.datastore import bin_copy
 from olpc.datastore import utils
 
 # changing this pattern impacts _targetFile
@@ -312,7 +313,7 @@ class FileBackingStore(BackingStore):
                 fp.write(line)
             fp.close()
         else:
-            shutil.copyfile(filelike.name, path)
+            bin_copy.bin_copy(filelike.name, path)
         if verify:
             content = self.indexmanager.get(uid)
             content.checksum = c.hexdigest()
@@ -438,9 +439,10 @@ class InplaceFileBackingStore(FileBackingStore):
                 relative = source[len(self.uri)+1:]
 
                 result, count = self.indexmanager.search(dict(filename=relative))
+                mime_type = gnomevfs.get_mime_type(source)
                 if not count:
                     # create a new record
-                    self.create(dict(filename=relative), source)
+                    self.create(dict(filename=relative, mime_type=mime_type), source)
                 else:
                     # update the object with the new content iif the
                     # checksum is different
@@ -451,7 +453,7 @@ class InplaceFileBackingStore(FileBackingStore):
                     # only if the checksum is different
                     #checksum = self._checksum(source)
                     #if checksum != content.checksum:
-                    self.update(uid, dict(filename=relative), source)
+                    self.update(uid, dict(filename=relative, mime_type=mime_type), source)
                         
         if self.options.get('sync_mount', False):
             self.complete_indexing()

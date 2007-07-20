@@ -18,16 +18,16 @@ __license__  = 'The GNU Public License V2+'
 from olpc.datastore.utils import Singleton
 import codecs
 import logging
-import mimetypes
 import os
 import subprocess
 import sys
 import tempfile
+import gnomevfs
 
 def guess_mimetype(filename):
-    output = subprocess.Popen(["file", "-bi", filename], stdout=subprocess.PIPE).communicate()[0]
-    return output.split()[-1].strip()
-
+    fn = os.path.abspath(filename)
+    mimetype = gnomevfs.get_mime_type(fn)
+    return mimetype
     
 class subprocessconverter(object):
     """Process a command. Collect the output
@@ -110,19 +110,18 @@ class Converter(object):
         #can result in unexpected or no output.
         ext = os.path.splitext(filename)[1]
         if mimetype: mt = mimetype
-        else:
-            mt = mimetypes.guess_type(filename, False)
-            if mt[0] is not None: mt = "%s/%s" % mt
-            else:
-                # try harder to get the mimetype
-                # most datastore files won't have extensions
-                mt = guess_mimetype(filename)
+        else: mt = guess_mimetype(filename)
+        maintype, subtype = mt.split('/',1)
 
         converter = self._converters.get(mt)
         if not converter:
             converter = self._converters.get(ext)
             if not converter:
                 converter = self._default
+                # it was an image or an unknown application
+                if maintype in ['image', 'application', 'audio', 'video'] or \
+                       subtype in ['x-trash', 'x-python-bytecode',]:
+                    converter = None
         if converter:
             try:
                 return converter(filename)

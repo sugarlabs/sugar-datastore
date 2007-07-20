@@ -72,9 +72,9 @@ def main():
         logger.debug("Datastore shutdown with error",
                          exc_info=sys.exc_info())
      
-main()
+#main()
 
-#import hotshot
-#p = hotshot.Profile('hs.prof')
-#p.run('main()')
+import hotshot
+p = hotshot.Profile('hs.prof')
+p.run('main()')
 

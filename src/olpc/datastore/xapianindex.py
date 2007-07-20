@@ -179,7 +179,14 @@ class IndexManager(object):
                         filename, mimetype = filestuff
                         fp = converter(filename, mimetype)
                         if fp:
-                            doc.fields.append(secore.Field('fulltext', fp.read()))
+                            # read in at a fixed block size, try to
+                            # conserve memory. If this doesn't work
+                            # we can make doc.fields a generator
+                            while True:
+                                chunk = fp.read(2048)
+                                if not chunk: break
+                                doc.fields.append(secore.Field('fulltext', chunk))
+                                
                             self.write_index.replace(doc)
                             logger.info("update file content %s:%s" % (uid, vid))
                         else:
@@ -294,7 +301,7 @@ class IndexManager(object):
         # Property indexing
         for k, prop in props.iteritems():
             value = prop.for_xapian
-
+            
             if k not in self.fields:
                 warnings.warn("""Missing field configuration for %s""" % k,
                               RuntimeWarning)
@@ -333,10 +340,17 @@ class IndexManager(object):
             q = self.read_index.query_all()
         elif isinstance(query, dict):
             queries = []
-            # each term becomes part of the query join
-            for k, v in query.iteritems():
-                queries.append(ri.query_field(k, v))
-            q = ri.query_composite(ri.OP_AND, queries)
+            q = query.pop('query', None)
+            if q:
+                queries.append(self.parse_query(q))
+            if not query:
+                # we emptied it 
+                q = self.read_index.query_all()
+            else:
+                # each term becomes part of the query join
+                for k, v in query.iteritems():
+                    queries.append(ri.query_field(k, v))
+                q = ri.query_composite(ri.OP_AND, queries)
         else:
             q = self.parse_query(query)
             

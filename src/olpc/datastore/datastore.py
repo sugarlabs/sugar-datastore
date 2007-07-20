@@ -256,7 +256,10 @@ class DataStore(dbus.service.Object):
         # only goes to the primary now. Punting on the merge case
         if isinstance(query, dict):
             kwargs.update(query)
-
+        else:
+            if 'query' not in kwargs:
+                kwargs['query'] = query
+        
         include_files = kwargs.pop('include_files', False)
         order_by = kwargs.pop('order_by', [])
 

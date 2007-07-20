@@ -122,6 +122,20 @@ class Test(unittest.TestCase):
         assert 'title' in c
         # maps back w/o the type
         assert 'incept' in c
+
+        ds.update(uid, {'title' : 'Random Extras the sequel',
+                        'foobar' : '',
+                        'incept:date' : datetime.datetime.now().isoformat()})
+
+        ds.complete_indexing()
+        assert ds.find('whodofoodo')[1] == 0
+        # found with it
+        assert ds.find('foobar:whodofoodo')[1] == 0
+        c = ds.get_properties(uid)
+        assert 'title' in c
+        # maps back w/o the type
+        assert 'incept' in c
+        assert c['foobar'] == ''
         
         
         ds.stop()

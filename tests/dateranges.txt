@@ -1,0 +1,42 @@
+Test that date
+First clean up from any other tests.
+>>> import os, datetime
+>>> assert os.system('rm -rf /tmp/test_ds/') == 0
+
+>>> from olpc.datastore import DataStore
+>>> from olpc.datastore import backingstore, model
+>>> ds = DataStore()
+>>> ds.registerBackend(backingstore.FileBackingStore)
+
+>>> assert ds.mount("/tmp/test_ds")
+
+>>> t1 = datetime.datetime(1995, 1, 1)
+>>> t2 = datetime.datetime(2000, 1, 1)
+>>> t3 = datetime.datetime(2005, 1, 1)
+
+>>> a = ds.create(dict(title="Content A", author="Bob", ctime=t1.isoformat()), '')
+>>> b = ds.create(dict(title="Content B", author="Alice", ctime=t2.isoformat()), '')
+>>> c = ds.create(dict(title="Content V", author="Clare", ctime=t3.isoformat()), '')        
+
+>>> ds.complete_indexing()
+
+
+Scan for ranges
+
+>>> result, count = ds.find({'ctime' : {'start' : t1.isoformat(), 'end' : t3.isoformat() }})
+>>> assert count == 3
+
+
+>>> result, count = ds.find({'ctime' : {'start' : t1.isoformat(), 'end' : t2.isoformat() }})
+>>> assert count == 2
+
+>>> result, count = ds.find({'ctime' : {'start' : t2.isoformat(), 'end' : t3.isoformat() }})
+>>> assert count == 2
+
+>>> result, count = ds.find({'ctime' : {'start' : t1.isoformat(), 'end' : t1.isoformat() }})
+>>> assert count == 1
+
+
+>>> ds.stop()
+>>> del ds
+>>> assert os.system('rm -rf /tmp/test_ds/') == 0

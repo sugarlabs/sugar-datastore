@@ -25,7 +25,7 @@ import secore
 
 from olpc.datastore import model 
 from olpc.datastore.converter import converter
-from olpc.datastore.utils import create_uid
+from olpc.datastore.utils import create_uid, parse_timestamp_or_float
 
 
 # Setup Logger
@@ -349,7 +349,20 @@ class IndexManager(object):
             else:
                 # each term becomes part of the query join
                 for k, v in query.iteritems():
-                    queries.append(ri.query_field(k, v))
+                    if isinstance(v, dict):
+                        # it might be a range scan
+                        # this needs to be factored out
+                        # and/or we need client side lib that helps
+                        # issue queries because there are type
+                        # conversion issues here
+                        start = v.pop('start', 0)
+                        end = v.pop('end', sys.maxint)
+                        start = parse_timestamp_or_float(start)
+                        end = parse_timestamp_or_float(end)
+                        queries.append(ri.query_range(k, start, end))
+                    else:
+                        queries.append(ri.query_field(k, v))
+                        
                 q = ri.query_composite(ri.OP_AND, queries)
         else:
             q = self.parse_query(query)

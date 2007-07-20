@@ -27,6 +27,7 @@ doctests = [
     resource_filename(__name__, "milestone_2.txt"),
     resource_filename(__name__, "mountpoints.txt"),
     resource_filename(__name__, "properties.txt"),
+    resource_filename(__name__, "dateranges.txt"),
     
 ]
 

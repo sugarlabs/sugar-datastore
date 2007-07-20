@@ -110,7 +110,8 @@ def sanitize_dbus(method):
         return method(self, *n, **kw)
     return decorator
 
-def timeparse(t, format):
+DATEFORMAT = "%Y-%m-%dT%H:%M:%S"
+def timeparse(t, format=DATEFORMAT):
     """Parse a time string that might contain fractions of a second.
 
     Fractional seconds are supported using a fragile, miserable hack.
@@ -151,3 +152,11 @@ def timeparse(t, format):
         raise
 
 
+def parse_timestamp_or_float(value):
+    result = None
+    try:
+        result = timeparse(value)
+        result = str(time.mktime(result.timetuple()))
+    except:
+        result = str(float(value))
+    return result

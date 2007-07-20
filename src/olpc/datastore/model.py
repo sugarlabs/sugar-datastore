@@ -202,8 +202,13 @@ class Content(object):
             if isinstance(v, list) and len(v) == 1:
                 v = v[0]
             field = self._model.fields.get(k)
-            kind = propertyByKind(field[1])
-            v = kind.from_xapian(v)
+            if field:
+                kind = propertyByKind(field[1])
+                v = kind.from_xapian(v)
+            else:
+                # do some generic property handling
+                if v: v = str(v)
+                else: v = ''
             d[k] = v
         return d
     

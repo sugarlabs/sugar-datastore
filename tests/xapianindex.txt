@@ -67,6 +67,23 @@ As well as quoted strings
 
 >>> assert expect_single(im.search(r'''"Don't peek"''')).id == uid
 
+
+We can also issue OR styled queries over a given field by submitting
+a list of queries to a given field.
+
+>>> assert expect_single(im.search(dict(mime_type=["text/plain", 
+...    'application/pdf']))).id == uid
+
+
+But an OR query for missing values still return nothing.
+
+>>> expect_none(im.search(dict(mime_type=["video/mpg", 
+...    'audio/ogg'])))
+
+
+
+
+
 Cleanly shut down.
 >>> im.stop()
 

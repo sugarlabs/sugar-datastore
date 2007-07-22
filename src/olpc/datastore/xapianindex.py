@@ -364,6 +364,11 @@ class IndexManager(object):
                         start = parse_timestamp_or_float(start)
                         end = parse_timestamp_or_float(end)
                         queries.append(ri.query_range(k, start, end))
+                    elif isinstance(v, list):
+                        # construct a set of OR queries
+                        ors = []
+                        for item in v: ors.append(ri.query_field(k, item))
+                        queries.append(ri.query_composite(ri.OP_OR, ors))
                     else:
                         queries.append(ri.query_field(k, v))
                         

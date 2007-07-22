@@ -1,3 +1,7 @@
+Snapshot 033d224d3b
+
+* Fix date filtering. (bcsaller)
+
 Snapshot e30379af95
 
 * Allow queries on content and all metadata. (bcsaller)

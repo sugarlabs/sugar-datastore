@@ -75,15 +75,22 @@ class subprocessconverter(object):
 
         try:
             cmd = cmd.split()
-            retcode = subprocess.call(cmd)
+            # the stderr capture here will hide glib error messages
+            # from converters which shouldn't be generating output anyway
+            retcode = subprocess.call(cmd, stderr=subprocess.PIPE)
             if retcode: return None
             return codecs.open(target, 'r', 'utf-8')
+        except UnicodeDecodeError:
+            # The data was an unknown type but couldn't be understood
+            # as text so we don't attempt to index it. This most
+            # likely means its just an unknown binary format.
+            return None
         finally:
             # we unlink the file as its already been opened for
             # reading
             if os.path.exists(target):
                 os.unlink(target)
-
+    
 class noop(object):
     def verify(self): return True
     def __call__(self, filename):
@@ -108,26 +115,23 @@ class Converter(object):
         #encoding is passed its the known encoding of the
         #contents. When None is passed the encoding is guessed which
         #can result in unexpected or no output.
-        ext = os.path.splitext(filename)[1]
         if mimetype: mt = mimetype
         else: mt = guess_mimetype(filename)
         maintype, subtype = mt.split('/',1)
 
         converter = self._converters.get(mt)
         if not converter:
-            converter = self._converters.get(ext)
-            if not converter:
-                converter = self._default
-                # it was an image or an unknown application
-                if maintype in ['image', 'application', 'audio', 'video'] or \
-                       subtype in ['x-trash', 'x-python-bytecode',]:
-                    converter = None
+            converter = self._default
+            # it was an image or an unknown application
+            if maintype in ['image', 'application', 'audio', 'video'] or \
+                   subtype in ['x-trash', 'x-python-bytecode',]:
+                converter = None
+
         if converter:
-            try:
-                return converter(filename)
+            try: return converter(filename)
             except:
-                logging.debug("Binary to Text failed: %s %s %s" %
-                              (ext, mt, filename), exc_info=sys.exc_info())
+                logging.debug("Binary to Text failed: %s %s" %
+                              (mt, filename), exc_info=sys.exc_info())
             
         return None
 
@@ -156,7 +160,7 @@ converter.registerConverter('.doc', doctotext)
 converter.registerConverter('application/msword', doctotext)
 
 # ODT
-odt2txt = subprocessconverter('/usr/local/bin/odt2txt --encoding=UTF-8 --output=%(target)s %(source)s')
+odt2txt = subprocessconverter('/usr/bin/odt2txt --encoding=UTF-8 --output=%(target)s %(source)s')
 converter.registerConverter('.odt', odt2txt)
 converter.registerConverter('application/vnd.oasis.opendocument.text', odt2txt)
 

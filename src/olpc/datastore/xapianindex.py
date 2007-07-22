@@ -17,7 +17,8 @@ from Queue import Queue, Empty
 import logging
 import re
 import sys
-
+import time
+import thread
 import threading
 import warnings
 
@@ -91,10 +92,11 @@ class IndexManager(object):
         self.read_index = secore.SearchConnection(repo)
 
         self.flush()        
-
         # by default we start the indexer now
         self.startIndexer()
+        assert self.indexer.isAlive()
 
+                
     def bind_to(self, backingstore):
         # signal from backingstore that its our parent
         self.backingstore = backingstore
@@ -147,7 +149,7 @@ class IndexManager(object):
             if not filestuff:
                 # In this case we are done
                 return
-            
+
         self.queue.put((uid, vid, doc, operation, filestuff))
 
     def indexThread(self):
@@ -160,8 +162,10 @@ class IndexManager(object):
             # include timeout here to ease shutdown of the thread
             # if this is a non-issue we can simply allow it to block
             try:
-                uid, vid, doc, operation, filestuff = self.queue.get(timeout=0.5)
+                data = self.queue.get(True, 0.025)
+                uid, vid, doc, operation, filestuff = data
             except Empty:
+                #time.sleep(1.0)
                 continue
 
             try:

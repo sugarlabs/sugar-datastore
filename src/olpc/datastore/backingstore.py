@@ -11,12 +11,14 @@ __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
 import cPickle as pickle
+from datetime import datetime
 import gnomevfs
 import os
 import re
 import sha
 import subprocess
 import time
+import threading
 
 from olpc.datastore.xapianindex import IndexManager
 from olpc.datastore import bin_copy
@@ -407,7 +409,8 @@ class InplaceFileBackingStore(FileBackingStore):
         super(InplaceFileBackingStore, self).__init__(uri, **kwargs)
         # use the original uri
         self.uri = uri
-
+        self.walker = None
+        
     @staticmethod
     def parse(uri):
         return uri.startswith("inplace:")
@@ -421,7 +424,10 @@ class InplaceFileBackingStore(FileBackingStore):
     def load(self):
         super(InplaceFileBackingStore, self).load()
         # now map/update the existing data into the indexes
-        self._walk()
+        # but do it async
+        self.walker = threading.Thread(target=self._walk)
+        self.walker.setDaemon(True)
+        self.walker.start()
 
     def _walk(self):
         # XXX: a version that checked xattr for uid would be simple
@@ -433,16 +439,33 @@ class InplaceFileBackingStore(FileBackingStore):
             if self.base in dirpath: continue
             if self.STORE_NAME in dirname:
                 dirname.remove(self.STORE_NAME)
+
+            # other files and dirs to blacklist
+            if '.Trashes' in dirpath: continue
                 
+            
             for fn in filenames:
+                # blacklist files
+                #   ignore conventionally hidden files
+                if fn.startswith("."): continue
+                
                 source = os.path.join(dirpath, fn)
                 relative = source[len(self.uri)+1:]
 
                 result, count = self.indexmanager.search(dict(filename=relative))
                 mime_type = gnomevfs.get_mime_type(source)
+                stat = os.stat(source)
+                ctime = datetime.fromtimestamp(stat.st_ctime).isoformat()
+                mtime = datetime.fromtimestamp(stat.st_mtime).isoformat()
+                title = os.path.splitext(os.path.split(source)[1])[0]
+                metadata = dict(filename=relative,
+                                mime_type=mime_type,
+                                ctime=ctime,
+                                mtime=mtime,
+                                title=title)
                 if not count:
                     # create a new record
-                    self.create(dict(filename=relative, mime_type=mime_type), source)
+                    self.create(metadata, source)
                 else:
                     # update the object with the new content iif the
                     # checksum is different
@@ -450,14 +473,12 @@ class InplaceFileBackingStore(FileBackingStore):
                     # happen)
                     content = result.next()
                     uid = content.id
-                    # only if the checksum is different
-                    #checksum = self._checksum(source)
-                    #if checksum != content.checksum:
-                    self.update(uid, dict(filename=relative, mime_type=mime_type), source)
-                        
-        if self.options.get('sync_mount', False):
-            self.complete_indexing()
-            
+                    saved_mtime = content.get_property('mtime')
+                    if mtime != saved_mtime:
+                        self.update(uid, metadata, source)
+        self.indexmanager.flush()
+        return
+    
     # File Management API
     def create(self, props, filelike):
         # the file would have already been changed inplace
@@ -482,4 +503,13 @@ class InplaceFileBackingStore(FileBackingStore):
         if path and os.path.exists(path):
             os.unlink(path)
         
+    def stop(self):
+        if self.walker and self.walker.isAlive():
+            self.walker.join()
+        self.indexmanager.stop()
 
+
+    def complete_indexing(self):
+        if self.walker and self.walker.isAlive():
+            self.walker.join()
+        self.indexmanager.complete_indexing()

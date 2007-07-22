@@ -49,6 +49,7 @@ ds = DataStore()
 ds.registerBackend(backingstore.FileBackingStore)
 ds.registerBackend(backingstore.InplaceFileBackingStore)
 ds.mount(repo_dir)
+ds.complete_indexing()
 
 # and run it 
 logger.info("Starting Datastore %s" % (repo_dir))
@@ -63,7 +64,18 @@ signal.signal(signal.SIGHUP, handle_shutdown)
 signal.signal(signal.SIGTERM, handle_shutdown)
 
 def main():
-    try: mainloop.run()
+    # XXX: The context/sleep loop is a work around for what seems
+    # to be the mainloop blocking in such a way that the indexer
+    # thread doesn't run until new dbus messages come in...
+    # I intend to track this down post trial-2
+    # really awful
+    import time
+    context = mainloop.get_context()
+    try:
+        while True:
+            context.iteration(False)
+            time.sleep(0.025)
+
     except KeyboardInterrupt:
         ds.stop()
         logger.info("DataStore shutdown by user")
@@ -72,9 +84,9 @@ def main():
         logger.debug("Datastore shutdown with error",
                          exc_info=sys.exc_info())
      
-#main()
+main()
 
-import hotshot
-p = hotshot.Profile('hs.prof')
-p.run('main()')
+#import hotshot
+#p = hotshot.Profile('hs.prof')
+#p.run('main()')
 

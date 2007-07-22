@@ -167,6 +167,10 @@ class Model(object):
             args = self.fields[fn]
             addField(args[0], **args[2])
 
+
+# Properties we don't automatically include in properties dict
+EXCLUDED_PROPERTIES = ['fulltext', ]
+
 class Content(object):
     """A light weight proxy around Xapian Documents from secore.
     This provides additional methods which are used in the
@@ -199,6 +203,8 @@ class Content(object):
     def properties(self):
         d = {}
         for k, v in self.data.iteritems():
+            if k in EXCLUDED_PROPERTIES: continue
+            
             if isinstance(v, list) and len(v) == 1:
                 v = v[0]
             field = self._model.fields.get(k)
@@ -238,8 +244,14 @@ class Content(object):
         return None, None
 
     def get_file(self):
-        if not hasattr(self, "_file") or self._file.closed is True:
-            self.backingstore.get(self.id)
+        if not hasattr(self, "_file") or not self._file or \
+               self._file.closed is True:
+            target, ext = self.suggestName()
+            try:
+                targetfile = self.backingstore._targetFile(self.id, target, ext)
+                self._file = targetfile
+            except OSError:
+                self._file = None
         return self._file
     
     def set_file(self, fileobj):

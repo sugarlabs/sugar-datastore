@@ -340,13 +340,13 @@ class FileBackingStore(BackingStore):
             self._writeContent(uid, filelike, replace=False)
         return uid
     
-    def get(self, uid, env=None, allowMissing=False):
+    def get(self, uid, env=None, allowMissing=False, includeFile=False):
         content = self.indexmanager.get(uid)
         if not content: raise KeyError(uid)
         path = self._translatePath(uid)
         fp = None
         # not all content objects have a file
-        if os.path.exists(path):
+        if includeFile and os.path.exists(path):
             fp = open(path, 'r')
             # now return a Content object from the model associated with
             # this file object
@@ -478,7 +478,18 @@ class InplaceFileBackingStore(FileBackingStore):
                         self.update(uid, metadata, source)
         self.indexmanager.flush()
         return
-    
+
+    def _translatePath(self, uid):
+        try: content = self.indexmanager.get(uid)
+        except KeyError: return None
+        return os.path.join(self.uri, content.get_property('filename'))
+
+    def _targetFile(self, uid, target=None, ext=None, env=None):
+        # in this case the file should really be there unless it was
+        # deleted in place or something which we typically isn't allowed
+        targetpath =  self._translatePath(uid)
+        return open(targetpath, 'rw')
+
     # File Management API
     def create(self, props, filelike):
         # the file would have already been changed inplace
@@ -507,7 +518,6 @@ class InplaceFileBackingStore(FileBackingStore):
         if self.walker and self.walker.isAlive():
             self.walker.join()
         self.indexmanager.stop()
-
 
     def complete_indexing(self):
         if self.walker and self.walker.isAlive():

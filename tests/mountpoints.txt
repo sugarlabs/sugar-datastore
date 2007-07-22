@@ -137,7 +137,23 @@ Verify that we can get the properties of objects on the inplace
 stores.
 
 >>> uid = result[0]['uid']
->>> assert ds.get_properties(uid)['title'] == "doc4"
+>>> props = ds.get_properties(uid)
+>>> assert props['title'] == "doc4"
+
+
+Currently sugar defines doing a copy as zeroing out the uid and
+changing the mountpoint. Lets copy an object from mp3 to mp1, the
+primary store.
+>>> props['mountpoint'] = mountpoint 
+>>> fn = ds.get_filename(uid)
+
+>>> copyuid = ds.create(props, fn)
+
+>>> ds.complete_indexing()
+
+>>> result, count = ds.find(dict(fulltext="four"))
+>>> assert count == 2
+
 
 
 >>> ds.stop(); del ds

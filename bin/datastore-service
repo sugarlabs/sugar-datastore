@@ -74,7 +74,7 @@ def main():
     try:
         while True:
             context.iteration(False)
-            time.sleep(0.025)
+            time.sleep(0.0025)
 
     except KeyboardInterrupt:
         ds.stop()

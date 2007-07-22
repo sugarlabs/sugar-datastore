@@ -133,5 +133,11 @@ Check for the new value in the descriptor
 
 >>> assert mp.descriptor()['title'] == 'Fake USB again'
 
+Verify that we can get the properties of objects on the inplace
+stores.
+
+>>> uid = result[0]['uid']
+>>> assert ds.get_properties(uid)['title'] == "doc4"
+
 
 >>> ds.stop(); del ds

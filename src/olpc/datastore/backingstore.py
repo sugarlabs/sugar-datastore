@@ -488,7 +488,7 @@ class InplaceFileBackingStore(FileBackingStore):
     def get(self, uid, env=None, allowMissing=False):
         content = self.indexmanager.get(uid)
         if not content: raise KeyError(uid)
-        return content.get_property('filename')
+        return content
 
     def update(self, uid, props, filelike=None):
         # the file would have already been changed inplace

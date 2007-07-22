@@ -335,11 +335,20 @@ class DataStore(dbus.service.Object):
 
     def get(self, uid):
         mp = self._resolveMountpoint()
-        c = mp.get(uid)
+        c = None
+        try:
+            c = mp.get(uid)
+            if c: return c
+        except KeyError:
+            pass
+            
         if not c:
             for mp in self.mountpoints.itervalues():
-                c = mp.get(uid)
-                if c: break
+                try:
+                    c = mp.get(uid)
+                    if c: break
+                except KeyError:
+                    continue
         return c
 
     #@utils.sanitize_dbus

@@ -259,7 +259,7 @@ class Content(object):
     file = property(get_file, set_file)
 
     @property
-    def filename(self): return self.file.name
+    def filename(self): return os.path.abspath(self.file.name)
 
     @property
     def contents(self): return self.file.read()
@@ -273,13 +273,6 @@ class Content(object):
     @property
     def data(self): return self._doc.data
     
-
-## class Buddy(object):
-##     """A co-author on content. Information is collected and managed
-##     here"""
-##     pass
-
-
 
 def noop(value): return value
 

@@ -8,7 +8,6 @@
 # Alternatively use the testrunner:
 #   python /path/to/Zope/utilities/testrunner.py -qa
 #
-
 import os, sys
 import unittest
 import doctest

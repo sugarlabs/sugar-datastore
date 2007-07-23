@@ -151,9 +151,22 @@ primary store.
 
 >>> ds.complete_indexing()
 
+
 >>> result, count = ds.find(dict(fulltext="four"))
 >>> assert count == 2
 
+We also need to test that we can copy from a normal store to an
+inplace one. Lets move the object with u1 to mp3
+
+>>> props = ds.get_properties(u1)
+>>> props['mountpoint'] = mp3
+>>> pen_copy = ds.create(props, ds.get_filename(u1))
+
+>>> ds.complete_indexing()
+
+>>> result, count = ds.find(dict(mountpoints=[mp3], filename="one.txt"))
+>>> assert count == 1
+>>> assert result[0]['uid'] == pen_copy
 
 
 >>> ds.stop(); del ds

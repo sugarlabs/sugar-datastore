@@ -158,6 +158,10 @@ class IndexManager(object):
         # for example if a USB stick is added and quickly removed
         # the mount should however get a stop() call which would
         # request that the indexing finish
+        # XXX: we can in many cases index, not from the tempfile but
+        # from the item in the repo as that will become our immutable
+        # copy. Detect those cases and use the internal filename
+        # property or backingstore._translatePath to get at it
         while self.indexer_running:
             # include timeout here to ease shutdown of the thread
             # if this is a non-issue we can simply allow it to block

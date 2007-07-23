@@ -240,6 +240,10 @@ class FileBackingStore(BackingStore):
 
     def _targetFile(self, uid, target=None, ext=None, env=None):
         # paths out of the datastore, working copy targets
+        path = self._translatePath(uid)
+        if not os.path.exists(path):
+            return None
+
         if target: targetpath = target
         else:
             targetpath = uid.replace('/', '_').replace('.', '__')
@@ -267,8 +271,7 @@ class FileBackingStore(BackingStore):
                 break
 
             targetpath = "%s(%s)%s" % (targetpath, attempt, ext)
-
-        path = self._translatePath(uid)
+            
         if subprocess.call(['cp', path, targetpath]):
             raise OSError("unable to create working copy")
         return open(targetpath, 'rw')
@@ -331,7 +334,6 @@ class FileBackingStore(BackingStore):
     # File Management API
     def create(self, props, filelike):
         uid = self.indexmanager.index(props, filelike)
-        filename = filelike
         if filelike:
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
@@ -484,17 +486,36 @@ class InplaceFileBackingStore(FileBackingStore):
         except KeyError: return None
         return os.path.join(self.uri, content.get_property('filename'))
 
-    def _targetFile(self, uid, target=None, ext=None, env=None):
-        # in this case the file should really be there unless it was
-        # deleted in place or something which we typically isn't allowed
-        targetpath =  self._translatePath(uid)
-        return open(targetpath, 'rw')
+##     def _targetFile(self, uid, target=None, ext=None, env=None):
+##         # in this case the file should really be there unless it was
+##         # deleted in place or something which we typically isn't
+##         # allowed
+##         # XXX: catch this case and remove the index
+##         targetpath =  self._translatePath(uid)
+##         return open(targetpath, 'rw')
 
     # File Management API
     def create(self, props, filelike):
         # the file would have already been changed inplace
         # don't touch it
-        return self.indexmanager.index(props, filelike)
+        uid = self.indexmanager.index(props, filelike)
+        if filelike:
+            if isinstance(filelike, basestring):
+                # lets treat it as a filename
+                filelike = open(filelike, "r")
+            filelike.seek(0)
+            # usually with USB drives and the like the file we are
+            # indexing is already on it, however in the case of moving
+            # files to these devices we need to detect this case and
+            # place the file
+            proposed_name = props.get('filename', None)
+            if not proposed_name:
+                proposed_name = os.path.split(filelike.name)[1]
+            proposed_name = os.path.join(self.uri, proposed_name)
+            if not os.path.exists(proposed_name):
+                self._writeContent(uid, filelike, replace=False)
+
+        return uid
     
     def get(self, uid, env=None, allowMissing=False):
         content = self.indexmanager.get(uid)

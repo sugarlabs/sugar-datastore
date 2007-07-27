@@ -106,7 +106,11 @@ class DataStore(dbus.service.Object):
         """Unmount a mountpoint by id"""
         if mountpoint_id not in self.mountpoints: return
         mp = self.mountpoints[mountpoint_id]
-        mp.stop()
+        try:
+            mp.stop()
+        except:
+            logger.warn("Issue with unmounting store. Trying to continue")
+            
         self.Unmounted(mp.descriptor())
         del self.mountpoints[mountpoint_id]
 

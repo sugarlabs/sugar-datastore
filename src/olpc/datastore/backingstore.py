@@ -572,9 +572,11 @@ class InplaceFileBackingStore(FileBackingStore):
         c = self.indexmanager.get(uid)
         path = c.get_property('filename', None)
         self.indexmanager.delete(uid)
-        path = os.path.join(self.uri, path)
-        if path and os.path.exists(path):
-            os.unlink(path)
+
+        if path:
+            path = os.path.join(self.uri, path)
+            if os.path.exists(path):
+                os.unlink(path)
         
     def stop(self):
         if self.walker and self.walker.isAlive():

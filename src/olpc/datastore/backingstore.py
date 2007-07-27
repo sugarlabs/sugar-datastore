@@ -101,7 +101,14 @@ class BackingStore(object):
     @property
     def title(self): return self.descriptor()['title']
 
-    
+    # Storage Translation
+    def localizedName(self, uid=None, content=None, target=None):
+        """taking any of uid, a content object, or a direct target
+    filename (which includes all of the relative components under a
+    store). Return the localized filename that should be used _within_
+    the repository for the storage of this content object
+    """
+        pass
 
 
 class FileBackingStore(BackingStore):
@@ -141,18 +148,23 @@ class FileBackingStore(BackingStore):
         # a hidden file with a pickled dict will live in the base
         # directory for each storage
         fn = os.path.join(self.base, self.DESCRIPTOR_NAME)
-        if not os.path.exists(fn):
+        if os.path.exists(fn):
+            try:
+                fp = open(fn, 'r')
+                desc = pickle.load(fp)
+                fp.close()
+            except:
+                desc = None
+        if not desc:
             # the data isn't there, this could happen for a number of
             # reasons (the store isn't writeable)
+            # or if the information on it was corrupt
+            # in this case, just create a new one
             desc = {'id' : self.uri,
                     'uri' : self.uri,
                     'title' : self.uri
                     }
             self.create_descriptor(**desc)
-        else:
-            fp = open(fn, 'r')
-            desc = pickle.load(fp)
-            fp.close()
             
         return desc
     
@@ -166,8 +178,12 @@ class FileBackingStore(BackingStore):
         desc = {}
         if os.path.exists(fn):
             fp = open(fn, 'r')
-            desc = pickle.load(fp)
-            fp.close()
+            try:
+                desc = pickle.load(fp)
+            except:
+                desc = {}
+            finally:
+                fp.close()
 
         desc.update(kwargs)
         
@@ -233,6 +249,27 @@ class FileBackingStore(BackingStore):
         ## signal from datastore that we are being bound to it
         self.datastore = datastore
 
+    def localizedName(self, uid=None, content=None, target=None):
+        """taking any of uid, a content object, or a direct target
+    filename (which includes all of the relative components under a
+    store). Return the localized filename that should be used _within_
+    the repository for the storage of this content object
+    """
+        if target: return os.path.join(self.base, target)
+        elif content:
+            # see if it expects a filename
+            fn, ext = content.suggestName()
+            if fn: return os.path.join(self.base, fn)
+            if ext: return os.path.join(self.base, "%s.%s" %
+                                        (content.id, ext))
+            if not uid: uid = content.id
+
+        if uid:
+            return os.path.join(self.base, uid)
+        else:
+            raise ValueError("""Nothing submitted to generate internal
+            storage name from""")
+        
     def _translatePath(self, uid):
         """translate a UID to a path name"""
         # paths into the datastore
@@ -243,7 +280,7 @@ class FileBackingStore(BackingStore):
         path = self._translatePath(uid)
         if not os.path.exists(path):
             return None
-
+        
         if target: targetpath = target
         else:
             targetpath = uid.replace('/', '_').replace('.', '__')
@@ -301,8 +338,11 @@ class FileBackingStore(BackingStore):
                     raise ValueError("Content for %s corrupt" % uid)
         return content
 
-    def _writeContent(self, uid, filelike, replace=True):
-        path = self._translatePath(uid)
+    def _writeContent(self, uid, filelike, replace=True, target=None):
+        if target: path = target
+        else:
+            path = self._translatePath(uid)
+            
         if replace is False and os.path.exists(path):
             raise KeyError("objects with path:%s for uid:%s exists" %(
                             path, uid))
@@ -484,7 +524,7 @@ class InplaceFileBackingStore(FileBackingStore):
     def _translatePath(self, uid):
         try: content = self.indexmanager.get(uid)
         except KeyError: return None
-        return os.path.join(self.uri, content.get_property('filename'))
+        return os.path.join(self.uri, content.get_property('filename', uid))
 
 ##     def _targetFile(self, uid, target=None, ext=None, env=None):
 ##         # in this case the file should really be there unless it was
@@ -513,7 +553,7 @@ class InplaceFileBackingStore(FileBackingStore):
                 proposed_name = os.path.split(filelike.name)[1]
             proposed_name = os.path.join(self.uri, proposed_name)
             if not os.path.exists(proposed_name):
-                self._writeContent(uid, filelike, replace=False)
+                self._writeContent(uid, filelike, replace=False, target=proposed_name)
 
         return uid
     
@@ -532,6 +572,7 @@ class InplaceFileBackingStore(FileBackingStore):
         c = self.indexmanager.get(uid)
         path = c.get_property('filename', None)
         self.indexmanager.delete(uid)
+        path = os.path.join(self.uri, path)
         if path and os.path.exists(path):
             os.unlink(path)
         

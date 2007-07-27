@@ -31,7 +31,7 @@ doctests = [
 ]
 
 doctest_options = doctest.ELLIPSIS
-doctest_options |= doctest.REPORT_ONLY_FIRST_FAILURE
+#doctest_options |= doctest.REPORT_ONLY_FIRST_FAILURE
 
 
 def test_suite():

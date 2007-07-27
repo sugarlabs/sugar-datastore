@@ -28,18 +28,15 @@ class Test(unittest.TestCase):
         ds = DataStore()
         ds.registerBackend(backingstore.FileBackingStore)
 
-        #add a custom field to the model 
-        dm = model.defaultModel.copy().addField('thumbnail', 'binary')
-                                         
-        
-        ds.mount(DEFAULT_STORE, {'indexmanager.model' : dm})
+
+        ds.mount(DEFAULT_STORE)
         n = datetime.datetime.now()
 
         data = open('test.jpg', 'r').read()
         # binary data with \0's in it can cause dbus errors here
         fn = tmpData("with image\0\0 prop")
         # The key types are looked up in the model now
-        uid = ds.create({'title' : "Document 1", 'thumbnail' : data, 'ctime' : n.isoformat()}, fn)
+        uid = ds.create({'title' : "Document 1", 'thumbnail:binary' : data, 'ctime' : n.isoformat()}, fn)
         
         ds.complete_indexing()
 

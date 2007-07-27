@@ -168,5 +168,34 @@ inplace one. Lets move the object with u1 to mp3
 >>> assert count == 1
 >>> assert result[0]['uid'] == pen_copy
 
+The file was properly created in the expected place.
+
+>>> assert os.path.exists('/tmp/store3/one.txt')
+
+
+We also need to be sure that delete commands work on inplace
+mounts. We will delete the object from the datastore and then verify
+that the file is missing.
+
+>>> ds.delete(pen_copy)
+>>> ds.complete_indexing()
+
+>>> os.path.exists('/tmp/store3/one.txt')
+False
+
+
+Now a tricky case where we corrupt the metadata on a mount and want to
+verify that we can still remount the store.
+
+>>> ds.unmount(mp3)
+>>> fp = open('/tmp/store3/.olpc.store/metainfo', 'w')
+>>> fp.seek(0)
+>>> fp.write('broken')
+>>> fp.close()
+
+>>> mp3 = ds.mount("inplace:/tmp/store3", dict(title="Fake USB from broken"))
+>>> mp = ds.mountpoints[mp3]
+>>> assert mp.descriptor()['title'] == 'Fake USB from broken'
+
 
 >>> ds.stop(); del ds

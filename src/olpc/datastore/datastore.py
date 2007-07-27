@@ -82,6 +82,8 @@ class DataStore(dbus.service.Object):
         self.mountpoints[mp.id] = mp
         if self.root is None:
             self.root = mp
+
+        self.Mounted(mp.descriptor())
         return mp.id
 
     @dbus.service.method(DS_DBUS_INTERFACE,
@@ -103,42 +105,52 @@ class DataStore(dbus.service.Object):
     def unmount(self, mountpoint_id):
         """Unmount a mountpoint by id"""
         if mountpoint_id not in self.mountpoints: return
-        self.mountpoints[mountpoint_id].stop()
+        mp = self.mountpoints[mountpoint_id]
+        mp.stop()
+        self.Unmounted(mp.descriptor())
         del self.mountpoints[mountpoint_id]
+
+    @dbus.service.signal(DS_DBUS_INTERFACE, signature="a{sv}")
+    def Mounted(self, descriptior):
+        """indicates that a new backingstore has been mounted by the
+    datastore. Returns the mount descriptor, like mounts()"""
+        pass
+
+    @dbus.service.signal(DS_DBUS_INTERFACE, signature="a{sv}")
+    def Unmounted(self, descriptor):
+        """indicates that a new backingstore has been mounted by the
+    datastore. Returns the mount descriptor, like mounts()"""
+        pass
+    
+    
     ### End Mount Points
 
-    ### Buddy Management
-    ##  A single datastore typically refers to a single user
-    ##  this breaks down a little in the case of things like USB
-    ##  sticks and so on. We provide a facility for tracking
-    ##  co-authors of content
-    ##  there are associated changes to 'find' to resolve buddies
-    def addBuddy(self, id, name, fg_color, bg_color, mountpoint=None):
-        mp = None
-        if mountpoint is None: mp = self.root
-        else: mp = self.mountpoints.get(mountpoint)
-        if mp is None: raise ValueError("Invalid mountpoint")
-        mp.addBuddy(id, name, fg_color, bg_color)
+    ### Backup support
+    def pause(self, mountpoints=None):
+        """pause the datastore, during this time it will not process
+    requests. this allows the underlying stores to be backup up via
+    traditional mechanisms
+    """
+        if mountpoints:
+            mps = [self.mountpoints[mp] for mp in mountpoints]
+        else:
+            mps = self.mountpoints.values()
 
-    def getBuddy(self, bid):
-        """Get a buddy by its id"""
-        b = None
-        for mp in self.mountpoints.itervalues():
-            b = mp.getBuddy(bid)
-            if b: break
-        return b
+        for mp in mps:
+            mp.stop()
 
-    
-    def buddies(self):
-        buddies = set()
-        for mp in self.mountpoints.itervalues():
-            buddies = buddies.union(mp.getBuddies())
-        return buddies
+    def unpause(self, mountpoints=None):
+        """resume the operation of a set of paused mountpoints"""
+        if mountpoints:
+            mps = [self.mountpoints[mp] for mp in mountpoints]
+        else:
+            mps = self.mountpoints.values()
+
+        for mp in mps:
+            mp.initialize_and_load()
         
-    
-
-    ## end buddy api
-    
+    ### End Backups
+            
     def connect_backingstore(self, uri, **kwargs):
         """
         connect to a new backing store
@@ -325,6 +337,8 @@ class DataStore(dbus.service.Object):
             if include_files :
                 try: filename = r.filename
                 except KeyError: pass
+                # XXX: this means that find never shows the internally
+                # stored filename attribute (which is private)
                 props['filename'] = filename
             d.append(props)
 
@@ -368,7 +382,9 @@ class DataStore(dbus.service.Object):
                          out_signature='a{sv}')
     def get_properties(self, uid):
         content = self.get(uid)
-        return content.properties
+        props = content.properties
+        props['mountpoint'] = content.backingstore.id
+        return props
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='sa{sv}',
@@ -399,9 +415,9 @@ class DataStore(dbus.service.Object):
         content = self.get(uid)
         mountpoint = props.pop('mountpoint', None)
         content.backingstore.update(uid, props, filelike)
-        if filelike:
-            self.Updated(content.id)
-            logger.debug("updated %s" % content.id)
+
+        self.Updated(content.id)
+        logger.debug("updated %s" % content.id)
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Updated(self, uid): pass
@@ -414,8 +430,8 @@ class DataStore(dbus.service.Object):
         content = self.get(uid)
         if content:
             content.backingstore.delete(uid)
-            self.Deleted(uid)
-            logger.debug("deleted %s" % uid)
+        self.Deleted(uid)
+        logger.debug("deleted %s" % uid)
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Deleted(self, uid): pass

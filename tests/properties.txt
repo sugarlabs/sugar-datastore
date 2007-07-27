@@ -19,20 +19,18 @@ Set up two mount points.
 
 Extend the model to retain a 'year' property used below.
 
->>> dm = model.defaultModel.copy().addField('year', "number")
-
 Mount a couple of stores.
 
->>> mp1 = ds.mount("/tmp/store1", {'title' : "Primary Storage", 'indexmanager.model' : dm})
->>> mp2 = ds.mount("/tmp/store2", {'title' : "Secondary Storage", 'indexmanager.model' : dm})
+>>> mp1 = ds.mount("/tmp/store1", {'title' : "Primary Storage",})
+>>> mp2 = ds.mount("/tmp/store2", {'title' : "Secondary Storage"})
 
 Create some content on each.
 
->>> u1 = ds.create({'title' : "Alpha doc", 'author' : "Ben", 'year:number' : 2000}, tmpData("""Document 1"""))
->>> u2 = ds.create({'title' : "Beta doc", 'author' : "Ben", 'year:number' : 2001} , tmpData("""Document 2""")) 
+>>> u1 = ds.create({'title' : "Alpha doc", 'author' : "Ben", 'year:int' : 2000}, tmpData("""Document 1"""))
+>>> u2 = ds.create({'title' : "Beta doc", 'author' : "Ben", 'year:int' : 2001} , tmpData("""Document 2""")) 
 
->>> u3 = ds.create({'title' : "Delta doc", 'author' :"HAL", 'year:number' : 2000, 'mountpoint' : mp2}, tmpData("""Document 3"""))
->>> u4 = ds.create({'title' : "Gamma doc", 'author' : "HAL", 'year:number' : 2001, 'mountpoint' : mp2}, tmpData("""Document 4""")) 
+>>> u3 = ds.create({'title' : "Delta doc", 'author' :"HAL", 'year:int' : 2000, 'mountpoint' : mp2}, tmpData("""Document 3"""))
+>>> u4 = ds.create({'title' : "Gamma doc", 'author' : "HAL", 'year:int' : 2001, 'mountpoint' : mp2}, tmpData("""Document 4""")) 
 
 Now we should be able to discover things about the system properties.
 >>> ds.complete_indexing()

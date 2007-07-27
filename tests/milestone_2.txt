@@ -10,12 +10,11 @@ First clean up from any other tests.
 >>> from olpc.datastore import backingstore, model
 >>> ds = DataStore()
 >>> ds.registerBackend(backingstore.FileBackingStore)
->>> dm = model.defaultModel.copy().addField('year', 'int').addField('month', 'string')
 
->>> assert ds.mount("/tmp/test_ds", {'indexmanager.model' : dm})
+>>> assert ds.mount("/tmp/test_ds")
 
->>> a = ds.create(dict(title="Content A", author="Bob", year="1999", month="Jan"), '')
->>> b = ds.create(dict(title="Content B", author="Alice", year="2000", month="Jan"), '')
+>>> a = ds.create({'title':"Content A", 'author':"Bob", 'year:int':"1999", 'month':"Jan"}, '')
+>>> b = ds.create({'title':"Content B", 'author':"Alice", 'year:int':"2000", 'month':"Jan"}, '')
 
 Find should return both
 >>> def find2uids(results): return [i['uid'] for i in results[0]]

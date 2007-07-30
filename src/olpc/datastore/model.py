@@ -240,6 +240,8 @@ class Content(object):
             mt = self.get_property('mime_type', None)
             if mt:
                 ext = mimetypes.guess_extension(mt)
+                # .ksh is a strange ext for plain text
+                if ext and ext == '.ksh': ext = '.txt'
                 if ext: return None, ext
         return None, None
 

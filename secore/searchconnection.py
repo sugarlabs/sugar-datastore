@@ -20,14 +20,16 @@ r"""searchconnection.py: A connection to the search engine for searching.
 """
 __docformat__ = "restructuredtext en"
 
+import os as _os
+import cPickle as _cPickle
+
 import xapian as _xapian
 from datastructures import *
 from fieldactions import *
 import fieldmappings as _fieldmappings
 import highlight as _highlight 
 import errors as _errors
-import os as _os
-import cPickle as _cPickle
+import indexerconnection as _indexerconnection
 
 class SearchResult(ProcessedDocument):
     """A result from a search.
@@ -42,7 +44,10 @@ class SearchResult(ProcessedDocument):
         """Get the language that should be used for a given field.
 
         """
-        actions = self._results._conn._field_actions[field]._actions
+        try:
+            actions = self._results._conn._field_actions[field]._actions
+        except KeyError:
+            actions = {}
         for action, kwargslist in actions.iteritems():
             if action == FieldActions.INDEX_FREETEXT:
                 for kwargs in kwargslist:
@@ -118,20 +123,24 @@ class SearchResultIter(object):
 
     def next(self):
         msetitem = self._iter.next()
-        return SearchResult(msetitem,
-                            self._results)
+        return SearchResult(msetitem, self._results)
 
 
 class SearchResults(object):
     """A set of results of a search.
 
     """
-    def __init__(self, conn, enq, query, mset, fieldmappings):
+    def __init__(self, conn, enq, query, mset, fieldmappings, tagspy,
+                 facetspy, facetfields):
         self._conn = conn
         self._enq = enq
         self._query = query
         self._mset = mset
         self._fieldmappings = fieldmappings
+        self._tagspy = tagspy
+        self._facetspy = facetspy
+        self._facetfields = facetfields
+        self._numeric_ranges_built = {}
 
     def __repr__(self):
         return ("<SearchResults(startrank=%d, "
@@ -225,12 +234,106 @@ class SearchResults(object):
         """
         return SearchResultIter(self)
 
+    def get_top_tags(self, field, maxtags):
+        """Get the most frequent tags in a given field.
+
+         - `field` - the field to get tags for.  This must have been specified
+           in the "gettags" argument of the search() call.
+         - `maxtags` - the maximum number of tags to return.
+
+        Returns a sequence of 2-item tuples, in which the first item in the
+        tuple is the tag, and the second is the frequency of the tag in the
+        matches seen (as an integer).
+
+        """
+        if self._tagspy is None:
+            raise _errors.SearchError("Field %r was not specified for getting tags" % field)
+        try:
+            prefix = self._conn._field_mappings.get_prefix(field)
+        except KeyError:
+            raise _errors.SearchError("Field %r was not indexed for tagging" % field)
+        return self._tagspy.get_top_terms(prefix, maxtags)
+
+    def get_suggested_facets(self, maxfacets=5, desired_num_of_categories=7):
+        """Get a suggested set of facets, to present to the user.
+
+        This returns a list, in descending order of the usefulness of the
+        facet, in which each item is a tuple holding:
+
+         - fieldname of facet.
+         - sequence of 2-tuples holding the suggested values or ranges for that
+           field:
+
+           For facets of type 'string', the first item in the 2-tuple will
+           simply be the string supplied when the facet value was added to its
+           document.  For facets of type 'float', it will be a 2-tuple, holding
+           floats giving the start and end of the suggested value range.
+
+           The second item in the 2-tuple will be the frequency of the facet
+           value or range in the result set.
+
+        """
+        if self._facetspy is None:
+            return []
+        scores = []
+        facettypes = {}
+        for field, slot, kwargslist in self._facetfields:
+            type = None
+            for kwargs in kwargslist:
+                type = kwargs.get('type', None)
+                if type is not None: break
+            if type is None: type = 'string'
+
+            if type == 'float':
+                if field not in self._numeric_ranges_built:
+                    field, self._facetspy.build_numeric_ranges(slot, desired_num_of_categories)
+                    self._numeric_ranges_built[field] = None
+            facettypes[field] = type
+            score = self._facetspy.score_categorisation(slot,
+                                                        desired_num_of_categories)
+            scores.append((score, field, slot))
+        scores.sort()
+
+        result = []
+        for score, field, slot in scores:
+            values = self._facetspy.get_values_as_dict(slot)
+            if len(values) <= 1:
+                continue
+            newvalues = []
+            if facettypes[field] == 'float':
+                # Convert numbers to python numbers, and number ranges to a
+                # python tuple of two numbers.
+                for value, frequency in values.iteritems():
+                    if len(value) <= 9:
+                        value1 = _xapian.sortable_unserialise(value)
+                        value2 = value1
+                    else:
+                        value1 = _xapian.sortable_unserialise(value[:9])
+                        value2 = _xapian.sortable_unserialise(value[9:])
+                    newvalues.append(((value1, value2), frequency))
+            else:
+                for value, frequency in values.iteritems():
+                    newvalues.append((value, frequency))
+                
+            newvalues.sort()
+            result.append((field, newvalues))
+            if len(result) >= maxfacets:
+                break
+        return result
+        
+
 class SearchConnection(object):
     """A connection to the search engine for searching.
 
     The connection will access a view of the database.
 
     """
+    _qp_flags_std = (_xapian.QueryParser.FLAG_PHRASE |
+                     _xapian.QueryParser.FLAG_BOOLEAN |
+                     _xapian.QueryParser.FLAG_LOVEHATE |
+                     _xapian.QueryParser.FLAG_AUTO_SYNONYMS |
+                     _xapian.QueryParser.FLAG_AUTO_MULTIWORD_SYNONYMS)
+    _qp_flags_nobool = (_qp_flags_std | _xapian.QueryParser.FLAG_BOOLEAN) ^ _xapian.QueryParser.FLAG_BOOLEAN
 
     def __init__(self, indexpath):
         """Create a new connection to the index for searching.
@@ -252,7 +355,10 @@ class SearchConnection(object):
         """Get the sort type that should be used for a given field.
 
         """
-        actions = self._field_actions[field]._actions
+        try:
+            actions = self._field_actions[field]._actions
+        except KeyError:
+            actions = {}
         for action, kwargslist in actions.iteritems():
             if action == FieldActions.SORT_AND_COLLAPSE:
                 for kwargs in kwargslist:
@@ -266,6 +372,7 @@ class SearchConnection(object):
         # class.  Move it to a shared location.
         config_file = _os.path.join(self._indexpath, 'config')
         if not _os.path.exists(config_file):
+            self._field_actions = {}
             self._field_mappings = _fieldmappings.FieldMappings()
             return
         fd = open(config_file)
@@ -368,21 +475,35 @@ class SearchConnection(object):
             raise _errors.SearchError("SearchConnection has been closed")
         return _xapian.Query(operator, list(queries))
 
-    def query_filter(self, query, filter):
+    def query_filter(self, query, filter, exclude=False):
         """Filter a query with another query.
 
-        Documents will only match the resulting query if they match both
-        queries, but will be weighted according to only the first query.
+        If exclude is False (or not specified), documents will only match the
+        resulting query if they match the both the first and second query: the
+        results of the first query are "filtered" to only include those which
+        also match the second query.
+
+        If exclude is True, documents will only match the resulting query if
+        they match the first query, but not the second query: the results of
+        the first query are "filtered" to only include those which do not match
+        the second query.
+        
+        Documents will always be weighted according to only the first query.
 
         - `query`: The query to filter.
         - `filter`: The filter to apply to the query.
+        - `exclude`: If True, the sense of the filter is reversed - only
+          documents which do not match the second query will be returned. 
 
         """
         if self._index is None:
             raise _errors.SearchError("SearchConnection has been closed")
         if not isinstance(filter, _xapian.Query):
             raise _errors.SearchError("Filter must be a Xapian Query object")
-        return _xapian.Query(_xapian.Query.OP_FILTER, query, filter)
+        if exclude:
+            return _xapian.Query(_xapian.Query.OP_AND_NOT, query, filter)
+        else:
+            return _xapian.Query(_xapian.Query.OP_FILTER, query, filter)
 
     def query_range(self, field, begin, end):
         """Create a query for a range search.
@@ -407,8 +528,60 @@ class SearchConnection(object):
         begin = fn(field, begin)
         end = fn(field, end)
 
-        slot = self._field_mappings.get_slot(field)
+        try:
+            slot = self._field_mappings.get_slot(field)
+        except KeyError:
+            return _xapian.Query()
         return _xapian.Query(_xapian.Query.OP_VALUE_RANGE, slot, begin, end)
+
+    def query_facet(self, field, val):
+        """Create a query for a facet value.
+        
+        This creates a query which matches only those documents which have a
+        facet value in the specified range.
+
+        For a numeric range facet, val should be a tuple holding the start and
+        end of the range.  For other facets, val should be the value to look
+        for.
+
+        The start and end values are both inclusive - any documents with a
+        value equal to start or end will be returned (unless end is less than
+        start, in which case no documents will be returned).
+
+        """
+        if self._index is None:
+            raise _errors.SearchError("SearchConnection has been closed")
+
+        try:
+            actions = self._field_actions[field]._actions
+        except KeyError:
+            actions = {}
+        facettype = None
+        for action, kwargslist in actions.iteritems():
+            if action == FieldActions.FACET:
+                for kwargs in kwargslist:
+                    facettype = kwargs.get('type', None)
+                    if facettype is not None:
+                        break
+            if facettype is not None:
+                break
+
+        if facettype == 'float':
+            assert(len(val) == 2)
+            try:
+                slot = self._field_mappings.get_slot(field)
+            except KeyError:
+                return _xapian.Query()
+            marshaller = SortableMarshaller(False)
+            fn = marshaller.get_marshall_function(field, sorttype)
+            begin = fn(field, val[0])
+            end = fn(field, val[1])
+            return _xapian.Query(_xapian.Query.OP_VALUE_RANGE, slot, begin, end)
+        else:
+            assert(facettype == 'string' or facettype is None)
+            prefix = self._field_mappings.get_prefix(field)
+            return _xapian.Query(prefix + val.lower())
+
 
     def _prepare_queryparser(self, allow, deny, default_op):
         """Prepare (and return) a query parser using the specified fields and
@@ -429,7 +602,10 @@ class SearchConnection(object):
             allow = [key for key in allow if key not in deny]
 
         for field in allow:
-            actions = self._field_actions[field]._actions
+            try:
+                actions = self._field_actions[field]._actions
+            except KeyError:
+                actions = {}
             for action, kwargslist in actions.iteritems():
                 if action == FieldActions.INDEX_EXACT:
                     # FIXME - need patched version of xapian to add exact prefixes
@@ -459,8 +635,11 @@ class SearchConnection(object):
 
         Only one of `allow` and `deny` may be specified.
 
-        If any of the entries in `allow` or `deny` are not present in the
-        configuration for the database, an exception will be raised.
+        If any of the entries in `allow` are not present in the configuration
+        for the database, or are not specified for indexing (either as
+        INDEX_EXACT or INDEX_FREETEXT), they will be ignored.  If any of the
+        entries in `deny` are not present in the configuration for the
+        database, they will be ignored.
 
         Returns a Query object, which may be passed to the search() method, or
         combined with other queries.
@@ -468,11 +647,11 @@ class SearchConnection(object):
         """
         qp = self._prepare_queryparser(allow, deny, default_op)
         try:
-            return qp.parse_query(string)
+            return qp.parse_query(string, self._qp_flags_std)
         except _xapian.QueryParserError, e:
             # If we got a parse error, retry without boolean operators (since
             # these are the usual cause of the parse error).
-            return qp.parse_query(string, 0)
+            return qp.parse_query(string, self._qp_flags_nobool)
 
     def query_field(self, field, value, default_op=OP_AND):
         """A query for a single field.
@@ -487,7 +666,9 @@ class SearchConnection(object):
 
         # need to check on field type, and stem / split as appropriate
         for action, kwargslist in actions.iteritems():
-            if action == FieldActions.INDEX_EXACT:
+            if action in (FieldActions.INDEX_EXACT,
+                          FieldActions.TAG,
+                          FieldActions.FACET,):
                 prefix = self._field_mappings.get_prefix(field)
                 if len(value) > 0:
                     chval = ord(value[0])
@@ -505,9 +686,7 @@ class SearchConnection(object):
                         qp.set_stemming_strategy(qp.STEM_SOME)
                     except KeyError:
                         pass
-                return qp.parse_query(value,
-                                      qp.FLAG_PHRASE | qp.FLAG_BOOLEAN | qp.FLAG_LOVEHATE,
-                                      prefix)
+                return qp.parse_query(value, self._qp_flags_std, prefix)
 
         return _xapian.Query()
 
@@ -528,12 +707,15 @@ class SearchConnection(object):
 
         Only one of `allow` and `deny` may be specified.
 
-        If any of the entries in `allow` or `deny` are not present in the
-        configuration for the database, an exception will be raised.
+        If any of the entries in `allow` are not present in the configuration
+        for the database, or are not specified for indexing (either as
+        INDEX_EXACT or INDEX_FREETEXT), they will be ignored.  If any of the
+        entries in `deny` are not present in the configuration for the
+        database, they will be ignored.
 
         """
         qp = self._prepare_queryparser(allow, deny, self.OP_AND)
-        qp.parse_query(string, qp.FLAG_PHRASE|qp.FLAG_BOOLEAN|qp.FLAG_LOVEHATE|qp.FLAG_SPELLING_CORRECTION)
+        qp.parse_query(string, self._qp_flags_std | qp.FLAG_SPELLING_CORRECTION)
         corrected = qp.get_corrected_query_string()
         if len(corrected) == 0:
             if isinstance(string, unicode):
@@ -544,7 +726,9 @@ class SearchConnection(object):
         return corrected
 
     def search(self, query, startrank, endrank,
-               checkatleast=0, sortby=None, collapse=None):
+               checkatleast=0, sortby=None, collapse=None,
+               gettags=None,
+               getfacets=None, allowfacets=None, denyfacets=None):
         """Perform a search, for documents matching a query.
 
         - `query` is the query to perform.
@@ -556,7 +740,10 @@ class SearchConnection(object):
           be returned.
         - `checkatleast` is the minimum number of results to check for: the
           estimate of the total number of matches will always be exact if
-          the number of matches is less than `checkatleast`.
+          the number of matches is less than `checkatleast`.  A value of ``-1``
+          can be specified for the checkatleast parameter - this has the
+          special meaning of "check all matches", and is equivalent to passing
+          the result of get_doccount().
         - `sortby` is the name of a field to sort by.  It may be preceded by a
           '+' or a '-' to indicate ascending or descending order
           (respectively).  If the first character is neither '+' or '-', the
@@ -564,10 +751,23 @@ class SearchConnection(object):
         - `collapse` is the name of a field to collapse the result documents
           on.  If this is specified, there will be at most one result in the
           result set for each value of the field.
+        - `gettags` is the name of a field to count tag occurrences in, or a
+          list of fields to do so.
+        - `getfacets` is a boolean - if True, the matching documents will be
+          examined to build up a list of the facet values contained in them.
+        - `allowfacets` is a list of the fieldnames of facets to consider.
+        - `denyfacets` is a list of fieldnames of facets which will not be
+          considered.
+
+        If neither 'allowfacets' or 'denyfacets' is specified, all fields
+        holding facets will be considered.
 
         """
         if self._index is None:
             raise _errors.SearchError("SearchConnection has been closed")
+        if checkatleast == -1:
+            checkatleast = self._index.get_doccount()
+
         enq = _xapian.Enquire(self._index)
         enq.set_query(query)
 
@@ -602,16 +802,103 @@ class SearchConnection(object):
         # there are more matches.
         checkatleast = max(checkatleast, endrank + 1)
 
+        # Build the matchspy.
+        matchspies = []
+
+        # First, add a matchspy for any gettags fields
+        if isinstance(gettags, basestring):
+            if len(gettags) != 0:
+                gettags = [gettags]
+        tagspy = None
+        if gettags is not None and len(gettags) != 0:
+            tagspy = _xapian.TermCountMatchSpy()
+            for field in gettags:
+                try:
+                    prefix = self._field_mappings.get_prefix(field)
+                    tagspy.add_prefix(prefix)
+                except KeyError:
+                    raise _errors.SearchError("Field %r was not indexed for tagging" % field)
+            matchspies.append(tagspy)
+
+
+        # add a matchspy for facet selection here.
+        facetspy = None
+        facetfields = []
+        if getfacets:
+            if allowfacets is not None and denyfacets is not None:
+                raise _errors.SearchError("Cannot specify both `allowfacets` and `denyfacets`")
+            if allowfacets is None:
+                allowfacets = [key for key in self._field_actions]
+            if denyfacets is not None:
+                allowfacets = [key for key in allowfacets if key not in denyfacets]
+
+            for field in allowfacets:
+                try:
+                    actions = self._field_actions[field]._actions
+                except KeyError:
+                    actions = {}
+                for action, kwargslist in actions.iteritems():
+                    if action == FieldActions.FACET:
+                        slot = self._field_mappings.get_slot(field)
+                        if facetspy is None:
+                            facetspy = _xapian.CategorySelectMatchSpy()
+                        facetspy.add_slot(slot)
+                        facetfields.append((field, slot,
+                                            kwargslist))
+        if facetspy is not None:
+            matchspies.append(facetspy)
+
+
+        # Finally, build a single matchspy to pass to get_mset().
+        if len(matchspies) == 0:
+            matchspy = None
+        elif len(matchspies) == 1:
+            matchspy = matchspies[0]
+        else:
+            matchspy = _xapian.MultipleMatchDecider()
+            for spy in matchspies:
+                matchspy.append(spy)
+
         enq.set_docid_order(enq.DONT_CARE)
 
         # Repeat the search until we don't get a DatabaseModifiedError
         while True:
             try:
-                mset = enq.get_mset(startrank, maxitems, checkatleast)
+                mset = enq.get_mset(startrank, maxitems, checkatleast, None,
+                                    None, matchspy)
                 break
             except _xapian.DatabaseModifiedError, e:
                 self.reopen()
-        return SearchResults(self, enq, query, mset, self._field_mappings)
+        return SearchResults(self, enq, query, mset, self._field_mappings,
+                             tagspy, facetspy, facetfields)
+
+    def iter_synonyms(self, prefix=""):
+        """Get an iterator over the synonyms.
+
+         - `prefix`: if specified, only synonym keys with this prefix will be
+           returned.
+
+        The iterator returns 2-tuples, in which the first item is the key (ie,
+        a 2-tuple holding the term or terms which will be synonym expanded,
+        followed by the fieldname specified (or None if no fieldname)), and the
+        second item is a tuple of strings holding the synonyms for the first
+        item.
+
+        These return values are suitable for the dict() builtin, so you can
+        write things like:
+
+         >>> conn = _indexerconnection.IndexerConnection('foo')
+         >>> conn.add_synonym('foo', 'bar')
+         >>> conn.add_synonym('foo bar', 'baz')
+         >>> conn.add_synonym('foo bar', 'foo baz')
+         >>> conn.flush()
+         >>> conn = SearchConnection('foo')
+         >>> dict(conn.iter_synonyms())
+         {('foo', None): ('bar',), ('foo bar', None): ('baz', 'foo baz')}
+
+        """
+        return _indexerconnection.SynonymIter(self._index, self._field_mappings, prefix)
+
 
 if __name__ == '__main__':
     import doctest, sys

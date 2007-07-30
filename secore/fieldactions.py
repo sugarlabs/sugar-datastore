@@ -42,6 +42,22 @@ def _act_index_exact(fieldname, doc, value, context):
     """
     doc.add_term(fieldname, value, 0)
 
+def _act_tag(fieldname, doc, value, context):
+    """Perform the TAG action.
+    
+    """
+    doc.add_term(fieldname, value.lower(), 0)
+
+def _act_facet(fieldname, doc, value, context, type=None):
+    """Perform the FACET action.
+    
+    """
+    marshaller = SortableMarshaller()
+    fn = marshaller.get_marshall_function(fieldname, type)
+    doc.add_term(fieldname, value.lower(), 0)
+    value = fn(fieldname, value)
+    doc.add_value(fieldname, value)
+
 def _act_index_freetext(fieldname, doc, value, context, weight=1, 
                         language=None, stop=None, spell=False,
                         nopos=False, noprefix=False):
@@ -210,7 +226,7 @@ class FieldActions(object):
         - 'string' - sort in lexicographic (ie, alphabetical) order.
           This is the default, used if no type is set.
         - 'float' - treat the values as (decimal representations of) floating
-          point numbers, and sort in numerical order .  The values in the field
+          point numbers, and sort in numerical order.  The values in the field
           must be valid floating point numbers (according to Python's float()
           function).
         - 'date' - sort in date order.  The values must be valid dates (either
@@ -221,6 +237,23 @@ class FieldActions(object):
       "collapse" result sets, such that only the highest result with each value
       of the field will be returned.
 
+    - `TAG`: the field contains tags; these are strings, which will be matched
+      in a case insensitive way, but otherwise must be exact matches.  Tag
+      fields can be searched for by making an explict query (ie, using
+      query_field(), but not with query_parse()).  A list of the most frequent
+      tags in a result set can also be accessed easily.
+
+    - `FACET`: the field represents a classification facet; these are strings
+      which will be matched exactly, but a list of all the facets present in
+      the result set can also be accessed easily - in addition, a suitable
+      subset of the facets, and a selection of the facet values, present in the
+      result set can be calculated.  One optional parameter may be supplied:
+
+      - 'type' is a value indicating the type of facet contained in the field:
+
+        - 'string' - the facet values are exact binary strings.
+        - 'float' - the facet values are floating point numbers.
+
     """
 
     # See the class docstring for the meanings of the following constants.
@@ -229,6 +262,8 @@ class FieldActions(object):
     INDEX_FREETEXT = 3
     SORTABLE = 4 
     COLLAPSE = 5
+    TAG = 6
+    FACET = 7
 
     # Sorting and collapsing store the data in a value, but the format depends
     # on the sort type.  Easiest way to implement is to treat them as the same
@@ -253,7 +288,10 @@ class FieldActions(object):
                           FieldActions.INDEX_EXACT,
                           FieldActions.INDEX_FREETEXT,
                           FieldActions.SORTABLE,
-                          FieldActions.COLLAPSE,):
+                          FieldActions.COLLAPSE,
+                          FieldActions.TAG,
+                          FieldActions.FACET,
+                         ):
             raise _errors.IndexerError("Unknown field action: %r" % action)
 
         info = self._action_info[action]
@@ -312,7 +350,7 @@ class FieldActions(object):
                     raise _errors.IndexerError("Field %r is already marked for "
                                                "sorting, with a different "
                                                "sort type" % self._fieldname)
-        
+
         if self.NEED_PREFIX in info[3]:
             field_mappings.add_prefix(self._fieldname)
         if self.NEED_SLOT in info[3]:
@@ -351,6 +389,8 @@ class FieldActions(object):
         SORTABLE: ('SORTABLE', ('type', ), None, (NEED_SLOT,), ),
         COLLAPSE: ('COLLAPSE', (), None, (NEED_SLOT,), ),
         SORT_AND_COLLAPSE: ('SORT_AND_COLLAPSE', ('type', ), _act_sort_and_collapse, (NEED_SLOT,), ),
+        TAG: ('TAG', (), _act_tag, (NEED_PREFIX,), ),
+        FACET: ('FACET', ('type', ), _act_facet, (NEED_PREFIX, NEED_SLOT,), ),
     }
 
 if __name__ == '__main__':

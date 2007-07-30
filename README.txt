@@ -37,7 +37,6 @@ Converters
 ---------- 
 (used to index binaries) 
 
-odt2txt       http://stosberg.net/odt2txt/
 pdftotext     from poppler-utils
 abiword/write
 

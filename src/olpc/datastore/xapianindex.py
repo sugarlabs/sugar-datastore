@@ -183,8 +183,10 @@ class IndexManager(object):
                         # done in the thread to keep things async and
                         # latency lower.
                         # we know that there is filestuff or it
-                        # wouldn't have been queued 
+                        # wouldn't have been queued
                         filename, mimetype = filestuff
+                        if isinstance(filename, file):
+                            filename = filename.name
                         fp = converter(filename, mimetype)
                         if fp:
                             # read in at a fixed block size, try to

@@ -339,6 +339,7 @@ class FileBackingStore(BackingStore):
         return content
 
     def _writeContent(self, uid, filelike, replace=True, target=None):
+        content = None
         if target: path = target
         else:
             path = self._translatePath(uid)
@@ -359,9 +360,10 @@ class FileBackingStore(BackingStore):
             fp.close()
         else:
             bin_copy.bin_copy(filelike.name, path)
-        if verify:
-            content = self.indexmanager.get(uid)
-            content.checksum = c.hexdigest()
+##         if verify:
+##             if not content:
+##                 content = self.indexmanager.get(uid)
+##             content.checksum = c.hexdigest()
 
     def _checksum(self, filename):
         c  = sha.sha()
@@ -538,7 +540,7 @@ class InplaceFileBackingStore(FileBackingStore):
     def create(self, props, filelike):
         # the file would have already been changed inplace
         # don't touch it
-        uid = self.indexmanager.index(props, filelike)
+        proposed_name = None
         if filelike:
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
@@ -551,9 +553,14 @@ class InplaceFileBackingStore(FileBackingStore):
             proposed_name = props.get('filename', None)
             if not proposed_name:
                 proposed_name = os.path.split(filelike.name)[1]
+            # record the name before qualifying it to the store
+            props['filename'] = proposed_name
             proposed_name = os.path.join(self.uri, proposed_name)
-            if not os.path.exists(proposed_name):
-                self._writeContent(uid, filelike, replace=False, target=proposed_name)
+
+        uid = self.indexmanager.index(props, filelike)
+
+        if proposed_name and not os.path.exists(proposed_name):
+            self._writeContent(uid, filelike, replace=False, target=proposed_name)
 
         return uid
     

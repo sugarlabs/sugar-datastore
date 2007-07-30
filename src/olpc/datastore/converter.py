@@ -160,7 +160,6 @@ converter.registerConverter('.doc', doctotext)
 converter.registerConverter('application/msword', doctotext)
 
 # ODT
-odt2txt = subprocessconverter('/usr/bin/odt2txt --encoding=UTF-8 --output=%(target)s %(source)s')
-converter.registerConverter('.odt', odt2txt)
-converter.registerConverter('application/vnd.oasis.opendocument.text', odt2txt)
+converter.registerConverter('.odt', doctotext)
+converter.registerConverter('application/vnd.oasis.opendocument.text', doctotext)
 

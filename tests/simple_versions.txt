@@ -1,0 +1,107 @@
+The Datastore supports versioning of content objects and
+metadata. Inorder to support this we introduce new API calls and a
+higher level set of semantic operations around versioning.
+
+Let's create a simple datastore and add some content.
+
+>>> import os
+>>> assert os.system('rm -rf /tmp/store1/') == 0
+
+>>> from olpc.datastore import DataStore
+>>> from olpc.datastore import backingstore
+>>> from testutils import *
+
+>>> ds = DataStore()
+>>> ds.registerBackend(backingstore.FileBackingStore)
+>>> mp1 = ds.mount("/tmp/store1", dict(title="Primary Storage"))
+
+
+The checkin operation will create new content or update existing
+content and increment the version all in a single operation. It takes
+the arguments of a properties dictionary and an optional filename of
+the content to store with this revision.
+
+>>> fn = tmpData("Part 1 -- it begins")
+>>> uid, vid = ds.checkin({'title' : 'A day in the life'}, fn)
+
+This operation returns the uid of the object and its current version
+id. 
+
+From the datastore we can now verify that this object exists and is
+indexed. To ensure this for testing we first allow the indexer to
+complete all its pending operations
+
+>>> ds.complete_indexing()
+
+>>> results, count = ds.find("A day")
+>>> assert count == 1
+>>> assert results[0]['uid'] == uid
+
+We can also search on its content directly.
+
+>>> results, count = ds.find("Part 1")
+>>> assert count == 1
+>>> assert results[0]['uid'] == uid
+
+
+To get a copy of this file out that we can manipulate we can use the
+checkout command. By default checkout will check out the HEAD revsion
+(the most recent) of a document. It returns the properties dictionary
+and the filename of the checkout which is ours to manipulate.
+
+>>> props, fn = ds.checkout(uid)
+
+>>> assert props['title'] == "A day in the life"
+>>> assert props['vid'] == vid
+
+>>> contents = open(fn, 'r').read()
+>>> assert contents.startswith("Part 1")
+
+Lets make a revision to this content.
+
+>>> fn2 = tmpData("Part Two -- the second helping")
+
+We are going to check in the new file using the props dict of the last
+call after making our modifications and supplying our new file.
+
+(note that we changed the case of 'life' here)
+
+>>> props['title'] = "A day in the Life" 
+>>> ds.checkin(props, fn2)
+>>> ds.complete_indexing()
+
+
+Verify that the contents of the old version isn't returned in the
+search. By default old versions are not included.
+
+>>> r, c = ds.find("begins"))
+>>> assert c == 0
+
+Verify that the HEAD revision of the content is searchable by default.
+
+>>> r, c = ds.find("second")
+>>> assert c == 1
+>>> assert r[0]['uid'] == uid
+
+Lets check out the head version of this document now.
+
+>>> props, rev2 = ds.checkout(uid)
+
+Check that the id is the same and the version id isn't.
+
+>>> assert props['id'] == uid
+>>> assert props['vid'] != vid
+
+Verify the contents of the file is as expected.
+
+>>> contents = open(rev2, 'r').read()
+>>> assert contents.startswith("Part Two")
+
+
+
+>>> ds.stop(); del ds
+
+
+
+
+

@@ -56,7 +56,6 @@ class DataStore(dbus.service.Object):
         self.backends.append(backendClass)
         
     ## MountPoint API
-    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature="sa{sv}",
                          out_signature='s')
@@ -98,7 +97,6 @@ class DataStore(dbus.service.Object):
         """
         return [mp.descriptor() for mp in self.mountpoints.itervalues()]
 
-    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature="s",
                          out_signature="")
@@ -184,7 +182,38 @@ class DataStore(dbus.service.Object):
         return mp
 
     # PUBLIC API
-    #@utils.sanitize_dbus
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature='a{sv}s',
+                         out_signature='ss')
+    def checkin(self, props, filelike=None):
+        """Check in a new content object. When uid is included in the
+        properties this is considered an update to the content object
+        which automatically creates a new revision.
+
+        This method returns the uid and version id tuple.
+        """
+        mp = self._resolveMountpoint(props)
+        uid = props.get('uid')
+        if uid:
+            # this is an update operation
+            
+        else:
+            # this is a create operation
+            
+        return uid, vid
+        
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature='ss',
+                         out_signature='a{sv}s')
+    def checkout(self, uid, vid=None):
+        """Check out a revision of a document. Returns the properties
+        of that version and a filename with the contents of that
+        version.
+        """
+        pass
+    
+    
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='a{sv}s',
                          out_signature='s')
@@ -234,7 +263,6 @@ class DataStore(dbus.service.Object):
 
         return d, len(d)
 
-    #@utils.sanitize_dbus    
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='a{sv}',
              out_signature='aa{sv}u')
@@ -369,7 +397,6 @@ class DataStore(dbus.service.Object):
                     continue
         return c
 
-    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='s')
@@ -380,7 +407,6 @@ class DataStore(dbus.service.Object):
             except AttributeError: pass
         return ''
         
-    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='s',
                          out_signature='a{sv}')
@@ -407,7 +433,6 @@ class DataStore(dbus.service.Object):
         return results
     
 
-    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='sa{sv}s',
              out_signature='')
@@ -426,7 +451,6 @@ class DataStore(dbus.service.Object):
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Updated(self, uid): pass
 
-    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='')

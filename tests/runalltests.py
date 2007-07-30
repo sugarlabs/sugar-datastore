@@ -27,7 +27,7 @@ doctests = [
     resource_filename(__name__, "mountpoints.txt"),
     resource_filename(__name__, "properties.txt"),
     resource_filename(__name__, "dateranges.txt"),
-    
+    resource_filename(__name__, "simple_versions.txt"),
 ]
 
 doctest_options = doctest.ELLIPSIS

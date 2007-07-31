@@ -470,6 +470,7 @@ class InplaceFileBackingStore(FileBackingStore):
         # now map/update the existing data into the indexes
         # but do it async
         self.walker = threading.Thread(target=self._walk)
+        self._runWalker = True
         self.walker.setDaemon(True)
         self.walker.start()
 
@@ -489,6 +490,8 @@ class InplaceFileBackingStore(FileBackingStore):
                 
             
             for fn in filenames:
+                # give the thread a chance to exit
+                if not self._runWalker: break
                 # blacklist files
                 #   ignore conventionally hidden files
                 if fn.startswith("."): continue
@@ -587,8 +590,9 @@ class InplaceFileBackingStore(FileBackingStore):
         
     def stop(self):
         if self.walker and self.walker.isAlive():
-            self.walker.join()
-        self.indexmanager.stop()
+            # XXX: just force the unmount, flush the index queue
+            self._runWalker = False
+        self.indexmanager.stop(force=True)
 
     def complete_indexing(self):
         if self.walker and self.walker.isAlive():

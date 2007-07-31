@@ -102,8 +102,8 @@ class IndexManager(object):
         self.backingstore = backingstore
 
     
-    def stop(self):
-        self.stopIndexer()
+    def stop(self, force=False):
+        self.stopIndexer(force)
         self.write_index.close()
         self.read_index.close()
 
@@ -118,6 +118,7 @@ class IndexManager(object):
         if not self.indexer_running: return 
         if not force: self.queue.join()
         self.indexer_running = False
+        # should terminate after the current task
         self.indexer.join()
 
     # flow control

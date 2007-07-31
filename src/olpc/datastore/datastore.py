@@ -196,10 +196,10 @@ class DataStore(dbus.service.Object):
         uid = props.get('uid')
         if uid:
             # this is an update operation
-            
+            pass
         else:
             # this is a create operation
-            
+            pass
         return uid, vid
         
 

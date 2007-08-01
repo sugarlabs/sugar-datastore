@@ -14,6 +14,7 @@ __license__  = 'The GNU Public License V2+'
 
 
 from Queue import Queue, Empty
+import gc
 import logging
 import re
 import sys
@@ -106,7 +107,15 @@ class IndexManager(object):
         self.stopIndexer(force)
         self.write_index.close()
         self.read_index.close()
-
+        # XXX: work around for xapian not having close() this will
+        # change in the future in the meantime we delete the
+        # references to the indexers and then force the gc() to run
+        # which should inturn trigger the C++ destructor which forces
+        # the database shut.
+        self.write_index = None
+        self.read_index = None
+        gc.collect()
+        
     # Index thread management
     def startIndexer(self):
         self.indexer_running = True

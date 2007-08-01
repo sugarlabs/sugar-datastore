@@ -197,5 +197,4 @@ verify that we can still remount the store.
 >>> mp = ds.mountpoints[mp3]
 >>> assert mp.descriptor()['title'] == 'Fake USB from broken'
 
-
 >>> ds.stop(); del ds

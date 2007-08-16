@@ -9,11 +9,12 @@ Let's create a simple datastore and add some content.
 
 >>> from olpc.datastore import DataStore
 >>> from olpc.datastore import backingstore
+>>> from olpc.datastore import hg_backingstore
 >>> from testutils import *
 
 >>> ds = DataStore()
->>> ds.registerBackend(backingstore.FileBackingStore)
->>> mp1 = ds.mount("/tmp/store1", dict(title="Primary Storage"))
+>>> ds.registerBackend(hg_backingstore.HgBackingStore)
+>>> mp1 = ds.mount("hg:/tmp/store1", dict(title="Primary Storage"))
 
 
 The checkin operation will create new content or update existing
@@ -48,11 +49,10 @@ To get a copy of this file out that we can manipulate we can use the
 checkout command. By default checkout will check out the HEAD revsion
 (the most recent) of a document. It returns the properties dictionary
 and the filename of the checkout which is ours to manipulate.
-
 >>> props, fn = ds.checkout(uid)
 
 >>> assert props['title'] == "A day in the life"
->>> assert props['vid'] == vid
+>>> assert props['vid'] == str(vid)
 
 >>> contents = open(fn, 'r').read()
 >>> assert contents.startswith("Part 1")
@@ -67,15 +67,14 @@ call after making our modifications and supplying our new file.
 (note that we changed the case of 'life' here)
 
 >>> props['title'] = "A day in the Life" 
->>> ds.checkin(props, fn2)
+>>> uid, vid = ds.checkin(props, fn2)
 >>> ds.complete_indexing()
 
 
-Verify that the contents of the old version isn't returned in the
-search. By default old versions are not included.
+Old versions of content are still available. 
 
->>> r, c = ds.find("begins"))
->>> assert c == 0
+>>> r, c = ds.find("begins")
+>>> assert c == 1
 
 Verify that the HEAD revision of the content is searchable by default.
 
@@ -89,14 +88,13 @@ Lets check out the head version of this document now.
 
 Check that the id is the same and the version id isn't.
 
->>> assert props['id'] == uid
+>>> assert props['uid'] == uid
 >>> assert props['vid'] != vid
 
 Verify the contents of the file is as expected.
 
 >>> contents = open(rev2, 'r').read()
 >>> assert contents.startswith("Part Two")
-
 
 
 >>> ds.stop(); del ds

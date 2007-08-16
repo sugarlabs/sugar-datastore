@@ -147,12 +147,13 @@ primary store.
 >>> props['mountpoint'] = mountpoint 
 >>> fn = ds.get_filename(uid)
 
+>>> del props['uid']
 >>> copyuid = ds.create(props, fn)
 
 >>> ds.complete_indexing()
 
 
->>> result, count = ds.find(dict(fulltext="four"))
+>>> result, count = ds.find(dict(query="four"))
 >>> assert count == 2
 
 We also need to test that we can copy from a normal store to an
@@ -177,7 +178,7 @@ We also need to be sure that delete commands work on inplace
 mounts. We will delete the object from the datastore and then verify
 that the file is missing.
 
->>> ds.delete(pen_copy)
+>>> ds.delete(pen_copy, mountpoint=mp3)
 >>> ds.complete_indexing()
 
 >>> os.path.exists('/tmp/store3/one.txt')

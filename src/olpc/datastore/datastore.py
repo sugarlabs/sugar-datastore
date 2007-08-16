@@ -193,27 +193,80 @@ class DataStore(dbus.service.Object):
         This method returns the uid and version id tuple.
         """
         mp = self._resolveMountpoint(props)
-        uid = props.get('uid')
-        if uid:
-            # this is an update operation
-            pass
+        if "versions" not in mp.capabilities:
+            uid = props.get('uid')
+            vid = "1" # we don't care about vid on
+            # non-versioning stores
+            if uid:
+                # this is an update operation
+                # and uid refers to the single object
+                # so an update is ok
+                mp.update(uid, props, filelike)
+            else:
+                # this is a create operation
+                uid = mp.create(props, filelike)
         else:
-            # this is a create operation
-            pass
+            # use the unified checkin on the backingstore
+            uid, vid = mp.checkin(props, filelike)
+            
         return uid, vid
         
 
     @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature='ss',
+                         in_signature='sss',
                          out_signature='a{sv}s')
-    def checkout(self, uid, vid=None):
+    def checkout(self, uid, vid=None, mountpoint=None):
         """Check out a revision of a document. Returns the properties
         of that version and a filename with the contents of that
-        version.
+        version. Generally calls to this should have the mountpoint
+        supplied as their may be different repositories with unmerged
+        histories of the same object.
         """
-        pass
-    
-    
+        ## XXX: review this when repo merge code is in place
+        mp = self._resolveMountpoint(mountpoint)
+        if "versions" not in mp.capabilities:
+            content = mp.get(uid)
+            props = content.properties
+            props['mountpoint'] = content.backingstore.id
+            filename = content.filename
+            return props, filename
+        else:
+            return mp.checkout(uid, vid)
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature='ssss',
+                         out_signature='a{sv}s')
+    def copy(self, uid, vid=None, mountpoint=None, target_mountpoint=None):
+        # attempt to copy an object from one mount to another
+        # if the uid/vid pair is not found a KeyError is raised
+        # if the mount points don't exist a KeyError is raised
+        # if both stores support versioning then the whole revision
+        # history is copied, if not this behaves as a checkout on the
+        # store
+        mp = self._resolveMountpoint(mountpoint)
+        mp2 = self._resolveMountpoint(target_mountpoint)
+        if not mp:raise KeyError("No mount %s" % mountpoint)
+        if not mp2:raise KeyError("No mount %s" % target_mountpoint)
+
+        vs = "versions" in mp.capabilities
+        vt = "versions" in mp2.capabilities
+        content = mp.get(uid)
+        props = content.properties
+
+        if not vs or not vt:
+            del props['uid']
+            filename = content.filename
+            uid = mp2.create(props, filename)
+            return uid, '1'
+        else:
+            # in this case we can copy the whole version history
+            mp2.raw_copy(mp.raw_sources())
+            # this creates an extra checkout, but as long as its not
+            # an inplace store it should be cleaner on index
+            mp2.update(props, content.filename)
+        
+
+    # OLD API
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='a{sv}s',
                          out_signature='s')
@@ -358,7 +411,9 @@ class DataStore(dbus.service.Object):
         for r in results:
             props =  {}
             props.update(r.properties)
-            
+
+            # on versioning stores uid will be different
+            # than r.id but must be set
             if 'uid' not in props:
                 props['uid'] = r.id
 
@@ -379,8 +434,8 @@ class DataStore(dbus.service.Object):
             
         return (d, len(results))
 
-    def get(self, uid):
-        mp = self._resolveMountpoint()
+    def get(self, uid, mountpoint=None):
+        mp = self._resolveMountpoint(mountpoint)
         c = None
         try:
             c = mp.get(uid)
@@ -452,14 +507,15 @@ class DataStore(dbus.service.Object):
     def Updated(self, uid): pass
 
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='s',
+             in_signature='ss',
              out_signature='')
-    def delete(self, uid):
-        content = self.get(uid)
+    def delete(self, uid, mountpoint=None):
+        content = self.get(uid, mountpoint)
         if content:
             content.backingstore.delete(uid)
         self.Deleted(uid)
         logger.debug("deleted %s" % uid)
+
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Deleted(self, uid): pass

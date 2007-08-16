@@ -8,6 +8,14 @@ def tmpData(data):
     os.close(fd)
     return fn
 
+def blit(data, path=None):
+    if not path: return tmpData(data)
+    fp = open(path, 'w')
+    fp.write(data)
+    fp.close()
+    return path
+
+
 # Search result set handlers
 def expect(r, count=None):
    if count: assert r[1] == count

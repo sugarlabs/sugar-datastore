@@ -81,6 +81,8 @@ But an OR query for missing values still return nothing.
 ...    'audio/ogg'])))
 
 
+Partial search... 
+>>> assert expect_single(im.search(r'''pee*''')).id == uid
 
 
 

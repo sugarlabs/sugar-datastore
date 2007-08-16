@@ -27,6 +27,18 @@ from olpc.datastore import utils
 # changing this pattern impacts _targetFile
 filename_attempt_pattern = re.compile('\(\d+\)$')
 
+# capabilities
+# list of strings on a backing store that indicate it provides an
+# implementation of some feature another layer can expect
+# "file" indicates that the store can return traditional filelike
+# objects and is the baseline capability expected of most other layers
+# "inplace" indicates that the backingstore will update/index the
+# files as they reside on the store. Files will not be moved.
+# "versions" indicates that the store will keep revisions of content
+# internally. This has implications at the search layer which may
+# perform different operations on stores that exhibit this capability
+
+
 class BackingStore(object):
     """Backing stores manage stable storage. We abstract out the
     management of file/blob storage through this class, as well as the
@@ -39,6 +51,8 @@ class BackingStore(object):
     olpc.datastore.model are provided.
     
     """
+    capabilities = ()
+    
     def __init__(self, uri, **kwargs):
         """The kwargs are used to configure the backend so it can
         provide its interface. See specific backends for details
@@ -127,6 +141,8 @@ class FileBackingStore(BackingStore):
     STORE_NAME = "store"
     INDEX_NAME = "index"
     DESCRIPTOR_NAME = "metainfo"
+
+    capabilities = ("file")
     
     def __init__(self, uri, **kwargs):
         """ FileSystemStore(path=<root of managed storage>)
@@ -446,7 +462,8 @@ class InplaceFileBackingStore(FileBackingStore):
     """
 
     STORE_NAME = ".olpc.store"
-
+    capabilities = ("file", "inplace")
+    
     def __init__(self, uri, **kwargs):
         # remove the 'inplace:' scheme
         uri = uri[len('inplace:'):]
@@ -495,7 +512,8 @@ class InplaceFileBackingStore(FileBackingStore):
                 
                 source = os.path.join(dirpath, fn)
                 relative = source[len(self.uri)+1:]
-
+                source = os.path.abspath(source)
+                
                 result, count = self.indexmanager.search(dict(filename=relative))
                 mime_type = gnomevfs.get_mime_type(source)
                 stat = os.stat(source)
@@ -517,7 +535,7 @@ class InplaceFileBackingStore(FileBackingStore):
                     # happen)
                     content = result.next()
                     uid = content.id
-                    saved_mtime = content.get_property('mtime')
+                    saved_mtime = content.get_property('mtime', None)
                     if mtime != saved_mtime:
                         self.update(uid, metadata, source)
         self.indexmanager.flush()
@@ -528,13 +546,6 @@ class InplaceFileBackingStore(FileBackingStore):
         except KeyError: return None
         return os.path.join(self.uri, content.get_property('filename', uid))
 
-##     def _targetFile(self, uid, target=None, ext=None, env=None):
-##         # in this case the file should really be there unless it was
-##         # deleted in place or something which we typically isn't
-##         # allowed
-##         # XXX: catch this case and remove the index
-##         targetpath =  self._translatePath(uid)
-##         return open(targetpath, 'rw')
 
     # File Management API
     def create(self, props, filelike):
@@ -542,17 +553,13 @@ class InplaceFileBackingStore(FileBackingStore):
         # don't touch it
         proposed_name = None
         if filelike:
-            if isinstance(filelike, basestring):
-                # lets treat it as a filename
-                filelike = open(filelike, "r")
-            filelike.seek(0)
             # usually with USB drives and the like the file we are
             # indexing is already on it, however in the case of moving
             # files to these devices we need to detect this case and
             # place the file
             proposed_name = props.get('filename', None)
             if not proposed_name:
-                proposed_name = os.path.split(filelike.name)[1]
+                proposed_name = os.path.split(filelike)[1]
             # record the name before qualifying it to the store
             props['filename'] = proposed_name
             proposed_name = os.path.join(self.uri, proposed_name)

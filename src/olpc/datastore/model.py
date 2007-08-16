@@ -169,7 +169,7 @@ class Model(object):
 
 
 # Properties we don't automatically include in properties dict
-EXCLUDED_PROPERTIES = ['fulltext', ]
+EXCLUDED_PROPERTIES = ['fulltext', 'head', 'tip', 'changeset']
 
 class Content(object):
     """A light weight proxy around Xapian Documents from secore.
@@ -227,7 +227,8 @@ class Content(object):
         # checkout name
         filename = self.get_property('filename', None)
         ext = self.get_property('ext', '')
-
+        title = self.get_property('title', '')
+        
         if filename:
             # some backingstores keep the full relative path
             filename = os.path.split(filename)[1]
@@ -242,7 +243,11 @@ class Content(object):
                 ext = mimetypes.guess_extension(mt)
                 # .ksh is a strange ext for plain text
                 if ext and ext == '.ksh': ext = '.txt'
+                if title: return title, ext
                 if ext: return None, ext
+
+        if title: return title, None
+        
         return None, None
 
     def get_file(self):
@@ -268,9 +273,11 @@ class Content(object):
     
     @property
     def backingstore(self): return self._backingstore
-    
+
+    # id of this record (unique in index)
     @property
-    def id(self): return self._doc.id
+    def id(self):
+        return self._doc.id
 
     @property
     def data(self): return self._doc.data
@@ -295,6 +302,7 @@ def encode_datetime(value):
     
 def decode_datetime(value):
     # convert a float to a local datetime
+    if not value: return None
     return datetime.datetime.fromtimestamp(float(value)).isoformat()
 
 def datedec(value, dateformat=DATEFORMAT):
@@ -346,8 +354,16 @@ registerPropertyType('date', dateenc, datedec, 'float', {'store' : True,
 
 defaultModel = Model().addFields(    
     ('fulltext', 'text'),
+    # unique to the object through out its history
+    ('uid', 'string'),
     # vid is version id
-    ('vid', 'number'),
+    # linear version id's don't imply direct lineage, only the relative merge order
+    ('vid', 'string'),
+    # unique token per change to help disambiguate for merges 
+    ('changeset', 'string'),
+    #('head', 'int'), # is this a head revision
+    #('tip', 'int'),  # is this the most recent head
+    
     ('checksum', 'string'),
     ('filename', 'string'),
     ('ext', 'string'), # its possible we don't store a filename, but

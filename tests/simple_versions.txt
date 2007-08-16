@@ -49,7 +49,8 @@ To get a copy of this file out that we can manipulate we can use the
 checkout command. By default checkout will check out the HEAD revsion
 (the most recent) of a document. It returns the properties dictionary
 and the filename of the checkout which is ours to manipulate.
->>> props, fn = ds.checkout(uid)
+
+>>> props, fn = ds.checkout(uid, dir='/tmp')
 
 >>> assert props['title'] == "A day in the life"
 >>> assert props['vid'] == str(vid)
@@ -64,9 +65,8 @@ Lets make a revision to this content.
 We are going to check in the new file using the props dict of the last
 call after making our modifications and supplying our new file.
 
-(note that we changed the case of 'life' here)
 
->>> props['title'] = "A day in the Life" 
+>>> props['title'] = "A Night in the Life" 
 >>> uid, vid = ds.checkin(props, fn2)
 >>> ds.complete_indexing()
 
@@ -84,7 +84,7 @@ Verify that the HEAD revision of the content is searchable by default.
 
 Lets check out the head version of this document now.
 
->>> props, rev2 = ds.checkout(uid)
+>>> props, rev2 = ds.checkout(uid, dir='/tmp')
 
 Check that the id is the same and the version id isn't.
 

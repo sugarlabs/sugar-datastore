@@ -213,9 +213,9 @@ class DataStore(dbus.service.Object):
         
 
     @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature='sss',
+                         in_signature='sssss',
                          out_signature='a{sv}s')
-    def checkout(self, uid, vid=None, mountpoint=None):
+    def checkout(self, uid, vid=None, mountpoint=None, target=None, dir=None):
         """Check out a revision of a document. Returns the properties
         of that version and a filename with the contents of that
         version. Generally calls to this should have the mountpoint
@@ -231,7 +231,7 @@ class DataStore(dbus.service.Object):
             filename = content.filename
             return props, filename
         else:
-            return mp.checkout(uid, vid)
+            return mp.checkout(uid, vid, target=target, dir=dir)
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='ssss',

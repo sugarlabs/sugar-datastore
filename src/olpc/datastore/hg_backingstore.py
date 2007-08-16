@@ -105,6 +105,7 @@ class FileRepo(repo.repository):
             x = Xattr(source, NAMESPACE)
             # attempt to resolve the revision number from the property
             parent = x.get('revision')
+            expected_uid = x.get('uid')
             if parent:
                 parent = int(parent) # from unicode
             else:
@@ -172,6 +173,7 @@ class FileRepo(repo.repository):
         # this is used to aid in parent chaining on commits
         x = Xattr(target, NAMESPACE)
         x['revision'] = rev
+        x['uid'] = path # this is from the repo where the names are uids
         
     def remove(self, path):
         """Hard remove the whole version history of an object"""

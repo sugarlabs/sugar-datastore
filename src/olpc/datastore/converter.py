@@ -64,6 +64,7 @@ class subprocessconverter(object):
     
     def __call__(self, filename):
         data = {}
+
         data['source'] = filename
         if self.require_target:
             # XXX: methods that return something bad here

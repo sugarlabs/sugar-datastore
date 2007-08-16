@@ -193,7 +193,6 @@ class IndexManager(object):
                 with self._write_lock:
                     for item in data:
                         uid, vid, doc, operation, filestuff = item
-
                         if operation is DELETE:
                             self.write_index.delete(uid)
                             logger.info("deleted content %s" % (uid,))
@@ -215,7 +214,7 @@ class IndexManager(object):
                                                " indexing at %s. Not"
                                                " Found" % filename)
                                 
-                            fp = converter(filename, mimetype)
+                            fp = converter(filename, mimetype=mimetype)
                             if fp:
                                 # read in at a fixed block size, try to
                                 # conserve memory. If this doesn't work

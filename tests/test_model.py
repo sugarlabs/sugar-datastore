@@ -6,6 +6,8 @@ from olpc.datastore import model, backingstore
 import datetime
 import os
 
+import logging
+logging.basicConfig()
 
 DEFAULT_STORE = '/tmp/test_ds'
 

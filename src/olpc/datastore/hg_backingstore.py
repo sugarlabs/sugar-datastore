@@ -35,10 +35,9 @@ class FileRepo(repo.repository):
         if not os.path.exists(self.basepath):
             os.makedirs(self.basepath)
             #os.chdir(self.basepath)
-        self.wopener = util.opener(self.root)
 
     def file(self, path):
-        eopen = util.encodedopener(util.opener('.ds'), util.encodefilename)
+        eopen = util.encodedopener(util.opener(self.datadir), util.encodefilename)
         fl = localizedFilelog(eopen, path, cwd=self.datadir)
         return fl
 

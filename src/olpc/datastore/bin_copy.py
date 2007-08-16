@@ -3,6 +3,11 @@ import os, subprocess
 
 def bin_copy(src, dest, mode=0600):
     try:
+        if not isinstance(src, basestring):
+            import pdb;pdb.set_trace()
+        if not isinstance(dest, basestring):
+            import pdb;pdb.set_trace()
+            
         subprocess.check_call(['/bin/cp', src, dest])
     except subprocess.CalledProcessError:
         raise OSError("Copy failed %s %s" % (src, dest))

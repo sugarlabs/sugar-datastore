@@ -171,12 +171,15 @@ class IndexManager(object):
         # property or backingstore._translatePath to get at it
         versions = self.versions
         inplace = self.inplace
-        
+        q = self.queue
         while self.indexer_running:
             # include timeout here to ease shutdown of the thread
             # if this is a non-issue we can simply allow it to block
             try:
-                data = self.queue.get(True, 0.025)
+                # XXX: on shutdown there is a race where the queue is
+                # joined while this get blocks, the exception seems
+                # harmless though
+                data = q.get(True, 0.025)
                 # when we enque a sequence of commands they happen
                 # under a single write lock pass through the loop and
                 # the changes become visible at once.

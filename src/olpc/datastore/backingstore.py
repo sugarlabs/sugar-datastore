@@ -15,7 +15,6 @@ from datetime import datetime
 import gnomevfs
 import os
 import re
-import sha
 import subprocess
 import time
 import threading
@@ -324,10 +323,9 @@ class FileBackingStore(BackingStore):
                 break
 
             targetpath = "%s(%s)%s" % (targetpath, attempt, ext)
-            
-        if subprocess.call(['cp', path, targetpath]):
-            raise OSError("unable to create working copy")
-        return open(targetpath, 'rw')
+
+        bin_copy.bin_copy(path, targetpath)
+        return targetpath
             
     def _mapContent(self, uid, fp, path, env=None):
         """map a content object and the file in the repository to a
@@ -345,17 +343,11 @@ class FileBackingStore(BackingStore):
             targetfile = self._targetFile(uid, target, ext, env)
             content.file = targetfile
         
-            if self.options.get('verify', False):
-                c  = sha.sha()
-                for line in targetfile:
-                    c.update(line)
-                fp.seek(0)
-                if c.hexdigest() != content.checksum:
-                    raise ValueError("Content for %s corrupt" % uid)
         return content
 
     def _writeContent(self, uid, filelike, replace=True, target=None):
         content = None
+        if not filelike: return
         if target: path = target
         else:
             path = self._translatePath(uid)
@@ -364,40 +356,12 @@ class FileBackingStore(BackingStore):
             raise KeyError("objects with path:%s for uid:%s exists" %(
                             path, uid))
 
-        verify = self.options.get('verify', False)
-        c = None
-        if verify:
-            fp = open(path, 'w')
-            filelike.seek(0)
-            c  = sha.sha()
-            for line in filelike:
-                if verify:c.update(line)
-                fp.write(line)
-            fp.close()
-        else:
-            bin_copy.bin_copy(filelike.name, path)
-##         if verify:
-##             if not content:
-##                 content = self.indexmanager.get(uid)
-##             content.checksum = c.hexdigest()
-
-    def _checksum(self, filename):
-        c  = sha.sha()
-        fp = open(filename, 'r')
-        for line in fp:
-            c.update(line)
-        fp.close()
-        return c.hexdigest()
+        bin_copy.bin_copy(filelike, path)
         
     # File Management API
     def create(self, props, filelike):
         uid = self.indexmanager.index(props, filelike)
-        if filelike:
-            if isinstance(filelike, basestring):
-                # lets treat it as a filename
-                filelike = open(filelike, "r")
-            filelike.seek(0)
-            self._writeContent(uid, filelike, replace=False)
+        self._writeContent(uid, filelike, replace=False)
         return uid
     
     def get(self, uid, env=None, allowMissing=False, includeFile=False):
@@ -416,15 +380,6 @@ class FileBackingStore(BackingStore):
         if 'uid' not in props: props['uid'] = uid
             
         self.indexmanager.index(props, filelike)
-        filename = filelike
-        if filelike:
-            if isinstance(filelike, basestring):
-                # lets treat it as a filename
-                filelike = open(filelike, "r")
-            filelike.seek(0)
-            self.set(uid, filelike)
-
-    def set(self, uid, filelike):
         self._writeContent(uid, filelike)
 
     def delete(self, uid, allowMissing=True):

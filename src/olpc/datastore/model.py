@@ -183,7 +183,8 @@ class Content(object):
         self._backingstore = backingstore
         self._file = None
         self._model = model
-
+        self._file = None
+        
     def __repr__(self):
         return "<%s %s>" %(self.__class__.__name__,
                            self.properties)
@@ -251,12 +252,15 @@ class Content(object):
         return None, None
 
     def get_file(self):
-        if not hasattr(self, "_file") or not self._file or \
-               self._file.closed is True:
+        if not self._file or self._file.closed is True:
             target, ext = self.suggestName()
             try:
                 targetfile = self.backingstore._targetFile(self.id, target, ext)
-                self._file = targetfile
+                if not targetfile:
+                    self._file = None
+                    return self._file
+                
+                self._file = open(targetfile, "rw")
             except OSError:
                 self._file = None
         return self._file
@@ -266,8 +270,11 @@ class Content(object):
     file = property(get_file, set_file)
 
     @property
-    def filename(self): return os.path.abspath(self.file.name)
-
+    def filename(self):
+        if self.file:
+            return os.path.abspath(self.file.name)
+        return ''
+    
     @property
     def contents(self): return self.file.read()
     

@@ -223,6 +223,10 @@ class HgBackingStore(FileBackingStore):
         if not self.repo:
             self.repo = FileRepo(self.base)
 
+
+    def tip(self, uid):
+        return self.repo.tip(uid)
+    
     # File Management API
     def create(self, props, filelike):
         # generate the uid ourselves. we do this so we can track the
@@ -306,7 +310,21 @@ class HgBackingStore(FileBackingStore):
     def checkin(self, props, filelike):
         """create or update the content object, creating a new
         version"""
-        uid = props.setdefault('uid', create_uid())
+        uid = props.get("uid")
+        if uid is None:
+            uid = create_uid()
+        else:
+            # is there an existing object with this uid?
+            # XXX: if there isn't it should it be an error?
+            r, count = self.indexmanager.get_by_uid_prop(uid, 'tip')
+            if count == 1:
+                c = r.next()
+                # copy the value forward
+                old_props = c.properties.copy()
+                old_props.update(props)
+                props = old_props
+                
+        props['uid'] = uid
         if filelike:
             message = props.setdefault('message', 'initial')
             parent = props.pop('parent', None)

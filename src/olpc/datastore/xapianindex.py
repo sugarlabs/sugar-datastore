@@ -156,7 +156,14 @@ class IndexManager(object):
             if not filestuff:
                 # In this case we are done
                 return
-
+        elif operation is DELETE:
+            # sync deletes
+            with self._write_lock:
+                self.write_index.delete(uid)
+                logger.info("deleted content %s" % (uid,))
+            self.flush()
+            return
+        
         self.queue.put((uid, vid, doc, operation, filestuff))
 
     def indexThread(self):
@@ -216,9 +223,11 @@ class IndexManager(object):
                                 
                             fp = converter(filename, mimetype=mimetype)
                             if fp:
-                                # read in at a fixed block size, try to
-                                # conserve memory. If this doesn't work
-                                # we can make doc.fields a generator
+                                # fixed size doesn't make sense, we
+                                # shouldn't be adding fulltext unless
+                                # it converted down to plain text in
+                                # the first place
+                                
                                 while True:
                                     chunk = fp.read(2048)
                                     if not chunk: break
@@ -397,6 +406,9 @@ class IndexManager(object):
         ri =  self.read_index
         q = ri.query_field('uid', uid)
         if rev:
+            if rev == "tip":
+                rev = self.backingstore.tip(uid)
+                
             q = ri.query_filter(q, ri.query_field('vid', str(rev)))
         results, count = self._search(q, 0, 1000)
         
@@ -465,7 +477,7 @@ class IndexManager(object):
 
         # map the result set to model.Content items
         return ContentMappingIter(results, self.backingstore, self.datamodel), count
-    
+
 
     def get_uniquevaluesfor(self, property):
         # XXX: this is very sketchy code

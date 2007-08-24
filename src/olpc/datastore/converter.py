@@ -91,8 +91,13 @@ class subprocessconverter(object):
             # reading
             if os.path.exists(target):
                 os.unlink(target)
-    
+
 class noop(object):
+    def verify(self): return True
+    def __call__(self, filename):
+        return open(filename, 'r')
+
+class decoder(object):
     def verify(self): return True
     def __call__(self, filename):
         return codecs.open(filename, 'r', 'utf-8')

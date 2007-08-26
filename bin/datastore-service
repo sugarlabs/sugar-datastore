@@ -3,7 +3,7 @@ import sys, os, signal
 import gobject
 import dbus.service
 import dbus.mainloop.glib
-from olpc.datastore import DataStore, DS_LOG_CHANNEL, backingstore
+from olpc.datastore import DataStore, DS_LOG_CHANNEL, backingstore, hg_backingstore
 import logging
 
 # Path handling
@@ -48,6 +48,7 @@ bus = dbus.SessionBus()
 ds = DataStore()
 ds.registerBackend(backingstore.FileBackingStore)
 ds.registerBackend(backingstore.InplaceFileBackingStore)
+ds.registerBackend(hg_backingstore.HgBackingStore)
 ds.mount(repo_dir)
 ds.complete_indexing()
 

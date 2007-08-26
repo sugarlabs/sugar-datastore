@@ -13,10 +13,11 @@ __license__  = 'The GNU Public License V2+'
 import datetime
 import mimetypes
 import os
+import re
 import time
 import warnings
 from olpc.datastore.utils import timeparse
-
+import dbus
 
 # XXX: Open issues
 # list properties - Contributors (a, b, c)
@@ -26,6 +27,9 @@ from olpc.datastore.utils import timeparse
 
 propertyTypes = {}
 _marker = object()
+
+# used in cases where we convert title to a filename
+titleSanitizer = re.compile("[\W]+")
 
 def registerPropertyType(kind, get, set, xapian_sort_type=None,
     defaults=None, for_xapian=None, from_xapain=None):
@@ -169,7 +173,7 @@ class Model(object):
 
 
 # Properties we don't automatically include in properties dict
-EXCLUDED_PROPERTIES = ['fulltext', 'head', 'tip', 'changeset']
+EXCLUDED_PROPERTIES = ['fulltext', 'changeset', 'file_rev']
 
 class Content(object):
     """A light weight proxy around Xapian Documents from secore.
@@ -229,6 +233,7 @@ class Content(object):
         filename = self.get_property('filename', None)
         ext = self.get_property('ext', '')
         title = self.get_property('title', '')
+        title = titleSanitizer.sub("_", title)
         
         if filename:
             # some backingstores keep the full relative path
@@ -294,8 +299,15 @@ def noop(value): return value
 
 import re
 base64hack = re.compile("(\S{212})")
-def base64enc(value): return ' '.join(base64hack.split(value.encode('base64')))
-def base64dec(value): return value.replace(' ', '').decode('base64')
+def base64enc(value):
+    if isinstance(value, list):
+        # its a bytearray
+        value = ''.join((str(v) for v in value))
+        import pdb;pdb.set_trace()
+    return ' '.join(base64hack.split(value.encode('base64')))
+
+def base64dec(value):
+    return value.replace(' ', '').decode('base64')
 
 DATEFORMAT = "%Y-%m-%dT%H:%M:%S"
 def date2string(value): return value.replace(microsecond=0).isoformat()
@@ -337,9 +349,10 @@ registerPropertyType('text', noop, noop, 'string', {'store' : True,
                                                     'collapse' : True,
                                                     })
 
-registerPropertyType('binary', noop, noop, None, {'store' : True,
-                                                  'exact' : False,
-                                                  'sortable' : False})
+# Now the convention is to directly use DBus.ByteArray
+registerPropertyType('binary', str, dbus.ByteArray, None, {'store' : True,
+                                                           'exact' : False,
+                                                           'sortable' : False})
 
 registerPropertyType('int', str, int, 'float', {'store' : True,
                                                 'exact' : True,
@@ -368,8 +381,8 @@ defaultModel = Model().addFields(
     ('vid', 'string'),
     # unique token per change to help disambiguate for merges 
     ('changeset', 'string'),
-    #('head', 'int'), # is this a head revision
-    #('tip', 'int'),  # is this the most recent head
+    ('file_rev', 'int'), # this is the revision of the file pointed to
+                         # by this revision of the object
     
     ('checksum', 'string'),
     ('filename', 'string'),

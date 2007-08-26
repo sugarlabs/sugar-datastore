@@ -46,8 +46,8 @@ class Test(unittest.TestCase):
         co1 = os.path.join(DATA_1, "co1")
         co2 = os.path.join(DATA_1, "co2")
 
-        repo.dump("foo", 0, co1)
-        repo.dump("foo", 1, co2)
+        repo.dump("foo", 0, co1, '', '')
+        repo.dump("foo", 1, co2, '', '')
 
         assert open(co1, 'r').read() == TEXT_1
         assert open(co2, 'r').read() == TEXT_2
@@ -75,7 +75,8 @@ class Test(unittest.TestCase):
         got = open(fn, 'r').read()
         assert got == d
 
-        uid, rev = bs.checkin(dict(uid=uid, title="B"), tmpData(d2))
+        props['title'] = "B"
+        uid, rev = bs.checkin(props, tmpData(d2))
 
         bs.complete_indexing()
         

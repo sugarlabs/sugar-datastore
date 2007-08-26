@@ -86,10 +86,10 @@ Lets check out the head version of this document now.
 
 >>> props, rev2 = ds.checkout(uid, dir='/tmp')
 
-Check that the id is the same and the version id isn't.
+Check that the id and vid are correct.
 
 >>> assert props['uid'] == uid
->>> assert props['vid'] != vid
+>>> assert props['vid'] == vid
 
 Verify the contents of the file is as expected.
 

@@ -15,7 +15,6 @@ from datetime import datetime
 import gnomevfs
 import os
 import re
-import subprocess
 import time
 import threading
 

@@ -234,6 +234,7 @@ class IndexManager(object):
                                     doc.fields.append(secore.Field('fulltext', chunk))
 
                                 self.write_index.replace(doc)
+                                
                                 if versions and not inplace:
                                     # we know the source file is ours
                                     # to remove 
@@ -241,7 +242,7 @@ class IndexManager(object):
                                     
                                 logger.info("update file content %s:%s" % (uid, vid))
                             else:
-                                logger.warning("""Conversion process failed for document %s %s""" % (uid, filename))
+                                logger.debug("""Conversion process failed for document %s %s""" % (uid, filename))
                         else:
                             logger.warning("Unknown indexer operation ( %s: %s)" % (uid, operation))
                             
@@ -349,8 +350,8 @@ class IndexManager(object):
         if self.versions:
             vid = props.get("vid")
             if not vid:
-                self.warn("Didn't supply needed versioning information"
-                          " on a backingstore which performs versioning")
+                logger.warn("Didn't supply needed versioning information"
+                            " on a backingstore which performs versioning")
             # each versions id is unique when using a versioning store
             doc.id = create_uid()
         else:
@@ -405,12 +406,12 @@ class IndexManager(object):
         # when rev is passed only that particular rev is returne
         ri =  self.read_index
         q = ri.query_field('uid', uid)
-        if rev:
+        if rev is not None:
             if rev == "tip":
                 rev = self.backingstore.tip(uid)
                 
             q = ri.query_filter(q, ri.query_field('vid', str(rev)))
-        results, count = self._search(q, 0, 1000)
+        results, count = self._search(q, 0, 1000, sortby="-vid")
         
         return results, count
         
@@ -471,8 +472,8 @@ class IndexManager(object):
 
         return self._search(q, start_index, end_index)
     
-    def _search(self, q, start_index, end_index):
-        results = self.read_index.search(q, start_index, end_index)
+    def _search(self, q, start_index, end_index, sortby=None):
+        results = self.read_index.search(q, start_index, end_index, sortby=sortby)
         count = results.matches_estimated
 
         # map the result set to model.Content items

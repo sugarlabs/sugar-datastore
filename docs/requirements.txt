@@ -1,0 +1,110 @@
+Datastore
+=========
+
+An outline of the basic requirements and design decisions of the
+Datastore used in Sugar.
+
+
+Description
+-----------
+
+The Datastore (DS) is a context storage and indexing tool. Its
+designed to provide efficient access to content while supplying both
+browse and search models on top of this content. It doesn't this
+without demanding any notion of a content repository, location or a
+data API from the consumer. Additionally the Datastore supports
+recovery of older versions of content and supports both backups and
+remote storage.
+
+
+Constraints
+------------
+
+The system is designed to run in a hostile environment. Operation
+runtime and space are both highly constrained and only limited CPU
+time/power is available to complete tasks.
+
+1. Limited Memory
+2. Limited Processing Power
+3. Limited Storage
+4. Attempt to limit number of writes to medium. 
+5. All interactions through the public interface should return as soon
+as possible. There is a 10 second window available to DBus, failure to
+return in this time causes errors. Failure to return in under 0.2
+seconds can result in the UI blocking. 
+
+Point 5 seems a system design flaw to me. The need for atomic
+I/O bound operations is at odds with a completely asycnronous model
+and the shouldn't call into such a system in a way that would make it
+block. 
+
+
+
+Versioning/Storage
+------------------
+
+The datastore needs to remain efficient in terms of both space and
+time while deliverying content in a reliable fashion. Additionally
+because its designed to function in an environment where we hope to
+minimize the number of writes.en
+
+1. Recovery of previous versions of documents
+2. Efficient Storage 
+         Should work with both normal text and binary data
+3. Should allow the archival of old versions removing the need to
+store the entire version history.
+4. Should support synchronization with remote stores.
+
+
+Searching/Indexing
+------------------
+
+The DS provide searchable metadata and content indexing for the vast
+majority of content on the system. 
+
+
+1. Searches should reflect immediate operations immediately. (Even though
+the operations happen asynchronously).
+
+2. Fulltext searching of content should be possible and
+accessible. Even through historic versions.
+
+3. Fulltext should support stemming of common terms in a given
+language. 
+
+
+
+Archival/Backups
+----------------
+
+The system should provide a model for long term storage and backup
+support. Old versions of content should be migrated to a long term
+storage. The system should provide a way identify content no longer
+needed by the runtime when:
+     1. Connected to a remote store
+     2. Connected to the school server
+     3. Space is limited
+     4. System is idle
+
+The system should identify content subject to backups. Begin a remote
+transaction with the storage repo. Migrate the old versions over an
+SSH connection and then remove the old versions and the index
+information for them from the local store.
+
+
+
+Remote Repositories
+-------------------
+
+The DS is capable of mouting additional stores and having them
+function as a single unit. This can extend from USB devices to remote
+network based storage (through the use of SSH). 
+
+If the model is SSH based then the remote stores don't require a
+active server runtime, but will have increased latency for common
+operations as indexes must be loaded on a per-request basis. Counting
+on the remote OS to cache and manage this is an option, a TTL based
+server start is an option, a per-user or per-machine server is also
+possible.
+
+

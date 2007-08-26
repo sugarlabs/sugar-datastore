@@ -2,13 +2,10 @@ from olpc.datastore.backingstore import FileBackingStore
 from olpc.datastore.sxattr import Xattr
 from olpc.datastore.utils import create_uid
 from olpc.datastore.bin_copy import bin_copy
+from olpc.datastore.config import XATTR_NAMESPACE 
 
 from mercurial import repo, filelog, transaction, util, revlog
 import os, sys, tempfile
-
-# Xattr attribute namespace
-NAMESPACE = "datastore"
-
 
 
 class localizedFilelog(filelog.filelog):
@@ -34,7 +31,6 @@ class FileRepo(repo.repository):
         self.datadir = os.path.join(self.basepath, ".ds")
         if not os.path.exists(self.basepath):
             os.makedirs(self.basepath)
-            #os.chdir(self.basepath)
 
     def file(self, path):
         eopen = util.encodedopener(util.opener(self.datadir), util.encodefilename)
@@ -99,13 +95,13 @@ class FileRepo(repo.repository):
         # most likely does)
         f = self.file(path)
         data = open(source, 'r').read()
-        
         tip = f.tip()
         if not parent:
-            x = Xattr(source, NAMESPACE)
+            x = Xattr(source, XATTR_NAMESPACE)
             # attempt to resolve the revision number from the property
             parent = x.get('revision')
             expected_uid = x.get('uid')
+            
             if parent:
                 parent = int(parent) # from unicode
             else:
@@ -118,9 +114,14 @@ class FileRepo(repo.repository):
 
         if isinstance(parent, int):
                 # its a revision number, resolve it to a node id
-                parent = f.node(parent)
-
-        if not f.cmp(parent, data):
+                try:
+                    parent = f.node(parent)
+                except IndexError:
+                    # XXX: log a warning, the parent passed in is
+                    # invalid
+                    # or... could have been archived I suppose
+                    parent = None
+        if parent and not f.cmp(parent, data):
             # they are the same
             return
 
@@ -163,17 +164,23 @@ class FileRepo(repo.repository):
             n = rev
         return l.read(n)
 
-    def dump(self, path, rev, target):
+    def dump(self, path, rev, target, mountpoint_id, changeset):
         """Dump the contents of a revision to the filename indicated
         by target"""
         fp = open(target, "w")
         fp.write(self.revision(path, rev))
         fp.close()
-        # tag the checkout with its current revision
-        # this is used to aid in parent chaining on commits
-        x = Xattr(target, NAMESPACE)
-        x['revision'] = rev
-        x['uid'] = path # this is from the repo where the names are uids
+        # tag the checkout with its current revision this is used to
+        # aid in parent chaining on commits this is equivalent to the
+        # file_rev property in the model.
+        # XXX: need to check for when xattr is not supported by the fs better
+        x = Xattr(target, XATTR_NAMESPACE)
+        x['revision'] = str(rev)
+        x['uid'] = path # this is from the repo where the names are
+                        # uids
+        x['mountpoint'] = mountpoint_id # to quickly recover the mountpoint
+                                        # this came from
+        x['changeset'] = changeset
         
     def remove(self, path):
         """Hard remove the whole version history of an object"""
@@ -238,7 +245,7 @@ class HgBackingStore(FileBackingStore):
         uid, rev = self.checkin(props, filelike)
         return uid
 
-    def get(self, uid, rev=None, env=None):
+    def get(self, uid, rev=None, env=None, allow_many=False):
         # we have a whole version chain, but get contracts to
         # return a single entry. In this case we default to 'tip'
         if not rev:
@@ -246,7 +253,7 @@ class HgBackingStore(FileBackingStore):
         results, count = self.indexmanager.get_by_uid_prop(uid, rev)
         if count == 0:
             raise KeyError(uid)
-        elif count == 1:
+        elif count == 1 or allow_many:
             return results.next()
 
         raise ValueError("Got %d results for 'get' operation on %s" %(count, uid))
@@ -295,6 +302,7 @@ class HgBackingStore(FileBackingStore):
         # removed
         if rev is None:
             rev = self.repo.tip(uid)
+
         c = self.get(uid, rev)
         self.indexmanager.delete(c.id)
         self.repo.strip(uid, rev)
@@ -302,8 +310,8 @@ class HgBackingStore(FileBackingStore):
     def _targetFile(self, uid, target=None, ext=None, env=None):
         c = self.indexmanager.get(uid)
         rev = int(c.get_property('vid'))
-        rev -= 1 # adjust for 0 based counting
-        self.repo.dump(uid, rev, target)
+        #rev -= 1 # adjust for 0 based counting
+        self.repo.dump(uid, rev, target, self.id, c.get_property('changeset'))
         return open(target, 'rw')
 
 
@@ -311,39 +319,58 @@ class HgBackingStore(FileBackingStore):
         """create or update the content object, creating a new
         version"""
         uid = props.get("uid")
+        c = None
         if uid is None:
             uid = create_uid()
+            props['vid'] = "1"
         else:
             # is there an existing object with this uid?
             # XXX: if there isn't it should it be an error?
-            r, count = self.indexmanager.get_by_uid_prop(uid, 'tip')
-            if count == 1:
+            r, count = self.indexmanager.get_by_uid_prop(uid,
+                                                         props.get('vid', 'tip'))
+            if count:
+                # XXX: if count > 1 case should be handled
                 c = r.next()
                 # copy the value forward
                 old_props = c.properties.copy()
                 old_props.update(props)
                 props = old_props
-                
+                # except vid which we increment here
+                props['vid'] = str(int(props['vid']) + 1)
+
         props['uid'] = uid
-        if filelike:
+        if filelike:            
             message = props.setdefault('message', 'initial')
-            parent = props.pop('parent', None)
+            # if a vid is passed in treat that as a parent revision
+            # because this is an interaction with the repo however we
+            # need to resolve that versions file_rev as the parent for
+            # 'put'
+            # it maybe that it didn't previously have a file at all in
+            # which case we must pass None
+
+            # where c is the content lookup from before
+            parent = None
+            try:
+                parent = c.get_property('file_rev', None)
+            except: pass
+            
             rev, parent, isTip, changeset = self.repo.put(uid, filelike,
                                                           parent, message,
                                                           meta=dict(uid=uid))
             # the create case is pretty simple
             # mark everything with defaults
             props['changeset'] = changeset
-            props['vid'] = str(rev)
-            
+            props['file_rev'] = str(rev)
         self.indexmanager.index(props, filelike)
-        return uid, rev
+        return uid, props['vid']
 
     def checkout(self, uid, vid=None, target=None, dir=None):
         """checkout the object with this uid at vid (or HEAD if
         None). Returns (props, filename)"""
         # use the repo to drive the property search
         f = self.repo.file(uid)
+        exists = f.count() > 0
+        
         if vid:
             vid = f.node(int(vid) -1) # base 0 counting
         else:
@@ -352,22 +379,33 @@ class HgBackingStore(FileBackingStore):
         # there will only be one thing with the changeset id of this
         # 'f'
         m = f._readmeta(vid)
-        changeset = m['changeset']
-        objs, count = self.indexmanager.search(dict(changeset=changeset))
-        assert count == 1
-        obj = objs.next()
+        changeset = m.get('changeset')
+        if changeset:
+            objs, count = self.indexmanager.search(dict(changeset=changeset))
+            assert count == 1
+            obj = objs.next()
+        elif not exists:
+            # There isn't any file content with this entry
+            objs = self.indexmanager.get_by_uid_prop(uid)
+            obj = objs[0].next()
 
-        if not target:
-            target, ext = obj.suggestName()
+        # we expect file content
+        if exists:
             if not target:
-                fd, fn = tempfile.mkstemp(dir=dir)
-                target = fn
+                target, ext = obj.suggestName()
+                if not target:
+                    fd, fn = tempfile.mkstemp(suffix=ext, dir=dir)
+                    target = fn
+                    os.close(fd)
 
-        if not target.startswith('/'):
-            if dir: target = os.path.join(dir, target)
-            else: os.path.join('/tmp', target)
-                
-        self.repo.dump(uid, rev, target)
+            if not target.startswith('/'):
+                if not dir: dir = "/tmp"
+                target = os.path.join(dir, target)
+
+            if target:
+                self.repo.dump(uid, rev, target, self.id, changeset)
+
+        if not target: target = ""
         return obj.properties, target
     
 if __name__ == "__main__":

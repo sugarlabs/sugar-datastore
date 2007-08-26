@@ -92,6 +92,9 @@ def _convert(arg):
             d[str(_convert(k))] = _convert(v)
         return d
 
+    if isinstance(arg, dbus.ByteArray):
+        return arg
+    
     if isinstance(arg, dbus.Array):
         a = []
         for item in arg:

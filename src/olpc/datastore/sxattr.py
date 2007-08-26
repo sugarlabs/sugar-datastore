@@ -51,4 +51,13 @@ class Xattr(object):
     def keys(self):
         return list(self.iterkeys())
     
-            
+    def asDict(self):
+        d = {}
+        for k in self.iterkeys():
+            d[k] = self[k]
+        return d
+
+    def update(self, dict):
+        for k,v in dict.iteritems():
+            self[k] = v
+    

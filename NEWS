@@ -1,3 +1,10 @@
+Snapshot a111996299
+
+Snapshot 356b35a278
+
+* #2559 Fix copy of files on a removable device. (bcsaller)
+* Fix abiword documents indexing. (bcsaller)
+
 Snapshot 4a4283978f
 
 * More usb devices fixes. (bcsaller)

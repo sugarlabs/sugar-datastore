@@ -353,7 +353,7 @@ class FileBackingStore(BackingStore):
             
         if replace is False and os.path.exists(path):
             raise KeyError("objects with path:%s for uid:%s exists" %(
-                            path, uid))
+                path, uid))
 
         bin_copy.bin_copy(filelike, path)
         
@@ -441,6 +441,7 @@ class InplaceFileBackingStore(FileBackingStore):
         # now map/update the existing data into the indexes
         # but do it async
         self.walker = threading.Thread(target=self._walk)
+        self._runWalker = True
         self.walker.setDaemon(True)
         self.walker.start()
 
@@ -460,6 +461,8 @@ class InplaceFileBackingStore(FileBackingStore):
                 
             
             for fn in filenames:
+                # give the thread a chance to exit
+                if not self._runWalker: break
                 # blacklist files
                 #   ignore conventionally hidden files
                 if fn.startswith("."): continue
@@ -534,7 +537,29 @@ class InplaceFileBackingStore(FileBackingStore):
         # the file would have already been changed inplace
         # don't touch it
         props['uid'] = uid
+
+        proposed_name = None
+        if filelike:
+            if isinstance(filelike, basestring):
+                # lets treat it as a filename
+                filelike = open(filelike, "r")
+            filelike.seek(0)
+            # usually with USB drives and the like the file we are
+            # indexing is already on it, however in the case of moving
+            # files to these devices we need to detect this case and
+            # place the file
+            proposed_name = props.get('filename', None)
+            if not proposed_name:
+                proposed_name = os.path.split(filelike.name)[1]
+            # record the name before qualifying it to the store
+            props['filename'] = proposed_name
+            proposed_name = os.path.join(self.uri, proposed_name)
+
         self.indexmanager.index(props, filelike)
+
+        if proposed_name:
+            self._writeContent(uid, filelike, replace=True, target=proposed_name)
+        
         
     def delete(self, uid):
         c = self.indexmanager.get(uid)
@@ -548,8 +573,9 @@ class InplaceFileBackingStore(FileBackingStore):
         
     def stop(self):
         if self.walker and self.walker.isAlive():
-            self.walker.join()
-        self.indexmanager.stop()
+            # XXX: just force the unmount, flush the index queue
+            self._runWalker = False
+        self.indexmanager.stop(force=True)
 
     def complete_indexing(self):
         if self.walker and self.walker.isAlive():

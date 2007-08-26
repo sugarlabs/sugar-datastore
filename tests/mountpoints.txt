@@ -173,6 +173,23 @@ The file was properly created in the expected place.
 
 >>> assert os.path.exists('/tmp/store3/one.txt')
 
+Now let's update that file.
+
+>>> fn = ds.get_filename(u1)
+>>> fp = open(fn, 'w')
+>>> print >>fp, "This is new content"
+>>> fp.close()
+
+>>> ds.update(pen_copy, props, fn)
+>>> ds.complete_indexing()
+
+and verify it worked.
+
+>>> result, count = ds.find(dict(query="new content"))
+>>> assert count == 1
+>>> assert result[0]['uid'] == pen_copy
+
+
 
 We also need to be sure that delete commands work on inplace
 mounts. We will delete the object from the datastore and then verify
@@ -197,6 +214,5 @@ verify that we can still remount the store.
 >>> mp3 = ds.mount("inplace:/tmp/store3", dict(title="Fake USB from broken"))
 >>> mp = ds.mountpoints[mp3]
 >>> assert mp.descriptor()['title'] == 'Fake USB from broken'
-
 
 >>> ds.stop(); del ds

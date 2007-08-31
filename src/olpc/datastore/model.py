@@ -349,6 +349,10 @@ registerPropertyType('text', noop, noop, 'string', {'store' : True,
                                                     'collapse' : True,
                                                     })
 
+registerPropertyType('tag', noop, str.lower, 'string', {'store' : True,
+                                                           'exact' : True,
+                                                           })
+
 # Now the convention is to directly use DBus.ByteArray
 registerPropertyType('binary', str, dbus.ByteArray, None, {'store' : True,
                                                            'exact' : False,
@@ -397,9 +401,10 @@ defaultModel = Model().addFields(
     ('ctime', 'date'),
     ('mtime', 'date'),
     # this will just be a space delimited list of tags
-    # indexed with the content
-    # I give them high weight as they have user given semantic value.
-    ('tags', 'text', {'weight' :3 } ),
+    # tags are case-insensitive and managed via the tags() API call
+    # while they can be set as normal properties with checkin that
+    # will create new versions and the tags() call will not.
+    ('tags', 'tag'),
 
     # olpc specific
     ('activity', 'string'),

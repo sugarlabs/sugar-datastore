@@ -86,6 +86,11 @@ Partial search...
 
 
 
+We also support tagging of documents.
+
+>>> im.tag(uid, "foo bar")
+>>> assert expect_single(im.search('tags:foo')).id == uid
+
 Cleanly shut down.
 >>> im.stop()
 

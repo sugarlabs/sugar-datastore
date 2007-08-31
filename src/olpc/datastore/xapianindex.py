@@ -331,8 +331,80 @@ class IndexManager(object):
         if self.backingstore:
             return "inplace" in self.backingstore.capabilities
         return False
+
+    def _parse_tags(self, tags):
+        # convert tags into (TAG, rev) pairs indicating if this tag
+        # applies to this rev or all revs
+        # all revs is ('tag', False)
+        # the specific rev (unknown in this function is ('tag', True)
+        t = tags.lower().split()
+        r = []
+        for tag in t:
+            all = True
+            mode = ADD
+            if tag.startswith("-"):
+                tag = tag[1:]
+                mode = REMOVE
+                
+            if tag[-2:] == ":0":
+                tag = tag[:-2]
+                
+            r.append((tag, all, mode))
+                       
+        return r
     
-    
+    def tag(self, uid, tags, rev=None):
+        # this can't create items so we either resolve the uid (which
+        # should be a given since we got to this layer) or fail
+        results, count = self.get_by_uid_prop(uid, rev)
+        if count == 0:
+            raise KeyError('unable to apply tags to uid %s' % uid)
+
+        # pull the whole version chain
+        results = list(results)
+        
+        tags = self._parse_tags(tags)
+
+        for tag, all, mode in tags:
+            if all:
+                used = results
+            else:
+                # select the revision indicated by rev
+                # when None is provided this will be the tip
+                pass
+
+            if not tag and mode is REMOVE:
+                # special case the '-' which removes all tags
+                for c in used:
+                    if 'tags' in c._doc.data:
+                        del c._doc.data['tags']
+            else:
+                # not a global remove so we need to look at each
+                # document, each tag and handle them case by case
+                for c in used:
+                    # we need to manipulate the field list of the existing
+                    # docs and then replace them in the database
+                    # to avoid adding new versions
+
+                    # XXX: this should really be model driven and support
+                    # any field that is of the tags type...
+                    existing = set(c.get_property('tags', []))
+                    if tag in existing and mode is REMOVE:
+                        existing.remove(tag)
+                    else:
+                        existing.add(tag)
+                        
+                    # XXX: low level interface busting
+                    # replace the current tags with the updated set
+                    c._doc.data['tags'] = list(existing)
+                    
+
+        # Sync version, (enque with update for async)
+        with self._write_lock:
+            for c in results:
+                self.write_index.replace_document(c)
+        
+        
     def index(self, props, filename=None):
         """Index the content of an object.
         Props must contain the following:

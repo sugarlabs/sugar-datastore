@@ -317,6 +317,39 @@ class DataStore(dbus.service.Object):
             return mp.checkout(uid, vid, target=target, dir=dir)
 
     @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature="sss",
+                         out_signature=""
+                         )
+    def tags(self, uid, tags, rev=None):
+        """ apply tags to a version of a document, there are cases
+        where some tags apply to all versions of a document and others
+        where they apply to a specific revision.
+
+        By default tags apply to all revisions but if they end with :0
+        then they are demarked as being version specific
+
+        for example
+
+        >>> ds.tags(uid, "foo bar")
+
+        would mark all instances of uid with the tags foo and bar
+
+        while
+
+        >>> ds.tags(uid, "foo bar:0")
+
+        would mark all instances of this uid with "foo" and this
+        specific instance with "bar". No version changes would be
+        created to any versions using this call.
+
+        In its current implementation even tags that apply to all
+        revisions only apply to revision on a particular store.
+        """
+        c = self.get(uid)
+        c.backingstore.tags(uid, tags)
+        
+        
+    @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='ssss',
                          out_signature='a{sv}s')
     def copy(self, uid, vid=None, mountpoint=None, target_mountpoint=None):

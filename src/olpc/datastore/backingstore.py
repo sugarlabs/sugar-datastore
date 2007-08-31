@@ -52,7 +52,7 @@ class BackingStore(object):
     capabilities = ()
     
     def __init__(self, uri, **kwargs):
-        """The kwargs are used to configure the backend so it can
+       """The kwargs are used to configure the backend so it can
         provide its interface. See specific backends for details
         """
         pass

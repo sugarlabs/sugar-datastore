@@ -183,12 +183,23 @@ class DataStore(dbus.service.Object):
             mp = self.root
         return mp
 
+    def _create_completion(self, async_cb, async_err_cb, exc=None, uid=None):
+        logger.debug("_create_completion_cb() called with %r / %r, exc %r, uid %r" % (async_cb, async_err_cb, exc, uid))
+        if exc is not None:
+            async_err_cb(exc)
+            return
+
+        self.Created(uid)
+        logger.debug("created %s" % uid)
+        async_cb(uid)
+
     # PUBLIC API
     #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature='a{sv}s',
-                         out_signature='s')
-    def create(self, props, filelike=None):
+                         in_signature='a{sv}sb',
+                         out_signature='s',
+                         async_callbacks=('async_cb', 'async_err_cb'))
+    def create(self, props, filelike=None, transfer_ownership=False, async_cb=None, async_err_cb=None):
         """create a new entry in the datastore. If a file is passed it
         will be consumed by the datastore. Because the repository has
         a checkin/checkout model this will create a copy of the file
@@ -200,11 +211,8 @@ class DataStore(dbus.service.Object):
         over this process can come at a later time.
         """
         mp = self._resolveMountpoint(props)
-        uid = mp.create(props, filelike)
-        self.Created(uid)
-        logging.debug("created %s" % uid)
-        
-        return uid
+        mp.create_async(props, filelike, can_move=transfer_ownership,
+            completion=lambda *args: self._create_completion(async_cb, async_err_cb, *args))
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Created(self, uid): pass
@@ -300,7 +308,7 @@ class DataStore(dbus.service.Object):
                 order_by = [o.strip() for o in order_by.split(',')]
                 
             if not isinstance(order_by, list):
-                logging.debug("bad query, order_by should be a list of property names")                
+                logger.debug("bad query, order_by should be a list of property names")                
                 order_by = None
 
             # generate a sort function based on the complete set of
@@ -406,22 +414,31 @@ class DataStore(dbus.service.Object):
             results = results.union(result)
         return results
     
+    def _update_completion_cb(self, async_cb, async_err_cb, content, exc=None):
+        logger.debug("_update_completion_cb() called with %r / %r, exc %r" % (async_cb, async_err_cb, exc))
+        if exc is not None:
+            async_err_cb(exc)
+            return
+
+        self.Updated(content.id)
+        logger.debug("updated %s" % content.id)
+        async_cb()
 
     #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='sa{sv}s',
-             out_signature='')
-    def update(self, uid, props, filelike=None):
+             in_signature='sa{sv}sb',
+             out_signature='',
+             async_callbacks=('async_cb', 'async_err_cb'))
+    def update(self, uid, props, filelike=None, transfer_ownership=False,
+            async_cb=None, async_err_cb=None):
         """Record the current state of the object checked out for a
         given uid. If contents have been written to another file for
         example. You must create it
         """
         content = self.get(uid)
         mountpoint = props.pop('mountpoint', None)
-        content.backingstore.update(uid, props, filelike)
-
-        self.Updated(content.id)
-        logger.debug("updated %s" % content.id)
+        content.backingstore.update_async(uid, props, filelike, can_move=transfer_ownership,
+            completion=lambda *args: self._update_completion_cb(async_cb, async_err_cb, content, *args))
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Updated(self, uid): pass

@@ -1,3 +1,4 @@
+* Fix duplicate datastore entries on item creation caused by last commit
 * On update() and create(), copy asynchronously where possible, and
   add new "transfer_ownership" argument to update() and create() that
   allow the datastore to move the object rather than copy it (dcbw)

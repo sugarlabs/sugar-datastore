@@ -450,7 +450,7 @@ class FileBackingStore(BackingStore):
             return
         try:
             # Index the content this time
-            uid = self.indexmanager.index(props, path)
+            self.indexmanager.index(props, path)
             completion(None, uid)
         except Exception, exc:
             completion(exc)
@@ -459,6 +459,7 @@ class FileBackingStore(BackingStore):
         if completion is None:
             raise RuntimeError("Completion must be valid for async create")
         uid = self.indexmanager.index(props)
+        props['uid'] = uid
         if filelike:
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
@@ -471,13 +472,15 @@ class FileBackingStore(BackingStore):
 
     def create(self, props, filelike, can_move=False):
         if filelike:
-            uid = self.indexmanager.index(props, None)
+            uid = self.indexmanager.index(props)
+            props['uid'] = uid
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
                 filelike = open(filelike, "r")
             filelike.seek(0)
             path = self._writeContent(uid, filelike, replace=False, can_move=can_move)
-            return self.indexmanager.index(props, path)
+            self.indexmanager.index(props, path)
+            return uid
         else:
             return self.indexmanager.index(props)
     
@@ -511,8 +514,8 @@ class FileBackingStore(BackingStore):
             raise RuntimeError("Filelike must be valid for async update")
         if completion is None:
             raise RuntimeError("Completion must be valid for async update")
-        if 'uid' not in props: props['uid'] = uid
 
+        props['uid'] = uid
         if filelike:
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
@@ -524,7 +527,7 @@ class FileBackingStore(BackingStore):
             completion()
 
     def update(self, uid, props, filelike=None, can_move=False):
-        if 'uid' not in props: props['uid'] = uid
+        props['uid'] = uid
         if filelike:
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
@@ -694,12 +697,14 @@ class InplaceFileBackingStore(FileBackingStore):
             props['filename'] = proposed_name
             proposed_name = os.path.join(self.uri, proposed_name)
 
-        uid = self.indexmanager.index(props, None)
+        uid = self.indexmanager.index(props)
+        props['uid'] = uid
         path = filelike
         if proposed_name and not os.path.exists(proposed_name):
             path = self._writeContent(uid, filelike, replace=False, target=proposed_name)
-        return self.indexmanager.index(props, path)
-    
+        self.indexmanager.index(props, path)
+        return uid
+
     def get(self, uid, env=None, allowMissing=False):
         content = self.indexmanager.get(uid)
         if not content: raise KeyError(uid)

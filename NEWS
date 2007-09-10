@@ -1,5 +1,9 @@
 Snapshot 617bf5d005
 
+* Index metadata on async updates. (tomeu)
+* Allow retrieving a specific set of properties in find(). (tomeu)
+* Add a timestamp field to the model for modification time. (tomeu)
+
 Snapshot 0a7e80f01a
 
 * Fix duplicate datastore entries on item creation caused by last commit

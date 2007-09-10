@@ -244,9 +244,9 @@ class DataStore(dbus.service.Object):
 
     #@utils.sanitize_dbus    
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='a{sv}',
+             in_signature='a{sv}as',
              out_signature='aa{sv}u')
-    def find(self, query=None, **kwargs):
+    def find(self, query=None, properties=None, **kwargs):
         """find(query)
         takes a dict of parameters and returns data in the following
              format
@@ -353,6 +353,11 @@ class DataStore(dbus.service.Object):
                 # stored filename attribute (which is private)
                 props['filename'] = filename
             d.append(props)
+
+            if properties:
+                for name in props.keys():
+                    if name not in properties:
+                        del props[name]
 
         if limit:
             d = d[offset: offset+limit]

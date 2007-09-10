@@ -510,6 +510,7 @@ class FileBackingStore(BackingStore):
             completion(exc)
 
     def update_async(self, uid, props, filelike, can_move=False, completion=None):
+        logging.debug('backingstore.update_async')
         if filelike is None:
             raise RuntimeError("Filelike must be valid for async update")
         if completion is None:
@@ -517,6 +518,7 @@ class FileBackingStore(BackingStore):
 
         props['uid'] = uid
         if filelike:
+            self.indexmanager.index(props, path)
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
                 filelike = open(filelike, "r")
@@ -524,6 +526,7 @@ class FileBackingStore(BackingStore):
             self._writeContent(uid, filelike, can_move=can_move,
                 completion=lambda *args: self._update_completion(uid, props, completion, *args))
         else:
+            self.indexmanager.index(props)
             completion()
 
     def update(self, uid, props, filelike=None, can_move=False):

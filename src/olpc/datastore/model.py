@@ -360,6 +360,8 @@ defaultModel = Model().addFields(
     ('language', 'string'),
     ('ctime', 'date'),
     ('mtime', 'date'),
+    # Better store the timestamp instead of date strings
+    ('timestamp', 'int'),
     # this will just be a space delimited list of tags
     # indexed with the content
     # I give them high weight as they have user given semantic value.
@@ -375,4 +377,3 @@ defaultModel = Model().addFields(
     ('buddies', 'text'),
     )
 
-        

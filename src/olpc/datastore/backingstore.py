@@ -518,7 +518,7 @@ class FileBackingStore(BackingStore):
 
         props['uid'] = uid
         if filelike:
-            self.indexmanager.index(props, path)
+            self.indexmanager.index(props, filelike)
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
                 filelike = open(filelike, "r")

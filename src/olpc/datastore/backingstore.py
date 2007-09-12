@@ -304,7 +304,27 @@ class FileBackingStore(BackingStore):
                 
             # This will ensure the fulltext and so on are all assigned
             im.bind_to(self)
-            im.connect(index_name)
+
+            try:
+                im.connect(index_name)
+            except Exception, e:
+                # TODO: Try to recover in a smarter way than deleting the base
+                # dir and reinitializing the index.
+
+                logging.error('Error while trying to load mount point %s: %s. ' \
+                              'Will try to renitialize and load again.' % (self.base, e))
+
+                # Delete the base dir and its contents
+                for root, dirs, files in os.walk(self.base, topdown=False):
+                    for name in files:
+                        os.remove(os.path.join(root, name))
+                    for name in dirs:
+                        os.rmdir(os.path.join(root, name))
+                    os.rmdir(root)
+
+                self.initialize()
+                self.load()
+                return
 
             self.indexmanager = im
             

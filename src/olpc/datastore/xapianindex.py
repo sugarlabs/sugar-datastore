@@ -153,6 +153,11 @@ class IndexManager(object):
                     self.write_index.replace(doc)
                     logger.info("updated %s:%s" % (uid, vid))
             self.flush()
+
+            # Disable content indexing for Trial-3.
+            # https://dev.laptop.org/ticket/3058
+            return
+            
             # now change CREATE to UPDATE as we set the
             # properties already
             operation = UPDATE

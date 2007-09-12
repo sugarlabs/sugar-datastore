@@ -1,3 +1,5 @@
+* #3058: Disable content indexing for Trial-3. (tomeu)
+
 Snapshot b0b4c4115a
 
 * #3324: Fix updates of entries with associated files. (tomeu)

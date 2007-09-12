@@ -1,3 +1,4 @@
+* #3374: Don't create another entry during async update. (tomeu)
 * #3058: Disable content indexing for Trial-3. (tomeu)
 
 Snapshot b0b4c4115a

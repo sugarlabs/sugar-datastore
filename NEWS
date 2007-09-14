@@ -1,3 +1,7 @@
+Snapshot ea13f75d6a
+
+* #2423: Simple partial matching. (bscaller, backported by marco)
+
 Snapshot 7655f4d99a
 
 * #3180: Recreate the index on mount failure. (tomeu)

@@ -24,6 +24,7 @@ import threading
 import warnings
 
 import secore
+import xapian as _xapian # we need to modify the QueryParser
 
 from olpc.datastore import model 
 from olpc.datastore.converter import converter
@@ -438,6 +439,13 @@ class IndexManager(object):
         # 'title:foo' match a document whose title contains 'foo'
         # 'title:"A tale of two datastores"' exact title match
         # '-this that' match that w/o this
+
+        # limited support for wildcard searches
+
+        qp = _xapian.QueryParser
+
+        flags = (qp.FLAG_LOVEHATE)
+
         ri = self.read_index
         start = 0
         end = len(query)
@@ -465,11 +473,31 @@ class IndexManager(object):
                     #XXX: strip quotes or not here
                     #word = query[orig+1:qm.end(1)-1]
                     word = query[orig:qm.end(1)]
+                    # this is a phrase modify the flags
+                    flags |= qp.FLAG_PHRASE
                     start = qm.end(1) + 1
 
             if field:
                 queries.append(ri.query_field(field, word))
             else:
-                queries.append(ri.query_parse(word))
+                if word.endswith("*"):
+                    flags |= qp.FLAG_WILDCARD
+                q = self._query_parse(word, flags)
+
+                queries.append(q)
         q = ri.query_composite(ri.OP_AND, queries)
         return q
+
+    def _query_parse(self, word, flags=0, op=None):
+        # while newer secore do pass flags it doesn't allow control
+        # over them at the API level. We override here to support
+        # adding wildcard searching
+        ri = self.read_index
+        if op is None: op = ri.OP_AND
+        qp = ri._prepare_queryparser(None, None, op)
+        try:
+            return qp.parse_query(word, flags)
+        except _xapian.QueryParserError, e:
+            # If we got a parse error, retry without boolean operators (since
+            # these are the usual cause of the parse error).
+            return qp.parse_query(string, 0)

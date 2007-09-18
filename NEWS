@@ -1,3 +1,5 @@
+* Fix for undefined variable error (dcbw)
+
 Snapshot eb82fe83a3
 
 * #3538: Fix a race when deleting objects. (marco)

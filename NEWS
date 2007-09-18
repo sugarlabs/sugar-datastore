@@ -1,3 +1,5 @@
+* #3538: Fix a race when deleting objects. (marco)
+
 Snapshot ea13f75d6a
 
 * #2423: Simple partial matching. (bscaller, backported by marco)

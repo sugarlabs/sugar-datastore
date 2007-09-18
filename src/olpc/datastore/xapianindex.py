@@ -165,6 +165,13 @@ class IndexManager(object):
             if not filestuff:
                 # In this case we are done
                 return
+        elif operation is DELETE:
+            # sync deletes
+            with self._write_lock:
+                self.write_index.delete(uid)
+                logger.info("deleted content %s:%s" % (uid,vid))
+            self.flush()
+            return
 
         self.queue.put((uid, vid, doc, operation, filestuff))
 
@@ -190,10 +197,7 @@ class IndexManager(object):
 
             try:
                 with self._write_lock:
-                    if operation is DELETE:
-                        self.write_index.delete(uid)
-                        logger.info("deleted content %s" % (uid,))
-                    elif operation is UPDATE:
+                    if operation is UPDATE:
                         # Here we handle the conversion of binary
                         # documents to plain text for indexing. This is
                         # done in the thread to keep things async and

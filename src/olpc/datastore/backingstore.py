@@ -211,6 +211,7 @@ class FileBackingStore(BackingStore):
         # a hidden file with a pickled dict will live in the base
         # directory for each storage
         fn = os.path.join(self.base, self.DESCRIPTOR_NAME)
+        desc = None
         if os.path.exists(fn):
             try:
                 fp = open(fn, 'r')

@@ -1,3 +1,5 @@
+* #3599 Fix the import logic on USB sticks. (marco)
+
 Snapshot 48ab782a01
 
 * Fix for undefined variable error (dcbw)

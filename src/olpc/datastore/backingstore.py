@@ -637,9 +637,10 @@ class InplaceFileBackingStore(FileBackingStore):
             if self.STORE_NAME in dirname:
                 dirname.remove(self.STORE_NAME)
 
-            # other files and dirs to blacklist
-            if '.Trashes' in dirpath: continue
-                
+            # blacklist all the hidden directories
+            if '/.' in dirpath: continue
+
+            logging.info([ dirpath, dirname, filenames ])               
             
             for fn in filenames:
                 # give the thread a chance to exit
@@ -670,11 +671,21 @@ class InplaceFileBackingStore(FileBackingStore):
                     # checksum is different
                     # XXX: what if there is more than one? (shouldn't
                     # happen)
-                    content = result.next()
-                    uid = content.id
-                    saved_mtime = content.get_property('mtime')
-                    if mtime != saved_mtime:
-                        self.update(uid, metadata, source)
+
+                    # FIXME This is throwing away all the entry metadata.
+                    # Disabled for trial-3. We are not doing indexing
+                    # anyway so it would just update the mtime which is
+                    # not that useful. Also the journal is currently
+                    # setting the mime type before saving the file making
+                    # the mtime check useless.
+                    #
+                    # content = result.next()
+                    # uid = content.id
+                    # saved_mtime = content.get_property('mtime')
+                    # if mtime != saved_mtime:
+                    #     self.update(uid, metadata, source)
+                    pass
+
         self.indexmanager.flush()
         return
 

@@ -640,8 +640,6 @@ class InplaceFileBackingStore(FileBackingStore):
             # blacklist all the hidden directories
             if '/.' in dirpath: continue
 
-            logging.info([ dirpath, dirname, filenames ])               
-            
             for fn in filenames:
                 # give the thread a chance to exit
                 if not self._runWalker: break
@@ -713,6 +711,29 @@ class InplaceFileBackingStore(FileBackingStore):
         except Exception, exc:
             completion(exc)
 
+    def _get_unique_filename(self, suggested_filename):
+        filename = suggested_filename.replace('/', '_')
+
+        # FAT limit is 255, leave some space for uniqueness
+        max_len = 250
+        if len(filename) > max_len:
+            name, extension = os.path.splitext(filename)
+            filename = name[0:max_len - extension] + extension
+
+        if os.path.exists(os.path.join(self.uri, filename)):
+            i = 1
+            while len(filename) <= max_len:
+                name, extension = os.path.splitext(filename)
+                filename = name + '_' + str(i) + extension
+                if not os.path.exists(os.path.join(self.uri, filename)):
+                    break
+                i += 1
+
+        if len(filename) > max_len:
+            filename = None
+
+        return filename
+
     def create(self, props, filelike, can_move=False):
         # the file would have already been changed inplace
         # don't touch it
@@ -727,6 +748,10 @@ class InplaceFileBackingStore(FileBackingStore):
             # files to these devices we need to detect this case and
             # place the file
             proposed_name = props.get('filename', None)
+            if not proposed_name:
+                suggested = props.get('suggested_filename', None)
+                if suggested:
+                    proposed_name = self._get_unique_filename(suggested)
             if not proposed_name:
                 proposed_name = os.path.split(filelike.name)[1]
             # record the name before qualifying it to the store

@@ -30,7 +30,7 @@ filename_attempt_pattern = re.compile('\(\d+\)$')
 import logging
 DS_LOG_CHANNEL = 'org.laptop.sugar.DataStore'
 logger = logging.getLogger(DS_LOG_CHANNEL)
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 
 class BackingStore(object):
     """Backing stores manage stable storage. We abstract out the
@@ -576,8 +576,9 @@ class FileBackingStore(BackingStore):
         return self.indexmanager.get_uniquevaluesfor(propertyname)
     
 
-    def find(self, query):
-        return self.indexmanager.search(query)
+    def find(self, query, order_by=None, limit=None):
+        if not limit: limit = 4069
+        return self.indexmanager.search(query, end_index=limit, order_by=order_by)
 
     def stop(self):
         self.indexmanager.stop()

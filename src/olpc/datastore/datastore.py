@@ -216,10 +216,19 @@ class DataStore(dbus.service.Object):
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Created(self, uid): pass
-        
-    def _multiway_search(self, query):
+
+    def _single_search(self, mountpoint, query, order_by, limit):
+        results, count = mountpoint.find(query.copy(), order_by, limit)
+        return list(results), count, 1
+
+    def _multiway_search(self, query, order_by=None, limit=None):
         mountpoints = query.pop('mountpoints', self.mountpoints)
         mountpoints = [self.mountpoints[str(m)] for m in mountpoints]
+
+        if len(mountpoints) == 1:
+            # Fast path the single mountpoint case
+            return self._single_search(mountpoints[0], query, order_by, limit)
+
         results = []
         # XXX: the merge will become *much* more complex in when
         # distributed versioning is implemented.
@@ -227,7 +236,7 @@ class DataStore(dbus.service.Object):
         #  some queries mutate the query-dict so we pass a copy each
         #  time
         for mp in mountpoints:
-            result, count =  mp.find(query.copy())
+            result, count =  mp.find(query.copy(), order_by, limit)
             results.append(result)
             
         # merge
@@ -239,8 +248,7 @@ class DataStore(dbus.service.Object):
                    existing.get_property('mtime') < hit.get_property('mtime'):
                     # XXX: age/version check
                     d[hit.id] = hit
-
-        return d, len(d)
+        return d, len(d), len(results)
 
     #@utils.sanitize_dbus    
     @dbus.service.method(DS_DBUS_INTERFACE,
@@ -293,7 +301,10 @@ class DataStore(dbus.service.Object):
 
         # distribute the search to all the mountpoints unless a
         # backingstore id set is specified
-        results, count = self._multiway_search(kwargs)
+        # backends may be able to return sorted results, if there is
+        # only a single backend in the query we can use pre-sorted
+        # results directly
+        results, count, results_from = self._multiway_search(kwargs, order_by, limit)
 
         
         # ordering is difficult when we are dealing with sets from
@@ -302,67 +313,56 @@ class DataStore(dbus.service.Object):
         # in post processing. This allows use to assemble partially
         # database sorted results from many sources and quickly
         # combine them.
-        if order_by:
-            # resolve key names to columns
-            if isinstance(order_by, basestring):
-                order_by = [o.strip() for o in order_by.split(',')]
-                
-            if not isinstance(order_by, list):
-                logger.debug("bad query, order_by should be a list of property names")                
-                order_by = None
+        if results_from > 1:
+            if order_by:
+                # resolve key names to columns
+                if isinstance(order_by, basestring):
+                    order_by = [o.strip() for o in order_by.split(',')]
 
-            # generate a sort function based on the complete set of
-            # ordering criteria which includes the primary sort
-            # criteria as well to keep it stable.
-            def comparator(a, b):
-                # we only sort on properties so
-                for criteria in order_by:
-                    mode = 1 # ascending
-                    if criteria.startswith('-'):
-                        mode = -1
-                        criteria = criteria[1:]
-                    pa = a.get_property(criteria, None)
-                    pb = b.get_property(criteria, None)
-                    r = cmp(pa, pb) * mode
-                    if r != 0: return r
-                return 0
-            
+                if not isinstance(order_by, list):
+                    logger.debug("bad query, order_by should be a list of property names")                
+                    order_by = None
 
-            r = results.values()
-            r.sort(comparator)
-            results = r
-        else:
-            results = results.values()
+                # generate a sort function based on the complete set of
+                # ordering criteria which includes the primary sort
+                # criteria as well to keep it stable.
+                def comparator(a, b):
+                    # we only sort on properties so
+                    for criteria in order_by:
+                        mode = 1 # ascending
+                        if criteria.startswith('-'):
+                            mode = -1
+                            criteria = criteria[1:]
+                        pa = a.get_property(criteria, None)
+                        pb = b.get_property(criteria, None)
+                        r = cmp(pa, pb) * mode
+                        if r != 0: return r
+                    return 0
+
+
+                r = results.values()
+                r.sort(comparator)
+                results = r
+            else:
+                results = results.values()
             
         d = []
+        c = 0
         for r in results:
-            props =  {}
-            props.update(r.properties)
-            
-            if 'uid' not in props:
-                props['uid'] = r.id
-
-            if 'mountpoint' not in props:
-                props['mountpoint'] = r.backingstore.id
-            
-            filename = ''
-            if include_files :
-                try: filename = r.filename
-                except KeyError: pass
-                # XXX: this means that find never shows the internally
-                # stored filename attribute (which is private)
-                props['filename'] = filename
+            props = r.properties
+            props['uid'] = r.id
+            props['mountpoint'] = r.backingstore.id
+            props['filename'] = ''
             d.append(props)
 
             if properties:
                 for name in props.keys():
                     if name not in properties:
                         del props[name]
-
-        if limit:
-            d = d[offset: offset+limit]
+            c+= 1
+            if limit and c > limit: break
             
-        return (d, len(results))
+        return (d, count)
 
     def get(self, uid):
         mp = self._resolveMountpoint()

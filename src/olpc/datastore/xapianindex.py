@@ -357,7 +357,7 @@ class IndexManager(object):
         
     #
     # Search
-    def search(self, query, start_index=0, end_index=4096):
+    def search(self, query, start_index=0, end_index=4096, order_by=None):
         """search the xapian store.
         query is a string defining the serach in standard web search syntax.
 
@@ -401,8 +401,12 @@ class IndexManager(object):
                 q = ri.query_composite(ri.OP_AND, queries)
         else:
             q = self.parse_query(query)
-            
-        results = ri.search(q, start_index, end_index)
+
+        if order_by and isinstance(order_by, list):
+            # secore only handles a single item, not a multilayer sort
+            order_by = order_by[0]
+
+        results = ri.search(q, start_index, end_index, sortby=order_by)
         count = results.matches_estimated
 
         # map the result set to model.Content items

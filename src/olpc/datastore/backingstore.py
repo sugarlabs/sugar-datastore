@@ -52,7 +52,7 @@ class BackingStore(object):
     capabilities = ()
     
     def __init__(self, uri, **kwargs):
-       """The kwargs are used to configure the backend so it can
+        """The kwargs are used to configure the backend so it can
         provide its interface. See specific backends for details
         """
         pass
@@ -394,8 +394,9 @@ class FileBackingStore(BackingStore):
         return self.indexmanager.get_uniquevaluesfor(propertyname)
     
 
-    def find(self, query):
-        return self.indexmanager.search(query)
+    def find(self, query, order_by=None, limit=None):
+        if not limit: limit = 4069
+        return self.indexmanager.search(query, end_index=limit, order_by=order_by)
 
     def stop(self):
         self.indexmanager.stop()

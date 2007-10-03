@@ -188,7 +188,7 @@ class Content(object):
         self._file = None
         self._model = model
         self._file = None
-        
+
     def __repr__(self):
         return "<%s %s>" %(self.__class__.__name__,
                            self.properties)
@@ -206,6 +206,7 @@ class Content(object):
         
     @property
     def properties(self):
+
         d = {}
         for k, v in self.data.iteritems():
             if k in EXCLUDED_PROPERTIES: continue

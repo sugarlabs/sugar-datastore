@@ -40,6 +40,9 @@ CREATE = 1
 UPDATE = 2
 DELETE = 3
 
+ADD = 1
+REMOVE = 2
+
 
 class ContentMappingIter(object):
     """An iterator over a set of results from a search.
@@ -159,6 +162,7 @@ class IndexManager(object):
                 elif operation is UPDATE:
                     self.write_index.replace(doc)
                     logger.info("updated %s:%s" % (uid, vid))
+
             self.flush()
             # now change CREATE to UPDATE as we set the
             # properties already
@@ -261,7 +265,7 @@ class IndexManager(object):
 
                 # we do flush on each record (or set for enque
                 # sequences) now
-                self.flush()
+                #self.flush()
             except:
                 logger.exception("Error in indexer")
                 
@@ -507,7 +511,7 @@ class IndexManager(object):
         
     #
     # Search
-    def search(self, query, start_index=0, end_index=4096):
+    def search(self, query, start_index=0, end_index=4096, order_by=None):
         """search the xapian store.
         query is a string defining the serach in standard web search syntax.
 
@@ -516,6 +520,7 @@ class IndexManager(object):
         to indicate that is is required to be absent.
         """
         ri = self.read_index
+
         if not query:
             q = self.read_index.query_all()
         elif isinstance(query, dict):
@@ -552,9 +557,16 @@ class IndexManager(object):
         else:
             q = self.parse_query(query)
 
-        return self._search(q, start_index, end_index)
+        if order_by and isinstance(order_by, list):
+            # secore only handles a single item, not a multilayer sort
+            order_by = order_by[0]
+            
+        return self._search(q, start_index, end_index, sortby=order_by)
     
     def _search(self, q, start_index, end_index, sortby=None):
+        start_index = int(start_index)
+        end_index = int(end_index)
+        sortby = str(sortby)
         results = self.read_index.search(q, start_index, end_index, sortby=sortby)
         count = results.matches_estimated
 

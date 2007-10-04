@@ -1,3 +1,5 @@
+* #3180: Recreate the index on mount failure of only removable devices. (tomeu)
+
 Snapshot dce9c18d56
 
 * #3469 Human readable names on USB. (marco)

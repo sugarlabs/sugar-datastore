@@ -20,6 +20,8 @@ import subprocess
 import time
 import threading
 
+import xapian
+
 from olpc.datastore.xapianindex import IndexManager
 from olpc.datastore import bin_copy
 from olpc.datastore import utils
@@ -598,7 +600,25 @@ class InplaceFileBackingStore(FileBackingStore):
 
         
     def load(self):
-        super(InplaceFileBackingStore, self).load()
+        try:
+            super(InplaceFileBackingStore, self).load()
+        except xapian.DatabaseCorruptError, e:
+            # TODO: Try to recover in a smarter way than deleting the base
+            # dir and reinitializing the index.
+
+            logging.error('Error while trying to load mount point %s: %s. ' \
+                            'Will try to renitialize and load again.' % (self.base, e))
+
+            # Delete the base dir and its contents
+            for root, dirs, files in os.walk(self.base, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                os.rmdir(root)
+
+            self.initialize()
+            self.load()
+            return
+
         # now map/update the existing data into the indexes
         # but do it async
         self.walker = threading.Thread(target=self._walk)

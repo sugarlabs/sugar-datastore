@@ -74,7 +74,7 @@ class ProcessedDocument(object):
 
     """
 
-    __slots__ = '_doc', '_fieldmappings', '_data',
+    __slots__ = '_doc', '_fieldmappings', '_data', '_id'
     def __init__(self, fieldmappings, xapdoc=None):
         """Create a ProcessedDocument.
 
@@ -91,6 +91,7 @@ class ProcessedDocument(object):
             self._doc = xapdoc
         self._fieldmappings = fieldmappings
         self._data = None
+        self._id = None
 
     def add_term(self, field, term, wdfinc=1, positions=None):
         """Add a term to the document.
@@ -185,14 +186,16 @@ class ProcessedDocument(object):
     """)
 
     def _get_id(self):
-        tl = self._doc.termlist()
-        try:
-            term = tl.skip_to('Q').term
-            if len(term) == 0 or term[0] != 'Q':
+        if self._id is None:
+            tl = self._doc.termlist()
+            try:
+                term = tl.skip_to('Q').term
+                if len(term) == 0 or term[0] != 'Q':
+                    return None
+            except StopIteration:
                 return None
-        except StopIteration:
-            return None
-        return term[1:]
+            self._id = term[1:]
+        return self._id
     def _set_id(self, id):
         tl = self._doc.termlist()
         try:

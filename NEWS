@@ -20,7 +20,6 @@ Snapshot ea13f75d6a
 
 Snapshot 7655f4d99a
 
-* #3180: Recreate the index on mount failure. (tomeu)
 * #3374: Don't create another entry during async update. (tomeu)
 * #3058: Disable content indexing for Trial-3. (tomeu)
 

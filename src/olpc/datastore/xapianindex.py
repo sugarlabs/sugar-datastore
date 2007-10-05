@@ -114,6 +114,7 @@ class IndexManager(object):
 
     
     def stop(self, force=False):
+        self.flush(force=True)
         self.stopIndexer(force)
         self.write_index.close()
         #self.read_index.close()

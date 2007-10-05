@@ -1,3 +1,5 @@
+Snapshot 87204de5b9
+
 * Offset support. (bcsaller)
 * #3180: Recreate the index on mount failure of only removable devices. (tomeu)
 

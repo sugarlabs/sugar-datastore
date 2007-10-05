@@ -219,7 +219,7 @@ class DataStore(dbus.service.Object):
 
     def _single_search(self, mountpoint, query, order_by, limit, offset):
         results, count = mountpoint.find(query.copy(), order_by,
-        limit, offset + limit)
+                                         limit + offset, offset)
         return list(results), count, 1
 
     def _multiway_search(self, query, order_by=None, limit=None, offset=None):

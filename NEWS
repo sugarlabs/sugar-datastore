@@ -1,3 +1,8 @@
+Snapshot 64abebe398
+
+* Do not index binaries. (bcsaller)
+* Really fix offset. (bcsaller)
+
 Snapshot 87204de5b9
 
 * Offset support. (bcsaller)

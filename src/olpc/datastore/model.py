@@ -324,6 +324,7 @@ registerPropertyType('text', noop, noop, 'string', {'store' : True,
 
 registerPropertyType('binary', noop, noop, None, {'store' : True,
                                                   'exact' : False,
+                                                  'fulltext': False,
                                                   'sortable' : False})
 
 registerPropertyType('int', str, int, 'float', {'store' : True,

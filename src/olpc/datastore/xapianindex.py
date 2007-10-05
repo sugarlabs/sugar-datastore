@@ -253,7 +253,7 @@ class IndexManager(object):
     
     #
     # Field management
-    def addField(self, key, store=True, exact=False, sortable=False,
+    def addField(self, key, store=True, exact=False, sortable=False, fulltext=True,
                  type='string', collapse=False,
                  **kwargs):
         language = kwargs.pop('language', self.language)
@@ -262,7 +262,7 @@ class IndexManager(object):
         
         if store: xi(key, secore.FieldActions.STORE_CONTENT)
         if exact: xi(key, secore.FieldActions.INDEX_EXACT)
-        else:
+        elif fulltext:
             # weight -- int 1 or more
             # nopos  -- don't include positional information
             # noprefix -- boolean

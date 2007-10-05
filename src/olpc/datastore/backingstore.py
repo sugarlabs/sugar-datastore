@@ -558,9 +558,9 @@ class FileBackingStore(BackingStore):
         return self.indexmanager.get_uniquevaluesfor(propertyname)
     
 
-    def find(self, query, order_by=None, limit=None):
+    def find(self, query, order_by=None, limit=None, offset=0):
         if not limit: limit = 4069
-        return self.indexmanager.search(query, end_index=limit, order_by=order_by)
+        return self.indexmanager.search(query, start_index=offset, end_index=limit, order_by=order_by)
 
     def stop(self):
         self.indexmanager.stop()

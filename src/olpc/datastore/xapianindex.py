@@ -39,6 +39,13 @@ CREATE = 1
 UPDATE = 2
 DELETE = 3
 
+# Force a flush every _n_ changes to the db
+THRESHOLD = 128
+
+class ReadWriteConnection(secore.indexerconnection.IndexerConnection,
+                          secore.searchconnection.SearchConnection):
+    # has search methods on a write connection
+    pass
 
 class ContentMappingIter(object):
     """An iterator over a set of results from a search.
@@ -74,6 +81,8 @@ class IndexManager(object):
         
         self.fields = set()
         self._write_lock = threading.Lock()
+        self.deltact = 0 # delta count
+        
     #
     # Initialization
     def connect(self, repo, **kwargs):
@@ -82,7 +91,7 @@ class IndexManager(object):
                           RuntimeWarning)
 
         self.repo = repo
-        self.write_index = secore.IndexerConnection(repo)
+        self.write_index = ReadWriteConnection(repo)
 
         # configure the database according to the model
         datamodel = kwargs.get('model', model.defaultModel)
@@ -91,9 +100,9 @@ class IndexManager(object):
         # store a reference
         self.datamodel = datamodel
         
-        self.read_index = secore.SearchConnection(repo)
+        self.read_index = self.write_index
 
-        self.flush()        
+        self.flush(force=True)        
         # by default we start the indexer now
         self.startIndexer()
         assert self.indexer.isAlive()
@@ -107,7 +116,7 @@ class IndexManager(object):
     def stop(self, force=False):
         self.stopIndexer(force)
         self.write_index.close()
-        self.read_index.close()
+        #self.read_index.close()
         # XXX: work around for xapian not having close() this will
         # change in the future in the meantime we delete the
         # references to the indexers and then force the gc() to run
@@ -132,12 +141,14 @@ class IndexManager(object):
         self.indexer.join()
 
     # flow control
-    def flush(self):
+    def flush(self, force=False):
         """Called after any database mutation"""
-        with self._write_lock:
-            self.write_index.flush()
-            self.read_index.reopen()
-
+        self.deltact += 1
+        if force or self.deltact > THRESHOLD:
+            with self._write_lock:
+                self.write_index.flush()
+                #self.read_index.reopen()
+                self.deltact = 0
 
     def enque(self, uid, vid, doc, operation, filestuff=None):
         # here we implement the sync/async policy

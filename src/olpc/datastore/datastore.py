@@ -217,17 +217,19 @@ class DataStore(dbus.service.Object):
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Created(self, uid): pass
 
-    def _single_search(self, mountpoint, query, order_by, limit):
-        results, count = mountpoint.find(query.copy(), order_by, limit)
+    def _single_search(self, mountpoint, query, order_by, limit, offset):
+        results, count = mountpoint.find(query.copy(), order_by,
+        limit, offset)
         return list(results), count, 1
 
-    def _multiway_search(self, query, order_by=None, limit=None):
+    def _multiway_search(self, query, order_by=None, limit=None, offset=None):
         mountpoints = query.pop('mountpoints', self.mountpoints)
         mountpoints = [self.mountpoints[str(m)] for m in mountpoints]
 
         if len(mountpoints) == 1:
             # Fast path the single mountpoint case
-            return self._single_search(mountpoints[0], query, order_by, limit)
+            return self._single_search(mountpoints[0], query,
+        order_by, limit, offset)
 
         results = []
         # XXX: the merge will become *much* more complex in when
@@ -304,7 +306,9 @@ class DataStore(dbus.service.Object):
         # backends may be able to return sorted results, if there is
         # only a single backend in the query we can use pre-sorted
         # results directly
-        results, count, results_from = self._multiway_search(kwargs, order_by, limit)
+        results, count, results_from = self._multiway_search(kwargs,
+                                                             order_by,
+                                                             limit, offset)
 
         
         # ordering is difficult when we are dealing with sets from
@@ -343,6 +347,8 @@ class DataStore(dbus.service.Object):
                 r = results.values()
                 r.sort(comparator)
                 results = r
+
+                results = results[offset:limit+offset]
             else:
                 results = results.values()
             

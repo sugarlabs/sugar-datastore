@@ -44,6 +44,7 @@ if not sys.stdin.isatty():
 # build the datastore
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 bus = dbus.SessionBus()
+connected = True
 
 ds = DataStore()
 ds.registerBackend(backingstore.FileBackingStore)
@@ -55,10 +56,19 @@ ds.complete_indexing()
 logger.info("Starting Datastore %s" % (repo_dir))
 mainloop = gobject.MainLoop()
 
+def handle_disconnect():
+    global connected
+    connected = False
+
 def handle_shutdown(signum, frame):
-    ds.stop()
-    print "shutdown cleanly"
+    global connected
+    connected = False
     raise SystemExit("Shutting down on signal %s" % signum)
+
+bus.set_exit_on_disconnect(False)
+bus.add_signal_receiver(handle_disconnect,
+                        signal_name='Disconnected',
+                        dbus_interface='org.freedesktop.DBus.Local')
 
 signal.signal(signal.SIGHUP, handle_shutdown)
 signal.signal(signal.SIGTERM, handle_shutdown)
@@ -72,19 +82,19 @@ def main():
     import time
     context = mainloop.get_context()
     try:
-        while True:
+        while connected:
             context.iteration(False)
             time.sleep(0.0025)
 
     except KeyboardInterrupt:
-        ds.stop()
         logger.info("DataStore shutdown by user")
     except:
-        ds.stop()
         logger.debug("Datastore shutdown with error",
                          exc_info=sys.exc_info())
      
 main()
+
+ds.stop()
 
 #import hotshot
 #p = hotshot.Profile('hs.prof')

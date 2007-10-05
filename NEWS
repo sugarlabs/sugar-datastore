@@ -1,3 +1,5 @@
+Snapshot 23becaa683
+
 * Don't mount automatically at start. (tomeu)
 * Exit cleanly when dbus goes down. (marco)
 

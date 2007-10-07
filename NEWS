@@ -1,3 +1,5 @@
+* Request binary data as dbus.ByteArray. (tomeu)
+
 Snapshot 23becaa683
 
 * Don't mount automatically at start. (tomeu)

@@ -198,7 +198,8 @@ class DataStore(dbus.service.Object):
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='a{sv}sb',
                          out_signature='s',
-                         async_callbacks=('async_cb', 'async_err_cb'))
+                         async_callbacks=('async_cb', 'async_err_cb'),
+                         byte_arrays=True)
     def create(self, props, filelike=None, transfer_ownership=False, async_cb=None, async_err_cb=None):
         """create a new entry in the datastore. If a file is passed it
         will be consumed by the datastore. Because the repository has
@@ -439,7 +440,8 @@ class DataStore(dbus.service.Object):
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='sa{sv}sb',
              out_signature='',
-             async_callbacks=('async_cb', 'async_err_cb'))
+             async_callbacks=('async_cb', 'async_err_cb'),
+             byte_arrays=True)
     def update(self, uid, props, filelike=None, transfer_ownership=False,
             async_cb=None, async_err_cb=None):
         """Record the current state of the object checked out for a

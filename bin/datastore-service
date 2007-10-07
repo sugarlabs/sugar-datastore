@@ -79,6 +79,12 @@ def main():
     # really awful
     import time
     context = mainloop.get_context()
+
+    if '-m' in sys.argv:
+        # mount automatically for local testing
+        ds.mount(repo_dir)
+        ds.complete_indexing()
+        
     try:
         while connected:
             context.iteration(False)

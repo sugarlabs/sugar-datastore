@@ -414,10 +414,11 @@ class IndexManager(object):
         else:
             q = self.parse_query(query)
 
-        if order_by and isinstance(order_by, list):
+        if isinstance(order_by, (list, tuple)):
             # secore only handles a single item, not a multilayer sort
-            order_by = order_by[0]
-
+            if order_by: order_by = order_by[0]
+            else: order_by = None
+                
         results = ri.search(q, start_index, end_index, sortby=order_by)
         count = results.matches_estimated
 

@@ -194,23 +194,33 @@ class Content(object):
         if isinstance(result, list) and len(result) == 1:
             result = result[0]
         field = self._model.fields.get(key)
-        kind = propertyByKind(field[1])
-        # Errors here usually property request for a missing field
-        return kind.from_xapian(result)
-    
+        if field[1] == "external":
+            return self.get_external_property(key)
+        else:
+            kind = propertyByKind(field[1])
+            # Errors here usually property request for a missing field
+            return kind.from_xapian(result)
+
+    def get_external_property(self, key):
+        return self._backingstore.get_external_property(self.id, key)
         
     @property
     def properties(self):
         d = {}
-        for k, v in self.data.iteritems():
+        for k in self._model.fields:
             if k in EXCLUDED_PROPERTIES: continue
             
-            if isinstance(v, list) and len(v) == 1:
-                v = v[0]
             field = self._model.fields.get(k)
             if field:
-                kind = propertyByKind(field[1])
-                v = kind.from_xapian(v)
+                if field[1] == "external":
+                    v = self.get_external_property(k)
+                else:
+                    v = self.data.get(k, _marker)
+                    if v is _marker: continue
+                    if isinstance(v, list) and len(v) == 1:
+                        v = v[0]
+                    kind = propertyByKind(field[1])
+                    v = kind.from_xapian(v)
             else:
                 # do some generic property handling
                 if v: v = str(v)
@@ -344,6 +354,11 @@ registerPropertyType('date', dateenc, datedec, 'float', {'store' : True,
                      from_xapain=decode_datetime)
 
 
+registerPropertyType('external', noop, noop, 'string', {'external' : True,
+                                                        'store' : False,
+                                                        'exact' : False,
+                                                        'fulltext' : False,
+                                                        })
 
 defaultModel = Model().addFields(    
     ('fulltext', 'text'),
@@ -374,7 +389,7 @@ defaultModel = Model().addFields(
     ('title_set_by_user', 'text'),
     ('keep', 'int'),
     ('icon-color', 'string'),
-    ('preview', 'binary'),
+    ('preview', 'external'),
     ('buddies', 'text'),
     )
 

@@ -258,7 +258,8 @@ class IndexManager(object):
                  type='string', collapse=False,
                  **kwargs):
         language = kwargs.pop('language', self.language)
-        
+        external = kwargs.pop('external', False)
+
         xi = self.write_index.add_field_action
         
         if store: xi(key, secore.FieldActions.STORE_CONTENT)
@@ -348,9 +349,15 @@ class IndexManager(object):
                 warnings.warn("""Missing field configuration for %s""" % k,
                               RuntimeWarning)
                 continue
-            
-            add(secore.Field(k, value))
-            
+
+            # XXX: wrap this in a proper API
+            if self.datamodel.fields[k][1] == "external":
+                # XXX: this is done directly inline and could block,
+                # but the expected datasize is still small
+                self.backingstore.set_external_property(uid, k, value)
+            else:
+                add(secore.Field(k, value))
+                
         # queue the document for processing
         self.enque(uid, vid, doc, operation, filestuff)
 

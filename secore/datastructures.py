@@ -192,9 +192,11 @@ class ProcessedDocument(object):
                 term = tl.skip_to('Q').term
                 if len(term) == 0 or term[0] != 'Q':
                     return None
+                self._id = term[1:]
             except StopIteration:
+                self._id = None
                 return None
-            self._id = term[1:]
+
         return self._id
     def _set_id(self, id):
         tl = self._doc.termlist()

@@ -20,6 +20,7 @@ import subprocess
 import time
 import threading
 
+import dbus
 import xapian
 
 from olpc.datastore.xapianindex import IndexManager
@@ -556,8 +557,28 @@ class FileBackingStore(BackingStore):
         
     def get_uniquevaluesfor(self, propertyname):
         return self.indexmanager.get_uniquevaluesfor(propertyname)
+
+
+    def get_external_property(self, doc_id, key):
+        # external properties default to the following storage
+        # <repo>/key/uid which is the file containing the external
+        # data. its contents is returned by this call
+        # when missing or absent '' is returned
+        pfile = os.path.join(self.base, key, str(doc_id))
+        if os.path.exists(pfile): v = open(pfile, 'r').read()
+        else: v = ''
+        return dbus.ByteArray(v)
     
 
+    def set_external_property(self, doc_id, key, value):
+        pdir = os.path.join(self.base, key)
+        if not os.path.exists(pdir): os.mkdir(pdir)
+        pfile = os.path.join(pdir, doc_id)
+        fp = open(pfile, 'w')
+        fp.write(value)
+        fp.close()
+        
+        
     def find(self, query, order_by=None, limit=None, offset=0):
         if not limit: limit = 4069
         return self.indexmanager.search(query, start_index=offset, end_index=limit, order_by=order_by)

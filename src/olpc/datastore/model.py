@@ -252,6 +252,7 @@ class Content(object):
                 ext = mimetypes.guess_extension(mt)
                 # .ksh is a strange ext for plain text
                 if ext and ext == '.ksh': ext = '.txt'
+                if ext and ext == '.jpe': ext = '.jpg' # fixes #3163
                 if ext: return None, ext
         return None, None
 

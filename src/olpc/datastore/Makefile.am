@@ -5,6 +5,7 @@ datastore_PYTHON = 		\
 	bin_copy.py		\
 	converter.py 		\
 	datastore.py		\
+	logger.py		\
 	model.py		\
 	xapianindex.py		\
 	utils.py		\

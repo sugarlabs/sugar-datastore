@@ -11,10 +11,10 @@ __copyright__ = 'Copyright ObjectRealms, LLC, 2007'
 __license__  = 'The GNU Public License V2+'
 
 import datetime
-import mimetypes
 import os
 import time
 import warnings
+from sugar import mime
 from olpc.datastore.utils import timeparse
 
 
@@ -249,7 +249,7 @@ class Content(object):
             # try to get an extension from the mimetype if available
             mt = self.get_property('mime_type', None)
             if mt:
-                ext = mimetypes.guess_extension(mt)
+                ext = mime.get_primary_extension(mt)
                 # .ksh is a strange ext for plain text
                 if ext and ext == '.ksh': ext = '.txt'
                 if ext and ext == '.jpe': ext = '.jpg' # fixes #3163

@@ -583,6 +583,9 @@ class FileBackingStore(BackingStore):
         if not limit: limit = 4069
         return self.indexmanager.search(query, start_index=offset, end_index=limit, order_by=order_by)
 
+    def ids(self):
+        return self.indexmanager.get_all_ids()
+    
     def stop(self):
         self.indexmanager.stop()
 

@@ -253,6 +253,18 @@ class DataStore(dbus.service.Object):
                     d[hit.id] = hit
         return d, len(d), len(results)
 
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+             in_signature='s',
+             out_signature='as')
+    def ids(self, mountpoint=None):
+        """return all the ids of objects living on a given
+             mountpoint"""
+        if str(mountpoint) == "": mountpoint=None
+        mp = self._resolveMountpoint(mountpoint)
+        return mp.ids()
+    
+
     #@utils.sanitize_dbus    
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='a{sv}',

@@ -431,7 +431,9 @@ class IndexManager(object):
 
         # map the result set to model.Content items
         return ContentMappingIter(results, self.backingstore, self.datamodel), count
-    
+
+    def get_all_ids(self):
+        return [ti.term[1:] for ti in self.read_index._index.allterms('Q')]
 
     def get_uniquevaluesfor(self, property):
         # XXX: this is very sketchy code

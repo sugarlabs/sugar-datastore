@@ -583,6 +583,9 @@ class FileBackingStore(BackingStore):
         if not limit: limit = 4069
         return self.indexmanager.search(query, start_index=offset, end_index=limit, order_by=order_by)
 
+    def ids(self):
+        return self.indexmanager.get_all_ids()
+    
     def stop(self):
         self.indexmanager.stop()
 
@@ -654,58 +657,63 @@ class InplaceFileBackingStore(FileBackingStore):
         # scan the uri for all non self.base files and update their
         # records in the db
         for dirpath, dirname, filenames in os.walk(self.uri):
-            # see if there is an entry for the filename
-            if self.base in dirpath: continue
-            if self.STORE_NAME in dirname:
-                dirname.remove(self.STORE_NAME)
+            try:
+                # see if there is an entry for the filename
+                if self.base in dirpath: continue
+                if self.STORE_NAME in dirname:
+                    dirname.remove(self.STORE_NAME)
 
-            # blacklist all the hidden directories
-            if '/.' in dirpath: continue
+                # blacklist all the hidden directories
+                if '/.' in dirpath: continue
 
-            for fn in filenames:
-                # give the thread a chance to exit
-                if not self._runWalker: break
-                # blacklist files
-                #   ignore conventionally hidden files
-                if fn.startswith("."): continue
-                
-                source = os.path.join(dirpath, fn)
-                relative = source[len(self.uri)+1:]
+                for fn in filenames:
+                    try:
+                        # give the thread a chance to exit
+                        if not self._runWalker: break
+                        # blacklist files
+                        #   ignore conventionally hidden files
+                        if fn.startswith("."): continue
+                        
+                        source = os.path.join(dirpath, fn)
+                        relative = source[len(self.uri)+1:]
 
-                result, count = self.indexmanager.search(dict(filename=relative))
-                mime_type = gnomevfs.get_mime_type(source)
-                stat = os.stat(source)
-                ctime = datetime.fromtimestamp(stat.st_ctime).isoformat()
-                mtime = datetime.fromtimestamp(stat.st_mtime).isoformat()
-                title = os.path.splitext(os.path.split(source)[1])[0]
-                metadata = dict(filename=relative,
-                                mime_type=mime_type,
-                                ctime=ctime,
-                                mtime=mtime,
-                                title=title)
-                if not count:
-                    # create a new record
-                    self.create(metadata, source)
-                else:
-                    # update the object with the new content iif the
-                    # checksum is different
-                    # XXX: what if there is more than one? (shouldn't
-                    # happen)
+                        result, count = self.indexmanager.search(dict(filename=relative))
+                        mime_type = gnomevfs.get_mime_type(source)
+                        stat = os.stat(source)
+                        ctime = datetime.fromtimestamp(stat.st_ctime).isoformat()
+                        mtime = datetime.fromtimestamp(stat.st_mtime).isoformat()
+                        title = os.path.splitext(os.path.split(source)[1])[0]
+                        metadata = dict(filename=relative,
+                                        mime_type=mime_type,
+                                        ctime=ctime,
+                                        mtime=mtime,
+                                        title=title)
+                        if not count:
+                            # create a new record
+                            self.create(metadata, source)
+                        else:
+                            # update the object with the new content iif the
+                            # checksum is different
+                            # XXX: what if there is more than one? (shouldn't
+                            # happen)
 
-                    # FIXME This is throwing away all the entry metadata.
-                    # Disabled for trial-3. We are not doing indexing
-                    # anyway so it would just update the mtime which is
-                    # not that useful. Also the journal is currently
-                    # setting the mime type before saving the file making
-                    # the mtime check useless.
-                    #
-                    # content = result.next()
-                    # uid = content.id
-                    # saved_mtime = content.get_property('mtime')
-                    # if mtime != saved_mtime:
-                    #     self.update(uid, metadata, source)
-                    pass
-
+                            # FIXME This is throwing away all the entry metadata.
+                            # Disabled for trial-3. We are not doing indexing
+                            # anyway so it would just update the mtime which is
+                            # not that useful. Also the journal is currently
+                            # setting the mime type before saving the file making
+                            # the mtime check useless.
+                            #
+                            # content = result.next()
+                            # uid = content.id
+                            # saved_mtime = content.get_property('mtime')
+                            # if mtime != saved_mtime:
+                            #     self.update(uid, metadata, source)
+                            pass
+                    except Exception, e:
+                        logging.exception('Error while processing %r: %r' % (fn, e))
+            except Exception, e:
+                logging.exception('Error while indexing mount point %r: %r' % (self.uri, e))
         self.indexmanager.flush()
         return
 

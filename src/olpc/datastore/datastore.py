@@ -253,11 +253,23 @@ class DataStore(dbus.service.Object):
                     d[hit.id] = hit
         return d, len(d), len(results)
 
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+             in_signature='s',
+             out_signature='as')
+    def ids(self, mountpoint=None):
+        """return all the ids of objects living on a given
+             mountpoint"""
+        if str(mountpoint) == "": mountpoint=None
+        mp = self._resolveMountpoint(mountpoint)
+        return mp.ids()
+    
+
     #@utils.sanitize_dbus    
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='a{sv}as',
+             in_signature='a{sv}',
              out_signature='aa{sv}u')
-    def find(self, query=None, properties=None, **kwargs):
+    def find(self, query=None, **kwargs):
         """find(query)
         takes a dict of parameters and returns data in the following
              format
@@ -294,7 +306,8 @@ class DataStore(dbus.service.Object):
         else:
             if 'query' not in kwargs:
                 kwargs['query'] = query
-        
+
+        properties = kwargs.pop("properties", [])
         include_files = kwargs.pop('include_files', False)
         order_by = kwargs.pop('order_by', [])
 

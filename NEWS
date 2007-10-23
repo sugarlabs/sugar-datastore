@@ -1,4 +1,5 @@
 * #3768 Fix copy of clipboard objects to usb stick (marco)
+* #4235: Keep indexing an usb stick after an error in a single file. (tomeu)
 
 Snapshot 89ae26ced4
 

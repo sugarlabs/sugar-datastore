@@ -735,6 +735,7 @@ class InplaceFileBackingStore(FileBackingStore):
 
     def _get_unique_filename(self, suggested_filename):
         filename = suggested_filename.replace('/', '_')
+        filename = filename.replace(':', '_')
 
         # FAT limit is 255, leave some space for uniqueness
         max_len = 250

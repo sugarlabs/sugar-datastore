@@ -1,3 +1,5 @@
+* #3768 Fix copy of clipboard objects to usb stick (marco)
+
 Snapshot 89ae26ced4
 
 * Improved mime type handling. (marco)

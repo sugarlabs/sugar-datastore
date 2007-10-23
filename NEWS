@@ -1,3 +1,5 @@
+* #4235: Keep indexing an usb stick after an error in a single file. (tomeu)
+
 Snapshot 89ae26ced4
 
 * Improved mime type handling. (marco)

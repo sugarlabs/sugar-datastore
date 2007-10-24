@@ -267,9 +267,9 @@ class DataStore(dbus.service.Object):
 
     #@utils.sanitize_dbus    
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='a{sv}',
+             in_signature='a{sv}as',
              out_signature='aa{sv}u')
-    def find(self, query=None, **kwargs):
+    def find(self, query=None, properties=None, **kwargs):
         """find(query)
         takes a dict of parameters and returns data in the following
              format
@@ -306,8 +306,7 @@ class DataStore(dbus.service.Object):
         else:
             if 'query' not in kwargs:
                 kwargs['query'] = query
-
-        properties = kwargs.pop("properties", [])
+        
         include_files = kwargs.pop('include_files', False)
         order_by = kwargs.pop('order_by', [])
 

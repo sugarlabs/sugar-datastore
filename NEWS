@@ -1,5 +1,4 @@
 * #4182: Flush every 20 changes or 1 minute after the last unflushed change. (tomeu)
-* #4083: Remove the active loop and check usb sticks on idle. (tomeu)
 
 Snapshot 5051fc3a4b
 

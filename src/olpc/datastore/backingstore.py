@@ -22,6 +22,7 @@ import threading
 
 import dbus
 import xapian
+import gobject
 
 from olpc.datastore.xapianindex import IndexManager
 from olpc.datastore import bin_copy
@@ -174,7 +175,6 @@ class AsyncCopy:
         logger.debug("AC: will copy %s -> %s (%d bytes)" % (self.src, self.dest, self.size))
 
         self.tstart = time.time()
-        import gobject
         sid = gobject.idle_add(self._copy_block)
 
 class FileBackingStore(BackingStore):
@@ -612,7 +612,7 @@ class InplaceFileBackingStore(FileBackingStore):
         super(InplaceFileBackingStore, self).__init__(uri, **kwargs)
         # use the original uri
         self.uri = uri
-        self.walker = None
+        self._walk_source = None
         
     @staticmethod
     def parse(uri):
@@ -646,76 +646,74 @@ class InplaceFileBackingStore(FileBackingStore):
 
         # now map/update the existing data into the indexes
         # but do it async
-        self.walker = threading.Thread(target=self._walk)
-        self._runWalker = True
-        self.walker.setDaemon(True)
-        self.walker.start()
-
-    def _walk(self):
-        # XXX: a version that checked xattr for uid would be simple
-        # and faster
-        # scan the uri for all non self.base files and update their
-        # records in the db
+        files_to_check = []
         for dirpath, dirname, filenames in os.walk(self.uri):
-            try:
-                # see if there is an entry for the filename
-                if self.base in dirpath: continue
-                if self.STORE_NAME in dirname:
-                    dirname.remove(self.STORE_NAME)
+            if self.base in dirpath: continue
+            if self.STORE_NAME in dirname:
+                dirname.remove(self.STORE_NAME)
 
-                # blacklist all the hidden directories
-                if '/.' in dirpath: continue
+            # blacklist all the hidden directories
+            if '/.' in dirpath: continue
 
-                for fn in filenames:
-                    try:
-                        # give the thread a chance to exit
-                        if not self._runWalker: break
-                        # blacklist files
-                        #   ignore conventionally hidden files
-                        if fn.startswith("."): continue
-                        
-                        source = os.path.join(dirpath, fn)
-                        relative = source[len(self.uri)+1:]
+            for fn in filenames:
+                # ignore conventionally hidden files
+                if fn.startswith("."):
+                    continue
+                files_to_check.append((dirpath, fn))
 
-                        result, count = self.indexmanager.search(dict(filename=relative))
-                        mime_type = gnomevfs.get_mime_type(source)
-                        stat = os.stat(source)
-                        ctime = datetime.fromtimestamp(stat.st_ctime).isoformat()
-                        mtime = datetime.fromtimestamp(stat.st_mtime).isoformat()
-                        title = os.path.splitext(os.path.split(source)[1])[0]
-                        metadata = dict(filename=relative,
-                                        mime_type=mime_type,
-                                        ctime=ctime,
-                                        mtime=mtime,
-                                        title=title)
-                        if not count:
-                            # create a new record
-                            self.create(metadata, source)
-                        else:
-                            # update the object with the new content iif the
-                            # checksum is different
-                            # XXX: what if there is more than one? (shouldn't
-                            # happen)
+        self._walk_source = gobject.idle_add(self._walk, files_to_check)
 
-                            # FIXME This is throwing away all the entry metadata.
-                            # Disabled for trial-3. We are not doing indexing
-                            # anyway so it would just update the mtime which is
-                            # not that useful. Also the journal is currently
-                            # setting the mime type before saving the file making
-                            # the mtime check useless.
-                            #
-                            # content = result.next()
-                            # uid = content.id
-                            # saved_mtime = content.get_property('mtime')
-                            # if mtime != saved_mtime:
-                            #     self.update(uid, metadata, source)
-                            pass
-                    except Exception, e:
-                        logging.exception('Error while processing %r: %r' % (fn, e))
-            except Exception, e:
-                logging.exception('Error while indexing mount point %r: %r' % (self.uri, e))
-        self.indexmanager.flush()
-        return
+    def _walk(self, files_to_check):
+        dirpath, fn = files_to_check.pop()
+        logging.debug('InplaceFileBackingStore._walk(): %r' % fn)
+        try:
+            source = os.path.join(dirpath, fn)
+            relative = source[len(self.uri)+1:]
+
+            result, count = self.indexmanager.search(dict(filename=relative))
+            mime_type = gnomevfs.get_mime_type(source)
+            stat = os.stat(source)
+            ctime = datetime.fromtimestamp(stat.st_ctime).isoformat()
+            mtime = datetime.fromtimestamp(stat.st_mtime).isoformat()
+            title = os.path.splitext(os.path.split(source)[1])[0]
+            metadata = dict(filename=relative,
+                            mime_type=mime_type,
+                            ctime=ctime,
+                            mtime=mtime,
+                            title=title)
+            if not count:
+                # create a new record
+                self.create(metadata, source)
+            else:
+                # update the object with the new content iif the
+                # checksum is different
+                # XXX: what if there is more than one? (shouldn't
+                # happen)
+
+                # FIXME This is throwing away all the entry metadata.
+                # Disabled for trial-3. We are not doing indexing
+                # anyway so it would just update the mtime which is
+                # not that useful. Also the journal is currently
+                # setting the mime type before saving the file making
+                # the mtime check useless.
+                #
+                # content = result.next()
+                # uid = content.id
+                # saved_mtime = content.get_property('mtime')
+                # if mtime != saved_mtime:
+                #     self.update(uid, metadata, source)
+                pass
+
+            self.indexmanager.flush()
+
+        except Exception, e:
+            logging.exception('Error while processing %r: %r' % (fn, e))
+
+        if files_to_check:
+            return True
+        else:
+            self._walk_source = None
+            return False
 
     def _translatePath(self, uid):
         try: content = self.indexmanager.get(uid)
@@ -849,12 +847,11 @@ class InplaceFileBackingStore(FileBackingStore):
                 os.unlink(path)
         
     def stop(self):
-        if self.walker and self.walker.isAlive():
-            # XXX: just force the unmount, flush the index queue
-            self._runWalker = False
+        if self._walk_source is not None:
+            gobject.source_remove(self._walk_source)
         self.indexmanager.stop(force=True)
 
     def complete_indexing(self):
-        if self.walker and self.walker.isAlive():
-            self.walker.join()
+        # TODO: Perhaps we should move the inplace indexing to be sync here?
         self.indexmanager.complete_indexing()
+

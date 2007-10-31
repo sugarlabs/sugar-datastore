@@ -1,3 +1,5 @@
+* #4083: Remove the active loop and check usb sticks on idle. (tomeu)
+
 Snapshot 5051fc3a4b
 
 Snapshot 26a372063c

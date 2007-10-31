@@ -1,3 +1,4 @@
+* #4083: Remove the active loop and initialize threads. (tomeu)
 * #4182: Flush every 20 changes or 1 minute after the last unflushed change. (tomeu)
 
 Snapshot 5051fc3a4b

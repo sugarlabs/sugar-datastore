@@ -1,3 +1,5 @@
+* #4234 Fix copying a download to an usb stick. (marco)
+
 Snapshot fa80f025af
 
 * #4083: Remove the active loop and initialize threads. (tomeu)

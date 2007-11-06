@@ -19,6 +19,8 @@ import sha
 import subprocess
 import time
 import threading
+import errno
+import shutil
 
 import dbus
 import xapian
@@ -343,11 +345,12 @@ class FileBackingStore(BackingStore):
         return os.path.join(self.base, str(uid))
 
     def _targetFile(self, uid, target=None, ext=None, env=None):
+        logging.debug('FileBackingStore._targetFile: %r %r %r %r' % (uid, target, ext, env))
         # paths out of the datastore, working copy targets
         path = self._translatePath(uid)
         if not os.path.exists(path):
             return None
-        
+
         if target: targetpath = target
         else:
             targetpath = uid.replace('/', '_').replace('.', '__')
@@ -355,8 +358,12 @@ class FileBackingStore(BackingStore):
                 if not ext.startswith('.'): ext = ".%s" % ext
                 targetpath = "%s%s" % (targetpath, ext)
 
-        base = '/tmp'
-        if env: base = env.get('cwd', base)
+        # TODO: When rainbow can tell us, we'll save the file to a dir inside the
+        # activity file space.
+        profile = os.environ.get('SUGAR_PROFILE', 'default')
+        base = os.path.join(os.path.expanduser('~'), '.sugar', profile, 'data')
+        if not os.path.exists(base):
+            os.makedirs(base)
         
         targetpath = os.path.join(base, targetpath)
         attempt = 0
@@ -375,10 +382,16 @@ class FileBackingStore(BackingStore):
                 break
 
             targetpath = "%s(%s)%s" % (targetpath, attempt, ext)
+
+        try:
+            os.link(path, targetpath)
+        except OSError, e:
+            if e.errno == errno.EXDEV:
+                shutil.copy(path, targetpath)
+            else:
+                raise
             
-        if subprocess.call(['cp', path, targetpath]):
-            raise OSError("unable to create working copy")
-        return open(targetpath, 'rw')
+        return open(targetpath, 'r')
             
     def _mapContent(self, uid, fp, path, env=None):
         """map a content object and the file in the repository to a

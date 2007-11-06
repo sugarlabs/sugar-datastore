@@ -260,11 +260,8 @@ class Content(object):
         if not hasattr(self, "_file") or not self._file or \
                self._file.closed is True:
             target, ext = self.suggestName()
-            try:
-                targetfile = self.backingstore._targetFile(self.id, target, ext)
-                self._file = targetfile
-            except OSError:
-                self._file = None
+            targetfile = self.backingstore._targetFile(self.id, target, ext)
+            self._file = targetfile
         return self._file
     
     def set_file(self, fileobj):

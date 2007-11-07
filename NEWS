@@ -1,3 +1,5 @@
+Snapshot 3b70954e71
+
 * #3801 Check out files in the activity instance dir with the correct
   permissions. (tomeu)
 * #4704 Fix copy of entries with file to removable devices. (tomeu)

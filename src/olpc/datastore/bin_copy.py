@@ -1,21 +1,17 @@
 import os, subprocess
 
 
-def bin_copy(src, dest, mode=0600):
+def bin_copy(src, dest):
     try:
         subprocess.check_call(['/bin/cp', src, dest])
     except subprocess.CalledProcessError:
         raise OSError("Copy failed %s %s" % (src, dest))
-    else:
-        os.chmod(dest, mode)
 
-def bin_mv(src, dest, mode=0600):
+def bin_mv(src, dest):
     try:
         subprocess.check_call(['/bin/mv', src, dest])
     except subprocess.CalledProcessError:
         raise OSError("Move failed %s %s" % (src, dest))
-    else:
-        os.chmod(dest, mode)
 
 if __name__ == "__main__":
     import sys

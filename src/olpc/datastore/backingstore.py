@@ -419,10 +419,19 @@ class FileBackingStore(BackingStore):
         return content
 
     def _writeContent_complete(self, path, completion=None):
+        self._set_permissions_if_possible(path)
         if completion is None:
             return path
         completion(None, path)
         return None
+
+    def _set_permissions_if_possible(self, path):
+        try:
+            os.chmod(path, 0604)
+        except OSError, e:
+            # This can fail for usb sticks.
+            if e.errno != errno.EPERM:
+                raise
 
     def _writeContent(self, uid, filelike, replace=True, can_move=False, target=None,
             completion=None):
@@ -440,10 +449,12 @@ class FileBackingStore(BackingStore):
             # protection on inplace stores
             if completion is None:
                 bin_copy.bin_copy(filelike.name, path)
+                self._set_permissions_if_possible(path)
                 return path
 
             if can_move:
                 bin_copy.bin_mv(filelike.name, path)
+                self._set_permissions_if_possible(path)
                 return self._writeContent_complete(path, completion)
 
             # Otherwise, async copy

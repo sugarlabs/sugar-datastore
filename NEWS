@@ -1,3 +1,5 @@
+* #3801 Check out files in the activity instance dir with the correct
+  permissions. (tomeu)
 * #4704 Fix copy of entries with file to removable devices. (tomeu)
 * #4714 Fix copy of entries without file to removable devices. (tomeu)
 

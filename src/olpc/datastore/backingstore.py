@@ -206,6 +206,12 @@ class FileBackingStore(BackingStore):
         self.base = os.path.join(uri, self.STORE_NAME)
         self.indexmanager = None
         
+        """ Current uid of the user that is calling DataStore.get_filename
+        through dbus. Needed for security stuff. It is an instance variable
+        instead of a method parameter because this is less invasive for Update 1.
+        """
+        self.current_user_id = None
+        
     # Informational
     def descriptor(self):
         """return a dict with atleast the following keys
@@ -358,13 +364,17 @@ class FileBackingStore(BackingStore):
                 if not ext.startswith('.'): ext = ".%s" % ext
                 targetpath = "%s%s" % (targetpath, ext)
 
-        # TODO: When rainbow can tell us, we'll save the file to a dir inside the
-        # activity file space.
-        profile = os.environ.get('SUGAR_PROFILE', 'default')
-        base = os.path.join(os.path.expanduser('~'), '.sugar', profile, 'data')
-        if not os.path.exists(base):
-            os.makedirs(base)
-        
+        if os.path.exists('/etc/olpc-security'):
+            if not self.current_user_id:
+                raise ValueError("Couldn't determine the current user uid.")
+            base = os.path.join('/activities', 'uid_to_instance_dir',
+                                str(self.current_user_id))
+        else:
+            profile = os.environ.get('SUGAR_PROFILE', 'default')
+            base = os.path.join(os.path.expanduser('~'), '.sugar', profile, 'data')
+            if not os.path.exists(base):
+                os.makedirs(base)
+
         targetpath = os.path.join(base, targetpath)
         attempt = 0
         while os.path.exists(targetpath):
@@ -383,11 +393,13 @@ class FileBackingStore(BackingStore):
 
             targetpath = "%s(%s)%s" % (targetpath, attempt, ext)
 
+        os.chmod(path, 0604)
         try:
             os.link(path, targetpath)
         except OSError, e:
             if e.errno == errno.EXDEV:
                 shutil.copy(path, targetpath)
+                os.chmod(targetpath, 0604)
             else:
                 raise
             

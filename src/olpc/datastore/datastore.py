@@ -404,13 +404,25 @@ class DataStore(dbus.service.Object):
     #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
-             out_signature='s')
-    def get_filename(self, uid):
+             out_signature='s',
+             sender_keyword='sender')
+    def get_filename(self, uid, sender=None):
         content = self.get(uid)
         if content:
-            try: return content.filename
-            except AttributeError: pass
-        return ''
+            # Assign to the backing store the uid of the process that called
+            # this method. This is needed for copying the file in the right
+            # place.
+            backingstore = content.backingstore
+            backingstore.current_user_id = dbus.Bus().get_unix_user(sender)
+            try:
+                # Retrieving the file path for the file will cause the file to be
+                # copied or linked to a directory accessible by the caller.
+                file_path = content.filename
+            except AttributeError:
+                file_path = ''
+            finally:
+                backingstore.current_user_id = None
+        return file_path
         
     #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,

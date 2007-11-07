@@ -746,8 +746,6 @@ class InplaceFileBackingStore(FileBackingStore):
     # File Management API
     def create_async(self, props, filelike, completion, can_move=False):
         """Inplace backing store doesn't copy, so no need for async"""
-        if not filelike:
-            raise RuntimeError("Filelike must be valid for async create")
         try:
             uid = self.create(props, filelike, can_move)
             completion(None, uid)
@@ -817,8 +815,6 @@ class InplaceFileBackingStore(FileBackingStore):
         return content
 
     def update_async(self, uid, props, filelike, completion, can_move=False):
-        if filelike is None:
-            raise RuntimeError("Filelike must be valid for async update")
         try:
             self.update(uid, props, filelike, can_move)
             completion()

@@ -364,7 +364,9 @@ class FileBackingStore(BackingStore):
                 if not ext.startswith('.'): ext = ".%s" % ext
                 targetpath = "%s%s" % (targetpath, ext)
 
-        if os.path.exists('/etc/olpc-security'):
+        use_instance_dir = os.path.exists('/etc/olpc-security') and \
+                           os.getuid() != self.current_user_id
+        if use_instance_dir:
             if not self.current_user_id:
                 raise ValueError("Couldn't determine the current user uid.")
             base = os.path.join('/activities', 'uid_to_instance_dir',

@@ -1,3 +1,5 @@
+* Copy files to the profile dir when asked by an out-of-container process. (tomeu)
+
 Snapshot 3b70954e71
 
 * #3801 Check out files in the activity instance dir with the correct

@@ -403,7 +403,7 @@ class FileBackingStore(BackingStore):
             if e.errno != errno.EPERM:
                 raise
 
-        # Try to link from the original file to the targetpath. This can work if
+        # Try to link from the original file to the targetpath. This can fail if
         # the file is in a different filesystem. Do a copy instead.
         try:
             os.link(path, targetpath)

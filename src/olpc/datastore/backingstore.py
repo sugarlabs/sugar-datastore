@@ -395,7 +395,16 @@ class FileBackingStore(BackingStore):
 
             targetpath = "%s(%s)%s" % (targetpath, attempt, ext)
 
-        os.chmod(path, 0604)
+        # Try to make the original file readable. This can fail if the file is
+        # in FAT filesystem.
+        try:
+            os.chmod(path, 0604)
+        except OSError, e:
+            if e.errno != errno.EPERM:
+                raise
+
+        # Try to link from the original file to the targetpath. This can work if
+        # the file is in a different filesystem. Do a copy instead.
         try:
             os.link(path, targetpath)
         except OSError, e:

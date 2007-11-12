@@ -14,7 +14,10 @@ import datetime
 import os
 import time
 import warnings
+import logging
+
 from sugar import mime
+
 from olpc.datastore.utils import timeparse
 
 
@@ -227,7 +230,17 @@ class Content(object):
                 else: v = ''
             d[k] = v
         return d
-    
+
+    def _get_extension_from_mimetype(self):
+        # try to get an extension from the mimetype if available
+        mt = self.get_property('mime_type', None)
+        if mt is not None:
+            ext = mime.get_primary_extension(mt)
+            # .ksh is a strange ext for plain text
+            if ext and ext == '.ksh': ext = '.txt'
+            if ext and ext == '.jpe': ext = '.jpg' # fixes #3163
+            return ext
+        return None
 
     def suggestName(self):
         # we look for certain known property names
@@ -237,6 +250,10 @@ class Content(object):
         # checkout name
         filename = self.get_property('filename', None)
         ext = self.get_property('ext', '')
+        if not ext:
+            ext = self._get_extension_from_mimetype()
+
+        logging.debug('Content.suggestName: %r %r' % (filename, ext))
 
         if filename:
             # some backingstores keep the full relative path
@@ -244,16 +261,9 @@ class Content(object):
             f, e = os.path.splitext(filename)
             if e: return filename, None
             if ext: return "%s.%s" % (filename, ext), None
-        elif ext: return None, ext
-        else:
-            # try to get an extension from the mimetype if available
-            mt = self.get_property('mime_type', None)
-            if mt:
-                ext = mime.get_primary_extension(mt)
-                # .ksh is a strange ext for plain text
-                if ext and ext == '.ksh': ext = '.txt'
-                if ext and ext == '.jpe': ext = '.jpg' # fixes #3163
-                if ext: return None, ext
+        elif ext:
+            return None, ext
+
         return None, None
 
     def get_file(self):

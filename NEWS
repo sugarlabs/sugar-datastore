@@ -1,3 +1,4 @@
+* #4783 Try harder to guess the file extension. (tomeu)
 * #4796 Ignore failure to chmod files in usb sticks. (tomeu)
 
 Snapshot 62a5c30d81

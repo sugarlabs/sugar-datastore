@@ -1,3 +1,4 @@
+* #4662 Add the 'source' property to the model. (marco)
 * #4558 Correctly encode characters in URI. (tomeu)
 
 Snapshot a42f40d575

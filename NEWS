@@ -1,3 +1,5 @@
+* #4784 Use valid FAT names when saving entries to usb sticks. (tomeu)
+
 Snapshot 6d3d607ec7
 
 * #4783 Try harder to guess the file extension. (tomeu)

@@ -787,9 +787,13 @@ class InplaceFileBackingStore(FileBackingStore):
             completion(exc)
 
     def _get_unique_filename(self, suggested_filename):
-        filename = suggested_filename.replace('/', '_')
-        filename = filename.replace(':', '_')
-        filename = filename.replace('\n', '_')
+        # Invalid characters in VFAT filenames. From
+        # http://en.wikipedia.org/wiki/File_Allocation_Table
+        invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '\x7F']
+        invalid_chars.extend([chr(x) for x in range(0, 32)])
+        filename = suggested_filename
+        for char in invalid_chars:
+            filename = filename.replace(char, '_')
 
         # FAT limit is 255, leave some space for uniqueness
         max_len = 250
@@ -825,12 +829,12 @@ class InplaceFileBackingStore(FileBackingStore):
             # files to these devices we need to detect this case and
             # place the file
             proposed_name = props.get('filename', None)
-            if not proposed_name:
-                suggested = props.get('suggested_filename', None)
-                if suggested:
-                    proposed_name = self._get_unique_filename(suggested)
-            if not proposed_name:
-                proposed_name = os.path.split(filelike.name)[1]
+            if proposed_name is None:
+                proposed_name = props.get('suggested_filename', None)
+                if proposed_name is None:
+                    proposed_name = os.path.split(filelike.name)[1]
+                proposed_name = self._get_unique_filename(proposed_name)
+
             # record the name before qualifying it to the store
             props['filename'] = proposed_name
             proposed_name = os.path.join(self.uri, proposed_name)

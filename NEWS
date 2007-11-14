@@ -1,3 +1,5 @@
+* #4558 Correctly encode characters in URI. (tomeu)
+
 Snapshot a42f40d575
 
 * #4784 Use valid FAT names when saving entries to usb sticks. (tomeu)

@@ -21,6 +21,7 @@ import time
 import threading
 import errno
 import shutil
+import urllib
 
 import dbus
 import xapian
@@ -725,7 +726,7 @@ class InplaceFileBackingStore(FileBackingStore):
                         relative = source[len(self.uri)+1:]
 
                         result, count = self.indexmanager.search(dict(filename=relative))
-                        mime_type = gnomevfs.get_mime_type(source)
+                        mime_type = gnomevfs.get_mime_type(urllib.quote(source))
                         stat = os.stat(source)
                         ctime = datetime.fromtimestamp(stat.st_ctime).isoformat()
                         mtime = datetime.fromtimestamp(stat.st_mtime).isoformat()

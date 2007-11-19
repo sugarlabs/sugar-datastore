@@ -104,6 +104,12 @@ class IndexManager(object):
         datamodel = kwargs.get('model', model.defaultModel)
         datamodel.apply(self)
 
+        # configure the model according to the database
+        for field_name in self.write_index._field_actions:
+            if field_name not in datamodel.fields:
+                datamodel.addField(field_name, 'string')
+            self.fields.add(field_name)
+
         # store a reference
         self.datamodel = datamodel
         
@@ -308,6 +314,7 @@ class IndexManager(object):
         d = {}
         add_anything = False
         for k,v in props.iteritems():
+            k = str(k)
             p, added = self.datamodel.fromstring(k, v,
                                                  allowAddition=True)
             if added is True:

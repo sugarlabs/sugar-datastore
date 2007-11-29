@@ -282,19 +282,22 @@ class IndexManager(object):
         external = kwargs.pop('external', False)
 
         xi = self.write_index.add_field_action
-        
-        if store: xi(key, secore.FieldActions.STORE_CONTENT)
-        if exact: xi(key, secore.FieldActions.INDEX_EXACT)
-        elif fulltext:
-            # weight -- int 1 or more
-            # nopos  -- don't include positional information
-            # noprefix -- boolean
-            xi(key, secore.FieldActions.INDEX_FREETEXT, language=language, **kwargs)
 
-        if sortable:
-            xi(key, secore.FieldActions.SORTABLE, type=type)
-        if collapse:
-            xi(key, secore.FieldActions.COLLAPSE)
+        try:
+            if store: xi(key, secore.FieldActions.STORE_CONTENT)
+            if exact: xi(key, secore.FieldActions.INDEX_EXACT)
+            elif fulltext:
+                # weight -- int 1 or more
+                # nopos  -- don't include positional information
+                # noprefix -- boolean
+                xi(key, secore.FieldActions.INDEX_FREETEXT, language=language, **kwargs)
+
+            if sortable:
+                xi(key, secore.FieldActions.SORTABLE, type=type)
+            if collapse:
+                xi(key, secore.FieldActions.COLLAPSE)
+        except secore.IndexerError, e:
+            logging.warning('Could not add field %r: %s' % (key, e))
 
         # track this to find missing field configurations
         self.fields.add(key)

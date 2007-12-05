@@ -400,5 +400,6 @@ defaultModel = Model().addFields(
     ('preview', 'external'),
     ('buddies', 'text'),
     ('source', 'text'),
+    ('description', 'text'),
     )
 

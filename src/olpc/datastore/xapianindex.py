@@ -22,6 +22,7 @@ import time
 import thread
 import threading
 import warnings
+import traceback
 
 import secore
 import xapian as _xapian # we need to modify the QueryParser
@@ -165,7 +166,11 @@ class IndexManager(object):
         self.deltact += 1
         if force or self.deltact > FLUSH_THRESHOLD:
             with self._write_lock:
-                self.write_index.flush()
+                try:
+                   self.write_index.flush()
+                except Exception:
+                    logging.error('Index flush failed:\n' + \
+                        ''.join(traceback.format_exception(*sys.exc_info())))
                 #self.read_index.reopen()
                 self.deltact = 0
         else:

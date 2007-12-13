@@ -399,5 +399,6 @@ defaultModel = Model().addFields(
     ('icon-color', 'string'),
     ('preview', 'external'),
     ('buddies', 'text'),
+    ('source', 'text'),
     )
 

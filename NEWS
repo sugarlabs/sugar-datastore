@@ -1,5 +1,3 @@
-* #4662 Correctly fix properties not in the model. (tomeu)
-
 Snapshot ea0764a9e9
 
 * #4662 Add the 'source' property to the model. (marco)

@@ -82,6 +82,8 @@ class IndexerConnection(object):
             return
         fd = open(config_file)
         config_str = fd.read()
+        if not config_str:
+            return
         fd.close()
 
         (self._field_actions, mappings, self._next_docid) = _cPickle.loads(config_str)

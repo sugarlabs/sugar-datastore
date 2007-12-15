@@ -22,8 +22,6 @@ import threading
 import errno
 import shutil
 import urllib
-import traceback
-import sys
 
 import dbus
 import xapian
@@ -269,13 +267,11 @@ class FileBackingStore(BackingStore):
         if 'uri' not in desc: desc['uri'] = self.uri
         if 'title' not in desc: desc['title'] = self.uri
 
-        try:
-            fp = open(fn, 'w')
-            pickle.dump(desc, fp)
-            fp.close()
-        except Exception:
-            logging.error('Unable to write descriptor:\n' + \
-                ''.join(traceback.format_exception(*sys.exc_info())))
+
+        fp = open(fn, 'w')
+        pickle.dump(desc, fp)
+        fp.close()
+
 
     @staticmethod
     def parse(uri):

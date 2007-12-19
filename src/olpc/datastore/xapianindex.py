@@ -22,6 +22,7 @@ import time
 import thread
 import threading
 import warnings
+import traceback
 
 import secore
 import xapian as _xapian # we need to modify the QueryParser
@@ -124,7 +125,15 @@ class IndexManager(object):
         logging.debug('IndexManager.stop()')
         self.flush(force=True)
         self.stopIndexer(force)
-        self.write_index.close()
+
+        # TODO: Would be better to check if the device is present and
+        # don't try to close if it's not.
+        try:
+            self.write_index.close()
+        except _xapian.DatabaseError, e:
+            logging.debug('Index close failed:\n' + \
+                ''.join(traceback.format_exception(*sys.exc_info())))
+
         #self.read_index.close()
         # XXX: work around for xapian not having close() this will
         # change in the future in the meantime we delete the
@@ -165,7 +174,15 @@ class IndexManager(object):
         self.deltact += 1
         if force or self.deltact > FLUSH_THRESHOLD:
             with self._write_lock:
-                self.write_index.flush()
+
+                # TODO: Would be better to check if the device is present and
+                # don't try to flush if it's not.
+                try:
+                   self.write_index.flush()
+                except _xapian.DatabaseError, e:
+                    logging.debug('Index flush failed:\n' + \
+                        ''.join(traceback.format_exception(*sys.exc_info())))
+
                 #self.read_index.reopen()
                 self.deltact = 0
         else:

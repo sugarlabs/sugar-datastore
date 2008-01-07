@@ -410,14 +410,13 @@ class FileBackingStore(BackingStore):
             if e.errno != errno.EPERM:
                 raise
 
-        # Try to link from the original file to the targetpath. This can fail if
-        # the file is in a different filesystem. Do a copy instead.
+        # Try to hard link from the original file to the targetpath. This can
+        # fail if the file is in a different filesystem. Do a symlink instead.
         try:
             os.link(path, targetpath)
         except OSError, e:
             if e.errno == errno.EXDEV:
-                shutil.copy(path, targetpath)
-                os.chmod(targetpath, 0604)
+                os.symlink(path, targetpath)
             else:
                 raise
             

@@ -377,7 +377,7 @@ class FileBackingStore(BackingStore):
         if use_instance_dir:
             if not self.current_user_id:
                 raise ValueError("Couldn't determine the current user uid.")
-            base = os.path.join('/activities', 'uid_to_instance_dir',
+            base = os.path.join(os.environ['HOME'], 'isolation', '1', 'uid_to_instance_dir',
                                 str(self.current_user_id))
         else:
             profile = os.environ.get('SUGAR_PROFILE', 'default')

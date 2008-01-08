@@ -170,6 +170,13 @@ class Model(object):
             args = self.fields[fn]
             addField(args[0], **args[2])
 
+    def get_external_properties(self):
+        external_properties = []
+        for field_name in self.fields:
+            field = self.fields.get(field_name)
+            if field[1] == "external":
+                external_properties.append(field[0])
+        return external_properties
 
 # Properties we don't automatically include in properties dict
 EXCLUDED_PROPERTIES = ['fulltext', ]

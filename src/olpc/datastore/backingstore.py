@@ -32,6 +32,7 @@ import gobject
 from olpc.datastore.xapianindex import IndexManager
 from olpc.datastore import bin_copy
 from olpc.datastore import utils
+from olpc.datastore import model
 
 # changing this pattern impacts _targetFile
 filename_attempt_pattern = re.compile('\(\d+\)$')
@@ -599,7 +600,17 @@ class FileBackingStore(BackingStore):
         else:
             self.indexmanager.index(props)
 
+    def _delete_external_properties(self, uid):
+        external_properties = model.defaultModel.get_external_properties()
+        for property_name in external_properties:
+            file_path = os.path.join(self.base, property_name, uid)
+            if os.path.exists(file_path):
+                logging.debug('deleting external property: %r' % file_path)
+                os.unlink(file_path)
+
     def delete(self, uid, allowMissing=True):
+        self._delete_external_properties(uid)
+
         self.indexmanager.delete(uid)
         path = self._translatePath(uid)
         if os.path.exists(path):
@@ -888,6 +899,8 @@ class InplaceFileBackingStore(FileBackingStore):
         self.indexmanager.index(props, path)
         
     def delete(self, uid):
+        self._delete_external_properties(uid)
+
         c = self.indexmanager.get(uid)
         path = c.get_property('filename', None)
         self.indexmanager.delete(uid)

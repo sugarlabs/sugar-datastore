@@ -12,7 +12,6 @@ AC_OUTPUT([
 Makefile
 bin/Makefile
 etc/Makefile
-secore/Makefile
 src/Makefile
 src/olpc/Makefile
 src/olpc/datastore/Makefile

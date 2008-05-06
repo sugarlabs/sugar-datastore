@@ -1,11 +1,8 @@
 datastoredir = $(pythondir)/olpc/datastore
 datastore_PYTHON = 		\
 	__init__.py		\
-	backingstore.py 	\
-	bin_copy.py		\
-	converter.py 		\
 	datastore.py		\
-	model.py		\
-	xapianindex.py		\
-	utils.py		\
+	filestore.py		\
+	indexstore.py		\
+	metadatastore.py	\
 	__version__.py

@@ -128,28 +128,10 @@ class DataStore(dbus.service.Object):
 
     ### Backup support
     def pause(self, mountpoints=None):
-        """pause the datastore, during this time it will not process
-    requests. this allows the underlying stores to be backup up via
-    traditional mechanisms
-    """
-        if mountpoints:
-            mps = [self.mountpoints[mp] for mp in mountpoints]
-        else:
-            mps = self.mountpoints.values()
-
-        for mp in mps:
-            mp.stop()
+        """ Deprecated. """
 
     def unpause(self, mountpoints=None):
-        """resume the operation of a set of paused mountpoints"""
-        if mountpoints:
-            mps = [self.mountpoints[mp] for mp in mountpoints]
-        else:
-            mps = self.mountpoints.values()
-
-        for mp in mps:
-            mp.initialize_and_load()
-        
+        """ Deprecated. """
     ### End Backups
             
     def connect_backingstore(self, uri, **kwargs):

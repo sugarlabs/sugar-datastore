@@ -29,6 +29,13 @@ import dbus
 import xapian
 import gobject
 
+try:
+    import cjson
+    has_cjson = True
+except ImportError:
+    import simplejson
+    has_cjson = False
+
 from olpc.datastore.xapianindex import IndexManager
 from olpc.datastore import bin_copy
 from olpc.datastore import utils
@@ -215,7 +222,11 @@ class FileBackingStore(BackingStore):
         instead of a method parameter because this is less invasive for Update 1.
         """
         self.current_user_id = None
-        
+
+        # source for an idle callback that exports to the file system the
+        # metadata from the index
+        self._export_metadata_source = None
+
     # Informational
     def descriptor(self):
         """return a dict with atleast the following keys
@@ -327,7 +338,28 @@ class FileBackingStore(BackingStore):
             im.connect(index_name)
 
             self.indexmanager = im
-            
+
+        # Check that all entries have their metadata in the file system.
+        if not os.path.exists(os.path.join(self.base, '.metadata.exported')):
+            uids_to_export = []
+            uids = self.indexmanager.get_all_ids()
+
+            for uid in uids:
+                if not os.path.exists(os.path.join(self.base, uid + '.metadata')):
+                    uids_to_export.append(uid)
+
+            if uids_to_export:
+                self._export_metadata_source = gobject.idle_add(
+                        self._export_metadata, uids_to_export)
+            else:
+                open(os.path.join(self.base, '.metadata.exported'), 'w').close()
+
+    def _export_metadata(self, uids_to_export):
+        uid = uids_to_export.pop()
+        props = self.indexmanager.get(uid).properties
+        self._store_metadata(uid, props)
+        return len(uids_to_export) > 0
+
     def bind_to(self, datastore):
         ## signal from datastore that we are being bound to it
         self.datastore = datastore
@@ -500,8 +532,33 @@ class FileBackingStore(BackingStore):
             c.update(line)
         fp.close()
         return c.hexdigest()
-        
+
     # File Management API
+    def _encode_json(self, metadata, file_path):
+        if has_cjson:
+            f = open(file_path, 'w')
+            f.write(cjson.encode(metadata))
+            f.close()
+        else:
+            simplejson.dump(metadata, open(file_path, 'w'))
+
+    def _store_metadata(self, uid, props):
+        t = time.time()
+        temp_path = os.path.join(self.base, '.temp_metadata')
+        props = props.copy()
+        for property_name in model.defaultModel.get_external_properties():
+            if property_name in props:
+                del props[property_name]
+        self._encode_json(props, temp_path)
+        path = os.path.join(self.base, uid + '.metadata')
+        os.rename(temp_path, path)
+        logging.debug('exported metadata: %r s.' % (time.time() - t))
+
+    def _delete_metadata(self, uid):
+        path = os.path.join(self.base, uid + '.metadata')
+        if os.path.exists(path):
+            os.unlink(path)
+
     def _create_completion(self, uid, props, completion, exc=None, path=None):
         if exc:
             completion(exc)
@@ -517,6 +574,7 @@ class FileBackingStore(BackingStore):
         if completion is None:
             raise RuntimeError("Completion must be valid for async create")
         uid = self.indexmanager.index(props)
+        self._store_metadata(uid, props)
         props['uid'] = uid
         if filelike:
             if isinstance(filelike, basestring):
@@ -531,6 +589,7 @@ class FileBackingStore(BackingStore):
     def create(self, props, filelike, can_move=False):
         if filelike:
             uid = self.indexmanager.index(props)
+            self._store_metadata(uid, props)
             props['uid'] = uid
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
@@ -540,7 +599,9 @@ class FileBackingStore(BackingStore):
             self.indexmanager.index(props, path)
             return uid
         else:
-            return self.indexmanager.index(props)
+            uid = self.indexmanager.index(props)
+            self._store_metadata(uid, props)
+            return uid
     
     def get(self, uid, env=None, allowMissing=False, includeFile=False):
         content = self.indexmanager.get(uid)
@@ -575,6 +636,7 @@ class FileBackingStore(BackingStore):
             raise RuntimeError("Completion must be valid for async update")
 
         props['uid'] = uid
+        self._store_metadata(uid, props)
         if filelike:
             uid = self.indexmanager.index(props, filelike)
             props['uid'] = uid
@@ -590,6 +652,7 @@ class FileBackingStore(BackingStore):
 
     def update(self, uid, props, filelike=None, can_move=False):
         props['uid'] = uid
+        self._store_metadata(uid, props)
         if filelike:
             if isinstance(filelike, basestring):
                 # lets treat it as a filename
@@ -610,6 +673,7 @@ class FileBackingStore(BackingStore):
 
     def delete(self, uid, allowMissing=True):
         self._delete_external_properties(uid)
+        self._delete_metadata(uid)
 
         self.indexmanager.delete(uid)
         path = self._translatePath(uid)
@@ -617,7 +681,7 @@ class FileBackingStore(BackingStore):
             os.unlink(path)
         else:
             if not allowMissing:
-                raise KeyError("object for uid:%s missing" % uid)            
+                raise KeyError("object for uid:%s missing" % uid)
         
     def get_uniquevaluesfor(self, propertyname):
         return self.indexmanager.get_uniquevaluesfor(propertyname)
@@ -651,6 +715,8 @@ class FileBackingStore(BackingStore):
         return self.indexmanager.get_all_ids()
     
     def stop(self):
+        if self._export_metadata_source is not None:
+            gobject.source_remove(self._export_metadata_source)
         self.indexmanager.stop()
 
     def complete_indexing(self):

@@ -1,0 +1,113 @@
+#!/usr/bin/env python
+#
+# Simple script to export a file from the datastore
+# Reinier Heeres, <reinier@heeres.eu>, 2007-12-24
+# Phil Bordelon <phil@thenexusproject.org>
+
+import sys
+import os
+import shutil
+import optparse
+
+from sugar.datastore import datastore
+import sugar.mime
+
+# Limit the number of objects returned on an ambiguous query to this number,
+# for quicker operation.
+RETURN_LIMIT = 2
+
+def build_option_parser():
+
+    usage = "Usage: %prog [-o OBJECT_ID] [-q SEARCH_STR] [-t SEARCH_STR] [-m] OUTFILE"
+    parser = optparse.OptionParser(usage=usage)
+
+    parser.add_option("-o", "--object_id", action="store", dest="object_id",
+     help="Retrieve object with explicit ID OBJECT_ID", metavar="OBJECT_ID",
+     default=None)
+
+    parser.add_option("-q", "--query", action="store", dest="query",
+     help="Full-text-search the metadata for SEARCH_STR", metavar="SEARCH_STR",
+     default=None)
+
+    parser.add_option("-t", "--title", action="store", dest="title",
+     help="Full-text-search the title for SEARCH_STR", metavar="SEARCH_STR",
+     default=None)
+
+    parser.add_option("-m", "--metadata", action="store_true", dest="show_meta",
+     help="Show all non-preview metadata [default: hide]", default=False)
+
+    return parser
+
+if __name__ == "__main__":
+
+    parser = build_option_parser()
+    options, args = parser.parse_args()
+    if len(args) < 1:
+        parser.print_help()
+        exit(0)
+
+    dsentry = None
+
+    # Get object directly if we were given an explicit object ID.
+    if options.object_id is not None:
+        dsentry = datastore.get(options.object_id)
+
+    # Compose the query based on the options provided.
+    if dsentry is None:
+        query = {}
+
+        if options.query is not None:
+            query['query'] = options.query
+        if options.title is not None:
+            query['title'] = options.title
+
+        # We only want a single file at a time; limit the number of objects
+        # returned to two, as anything more than one means the criteria were
+        # not limited enough.
+        objects, count = datastore.find(query, limit=RETURN_LIMIT, sorting='-mtime')
+        print '%r' % query
+        if count > 1:
+            print 'WARNING: %d objects found; retrieving most recent.' % (count)
+            for i in xrange(1, RETURN_LIMIT):
+                objects[i].destroy()
+
+        if count > 0:
+            dsentry = objects[0]
+
+    # If neither an explicit object ID nor a query gave us data, fail.
+    if dsentry is None:
+        print 'ERROR: unable to determine journal object to copy.'
+        parser.print_help()
+        exit(0)
+
+    # Print metadata if that is what the user asked for.
+    if options.show_meta:
+        print 'Metadata:'
+        for key, val in dsentry.metadata.get_dictionary().iteritems():
+            if key != 'preview':
+                print '%20s -> %s' % (key, val)
+
+    # If no file is associated with this object, we can't save it out.
+    if dsentry.get_file_path() == "":
+        print 'ERROR: no file associated with object, just metadata.'
+        dsentry.destroy()
+        exit(0)
+
+    outname = args[0]
+    outroot, outext = os.path.splitext(outname)
+
+    # Do our best to determine the output file extension, based on Sugar's
+    # MIME-type-to-extension mappings.
+    if outext == "":
+        mimetype = dsentry.metadata['mime_type']
+        outext = sugar.mime.get_primary_extension(mimetype)
+        if outext == None:
+            outext = "dsobject"
+
+    # Lastly, actually copy the file out of the datastore and onto the
+    # filesystem.
+    shutil.copyfile(dsentry.get_file_path(), outroot + '.' + outext)
+    print '%s -> %s' % (dsentry.get_file_path(), outroot + '.' + outext)
+
+    # Cleanup.
+    dsentry.destroy()

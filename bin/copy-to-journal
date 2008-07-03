@@ -1,0 +1,86 @@
+#!/usr/bin/python
+#
+# Simple script to import a file to the datastore
+# Reinier Heeres, <reinier@heeres.eu>, 2007-12-20
+#
+# Modified by Phil Bordelon <phil@thenexusproject.org> 2007-12-20, 2007-12-21
+# to support adding metadata.  Note that the MIME-type is required,
+# as otherwise the datastore will not accept the file.
+
+import sys
+import os
+import optparse
+
+from sugar.datastore import datastore
+
+def build_option_parser():
+
+    usage = "Usage: %prog <file> -m MIMETYPE [-t TITLE] [-d DESC] [-T tag1 [-T tag2 ...]]"
+    parser = optparse.OptionParser(usage=usage)
+
+    parser.add_option("-t", "--title", action="store", dest="title",
+     help="Set the title of the journal entry to TITLE", metavar="TITLE",
+     default=None)
+    parser.add_option("-d", "--description", action="store",
+     dest="description", metavar="DESC",
+     help="Set the description of the journal entry to DESC",
+     default=None)
+    parser.add_option("-m", "--mimetype", action="store",
+     dest="mimetype", metavar="MIMETYPE",
+     help="Set the file's MIME-type to MIMETYPE",
+     default=None)
+    parser.add_option("-T", "--tag", action="append", dest="tag_list",
+     help="Add tag TAG to the journal entry's tags; this option can be repeated",
+     metavar="TAG")
+    return parser
+
+if __name__ == "__main__":
+
+    parser = build_option_parser()
+    options, args = parser.parse_args()
+    if len(args) < 1:
+        parser.print_help()
+        exit(0)
+    
+    fname = args[0]
+    absname = os.path.abspath(fname)
+    if not os.path.exists(absname):
+        print 'Error: File does not exist.'
+        parser.print_help()
+        exit(0)
+
+    if not options.mimetype:
+        print 'Error: No MIME-type given.'
+        parser.print_help()
+        exit(0)
+    
+    try:
+        entry = datastore.create()
+        entry.set_file_path(absname)
+
+        # Set the mimetype to the provided one.
+        entry.metadata['mime_type'] = options.mimetype
+
+        # If no title is given, use the filename.
+        if options.title:
+            entry.metadata['title'] = options.title
+        else:
+            entry.metadata['title'] = fname
+
+        # Use the description given, otherwise leave it blank.
+        if options.description:
+            entry.metadata['description'] = options.description
+
+        # Lastly, if any tags are given, combine them into a single string
+        # and save them.
+        if options.tag_list:
+            tag_string = " ".join(options.tag_list)
+            entry.metadata['tags'] = tag_string
+
+        datastore.write(entry)
+        print 'Created as %s' % (entry.object_id)
+    
+        entry.destroy()
+    
+    except Exception, e:
+        print 'Error: %s' % (e)

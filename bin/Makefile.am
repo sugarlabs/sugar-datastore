@@ -1,4 +1,6 @@
 bin_SCRIPTS =	\
-	datastore-service	
+	datastore-service	\
+	copy-from-journal	\
+	copy-to-journal
 
 EXTRA_DIST = $(bin_SCRIPTS)

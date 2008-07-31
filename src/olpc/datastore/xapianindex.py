@@ -467,7 +467,8 @@ class IndexManager(object):
             if order_by: order_by = order_by[0]
             else: order_by = None
                 
-        results = ri.search(q, start_index, end_index, sortby=order_by)
+        results = ri.search(q, start_index, end_index, sortby=order_by,
+                            checkatleast=sys.maxint)
         count = results.matches_estimated
 
         # map the result set to model.Content items

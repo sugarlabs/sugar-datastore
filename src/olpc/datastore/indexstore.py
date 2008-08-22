@@ -1,5 +1,7 @@
 import os
 import logging
+import time
+import sys
 
 import xapian
 from xapian import WritableDatabase, Document, Enquire, Query, QueryParser
@@ -113,16 +115,34 @@ class IndexStore(object):
 
             queries.append(query)
 
+        self._replace_mtime(query_dict)
+        if query_dict.has_key('timestamp'):
+            start = str(query_dict['timestamp'].pop('start', 0))
+            end = str(query_dict['timestamp'].pop('end', sys.maxint))
+            query = Query(Query.OP_VALUE_RANGE, _VALUE_TIMESTAMP, start, end)
+            queries.append(query)
+
         if query_dict.has_key('uid'):
             queries.append(Query('Q' + query_dict['uid']))
-
-        #if query_dict.has_key('timestamp'):
-        #    queries.append(Query('Q' + query_dict['uid']))
 
         if not queries:
             queries.append(Query(''))
         
         return Query(Query.OP_AND, queries)
+
+    def _replace_mtime(self, query):
+        # TODO: Just a hack for the current journal that filters by mtime
+        DATE_FORMAT = '%Y-%m-%dT%H:%M:%S'
+        if query.has_key('mtime'):
+            mtime_range = query.pop('mtime')
+
+            start = mtime_range['start'][:-7]
+            start = time.mktime(time.strptime(start, DATE_FORMAT))
+
+            end = mtime_range['end'][:-7]
+            end = time.mktime(time.strptime(end, DATE_FORMAT))
+
+            query['timestamp'] = {'start': start, 'end': end}
 
     def delete(self, uid):
         self._database.delete_document('Q' + uid)

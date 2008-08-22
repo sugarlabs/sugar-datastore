@@ -1,7 +1,8 @@
 import os
+import logging
 
 import xapian
-from xapian import WritableDatabase, Document, Enquire, Query
+from xapian import WritableDatabase, Document, Enquire, Query, QueryParser
 
 _MAX_LIMIT = 4096
 
@@ -11,6 +12,8 @@ _VALUE_ACTIVITY_ID = 2
 _VALUE_MIME_TYPE = 3
 _VALUE_ACTIVITY = 4
 _VALUE_KEEP = 5
+
+_PROPERTIES_NOT_TO_INDEX = ['timestamp', 'activity_id', 'keep', 'preview']
 
 class IndexStore(object):
     def __init__(self, root_path):
@@ -34,11 +37,37 @@ class IndexStore(object):
         document.add_value(_VALUE_MIME_TYPE, str(properties['keep']))
         document.add_value(_VALUE_ACTIVITY, properties['activity'])
 
+        term_generator = xapian.TermGenerator()
+
+        # TODO: we should do stemming, but in which language?
+        #if language is not None:
+        #    term_generator.set_stemmer(_xapian.Stem(language))
+
+        # TODO: we should use a stopper
+        #if stop is not None:
+        #    stopper = _xapian.SimpleStopper()
+        #    for term in stop:
+        #        stopper.add (term)
+        #    term_generator.set_stopper (stopper)
+
+        term_generator.set_document(document)
+        term_generator.index_text_without_positions(
+                self._extract_text(properties), 1, '')
+
         if not self._document_exists(uid):
             self._database.add_document(document)
         else:
             self._database.replace_document('Q' + uid, document)
         self._database.flush()
+
+    def _extract_text(self, properties):
+        text = ''
+        for key, value in properties.items():
+            if key not in _PROPERTIES_NOT_TO_INDEX:
+                if text:
+                    text += ' '
+                text += value
+        return text
 
     def find(self, query):
         enquire = Enquire(self._database)
@@ -62,7 +91,27 @@ class IndexStore(object):
         return (uids, total_count)
 
     def _parse_query(self, query_dict):
+        logging.debug('_parse_query %r' % query_dict)
         queries = []
+
+        if query_dict.has_key('query'):
+            query_parser = QueryParser()
+            query_parser.set_database(self._database)
+            #query_parser.set_default_op(Query.OP_AND)
+
+            # TODO: we should do stemming, but in which language?
+            #query_parser.set_stemmer(_xapian.Stem(lang))
+            #query_parser.set_stemming_strategy(qp.STEM_SOME)
+
+            query = query_parser.parse_query(
+                    query_dict['query'],
+                    QueryParser.FLAG_PHRASE |
+                            QueryParser.FLAG_BOOLEAN |
+                            QueryParser.FLAG_LOVEHATE |
+                            QueryParser.FLAG_WILDCARD,
+                    '')
+
+            queries.append(query)
 
         if query_dict.has_key('uid'):
             queries.append(Query('Q' + query_dict['uid']))

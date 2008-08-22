@@ -194,7 +194,7 @@ class DataStore(dbus.service.Object):
                          in_signature="",
                          out_signature="aa{sv}")
     def mounts(self):
-        return [{'id': 0}]
+        return [{'id': 1}]
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature="s",

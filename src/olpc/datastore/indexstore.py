@@ -158,7 +158,7 @@ class IndexStore(object):
             end = mtime_range['end'][:-7]
             end = time.mktime(time.strptime(end, DATE_FORMAT))
 
-            query['timestamp'] = {'start': start, 'end': end}
+            query['timestamp'] = {'start': int(start), 'end': int(end)}
 
     def delete(self, uid):
         self._database.delete_document(_PREFIX_UID + uid)

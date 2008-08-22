@@ -159,8 +159,12 @@ class DataStore(dbus.service.Object):
                          in_signature='sa{sv}',
                          out_signature='as')
     def get_uniquevaluesfor(self, propertyname, query=None):
-        return []
-    
+        if propertyname != 'activity':
+            raise ValueError('Only ''activity'' is a supported property name')
+        if query:
+            raise ValueError('The query parameter is not supported')
+        return self._index_store.get_activities()
+
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='')

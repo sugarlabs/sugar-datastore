@@ -15,6 +15,9 @@ _VALUE_MIME_TYPE = 3
 _VALUE_ACTIVITY = 4
 _VALUE_KEEP = 5
 
+_PREFIX_UID = 'Q'
+_PREFIX_ACTIVITY = 'A'
+
 _PROPERTIES_NOT_TO_INDEX = ['timestamp', 'activity_id', 'keep', 'preview']
 
 class IndexStore(object):
@@ -23,7 +26,7 @@ class IndexStore(object):
         self._database = WritableDatabase(index_path, xapian.DB_CREATE_OR_OPEN)
 
     def _document_exists(self, uid):
-        postings = self._database.postlist('Q' + uid)
+        postings = self._database.postlist(_PREFIX_UID + uid)
         try:
             postlist_item = postings.next()
         except StopIteration:
@@ -32,7 +35,9 @@ class IndexStore(object):
 
     def store(self, uid, properties):
         document = Document()
-        document.add_term('Q' + uid)
+        document.add_term(_PREFIX_UID + uid)
+        document.add_term(_PREFIX_ACTIVITY + properties['activity'])
+
         document.add_value(_VALUE_UID, uid)
         document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))
         document.add_value(_VALUE_ACTIVITY_ID, properties['activity_id'])
@@ -59,7 +64,7 @@ class IndexStore(object):
         if not self._document_exists(uid):
             self._database.add_document(document)
         else:
-            self._database.replace_document('Q' + uid, document)
+            self._database.replace_document(_PREFIX_UID + uid, document)
         self._database.flush()
 
     def _extract_text(self, properties):
@@ -123,7 +128,7 @@ class IndexStore(object):
             queries.append(query)
 
         if query_dict.has_key('uid'):
-            queries.append(Query('Q' + query_dict['uid']))
+            queries.append(Query(_PREFIX_UID + query_dict['uid']))
 
         if not queries:
             queries.append(Query(''))
@@ -145,5 +150,11 @@ class IndexStore(object):
             query['timestamp'] = {'start': start, 'end': end}
 
     def delete(self, uid):
-        self._database.delete_document('Q' + uid)
+        self._database.delete_document(_PREFIX_UID + uid)
+
+    def get_activities(self):
+        activities = []
+        for term in self._database.allterms(_PREFIX_ACTIVITY):
+            activities.append(term.term[len(_PREFIX_ACTIVITY):])
+        return activities
 

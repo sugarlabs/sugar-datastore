@@ -17,6 +17,7 @@ _VALUE_KEEP = 5
 
 _PREFIX_UID = 'Q'
 _PREFIX_ACTIVITY = 'A'
+_PREFIX_MIME_TYPE = 'M'
 
 _PROPERTIES_NOT_TO_INDEX = ['timestamp', 'activity_id', 'keep', 'preview']
 
@@ -37,6 +38,7 @@ class IndexStore(object):
         document = Document()
         document.add_term(_PREFIX_UID + uid)
         document.add_term(_PREFIX_ACTIVITY + properties['activity'])
+        document.add_term(_PREFIX_MIME_TYPE + properties['mime_type'])
 
         document.add_value(_VALUE_UID, uid)
         document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))
@@ -132,6 +134,12 @@ class IndexStore(object):
 
         if query_dict.has_key('activity'):
             queries.append(Query(_PREFIX_ACTIVITY + query_dict['activity']))
+
+        if query_dict.has_key('mime_type'):
+            mime_queries = []
+            for mime_type in query_dict['mime_type']:
+                mime_queries.append(Query(_PREFIX_MIME_TYPE + mime_type))
+            queries.append(Query(Query.OP_OR, mime_queries))
 
         if not queries:
             queries.append(Query(''))

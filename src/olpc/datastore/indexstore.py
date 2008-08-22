@@ -130,6 +130,9 @@ class IndexStore(object):
         if query_dict.has_key('uid'):
             queries.append(Query(_PREFIX_UID + query_dict['uid']))
 
+        if query_dict.has_key('activity'):
+            queries.append(Query(_PREFIX_ACTIVITY + query_dict['activity']))
+
         if not queries:
             queries.append(Query(''))
         

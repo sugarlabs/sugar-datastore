@@ -156,6 +156,7 @@ class IndexStore(object):
             start = time.mktime(time.strptime(start, DATE_FORMAT))
 
             end = mtime_range['end'][:-7]
+            # FIXME: this will give an unexpected result if the journal is in a different timezone
             end = time.mktime(time.strptime(end, DATE_FORMAT))
 
             query['timestamp'] = {'start': int(start), 'end': int(end)}

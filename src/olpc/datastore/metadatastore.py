@@ -104,7 +104,6 @@ class MetadataStore(object):
         f = open(file_path, 'r')
         metadata = {}
         for line in f.readlines():
-            logging.debug(line)
             key, value = line.split(' ', 1)
             value = value[:-1] # Take out the trailing '\n'
             value = self._cast_for_journal(key, urllib.unquote(value))

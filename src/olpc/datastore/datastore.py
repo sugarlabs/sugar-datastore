@@ -12,12 +12,11 @@ __license__  = 'The GNU Public License V2+'
 
 import logging
 import uuid
-import os.path
 import time
 
-import dbus.service
-import dbus.mainloop.glib
+import dbus
 
+from olpc.datastore import layoutmanager
 from olpc.datastore.metadatastore import MetadataStore
 from olpc.datastore.indexstore import IndexStore
 from olpc.datastore.filestore import FileStore
@@ -40,19 +39,9 @@ class DataStore(dbus.service.Object):
                                         allow_replacement=False)
         dbus.service.Object.__init__(self, bus_name, DS_OBJECT_PATH)
 
-        profile = os.environ.get('SUGAR_PROFILE', 'default')
-        base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
-
-        self._root_path = os.path.join(base_dir, 'datastore2')
-        if not os.path.exists(self._root_path):
-            os.makedirs(self._root_path)
-
         self._metadata_store = MetadataStore()
-        self._index_store = IndexStore(self._root_path)
+        self._index_store = IndexStore()
         self._file_store = FileStore()
-
-    def _get_entry_path(self, uid):
-        return os.path.join(self._root_path, uid[:2], uid)
 
     def _create_completion_cb(self, async_cb, async_err_cb, uid, exc=None):
         logger.debug("_create_completion_cb(%r, %r, %r, %r)" % \
@@ -73,14 +62,13 @@ class DataStore(dbus.service.Object):
     def create(self, props, file_path, transfer_ownership,
                async_cb, async_err_cb):
         uid = str(uuid.uuid4())
-        dir_path = self._get_entry_path(uid)
 
         if not props.get('timestamp', ''):
             props['timestamp'] = int(time.time())
 
-        self._metadata_store.store(uid, props, dir_path)
+        self._metadata_store.store(uid, props)
         self._index_store.store(uid, props)
-        self._file_store.store(uid, file_path, transfer_ownership, dir_path,
+        self._file_store.store(uid, file_path, transfer_ownership,
                 lambda *args: self._create_completion_cb(async_cb,
                                                          async_err_cb,
                                                          uid,
@@ -108,14 +96,12 @@ class DataStore(dbus.service.Object):
              byte_arrays=True)
     def update(self, uid, props, file_path, transfer_ownership,
                async_cb, async_err_cb):
-        dir_path = self._get_entry_path(uid)
-
         if not props.get('timestamp', ''):
             props['timestamp'] = int(time.time())
 
-        self._metadata_store.store(uid, props, dir_path)
+        self._metadata_store.store(uid, props)
         self._index_store.store(uid, props)
-        self._file_store.store(uid, file_path, transfer_ownership, dir_path,
+        self._file_store.store(uid, file_path, transfer_ownership,
                 lambda *args: self._update_completion_cb(async_cb,
                                                          async_err_cb,
                                                          uid,
@@ -133,8 +119,7 @@ class DataStore(dbus.service.Object):
         uids, count = self._index_store.find(query)
         entries = []
         for uid in uids:
-            dir_path = self._get_entry_path(uid)
-            metadata = self._metadata_store.retrieve(uid, dir_path, properties)
+            metadata = self._metadata_store.retrieve(uid, properties)
             entries.append(metadata)
         logger.debug('find(): %r' % (time.time() - t))
         return entries, count
@@ -145,15 +130,13 @@ class DataStore(dbus.service.Object):
              sender_keyword='sender')
     def get_filename(self, uid, sender=None):
         user_id = dbus.Bus().get_unix_user(sender)
-        dir_path = self._get_entry_path(uid)
-        return self._file_store.retrieve(uid, dir_path, user_id)
+        return self._file_store.retrieve(uid, user_id)
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='s',
                          out_signature='a{sv}')
     def get_properties(self, uid):
-        dir_path = self._get_entry_path(uid)
-        return self._metadata_store.retrieve(uid, dir_path)
+        return self._metadata_store.retrieve(uid)
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='sa{sv}',
@@ -169,10 +152,13 @@ class DataStore(dbus.service.Object):
              in_signature='s',
              out_signature='')
     def delete(self, uid):
-        dir_path = self._get_entry_path(uid)
         self._index_store.delete(uid)
-        self._file_store.delete(uid, dir_path)
-        self._metadata_store.delete(uid, dir_path)
+        self._file_store.delete(uid)
+        self._metadata_store.delete(uid)
+        
+        entry_path = layoutmanager.get_instance().get_entry_path(uid)
+        os.removedirs(entry_path)
+
         self.Deleted(uid)
         logger.debug("deleted %s" % uid)
 

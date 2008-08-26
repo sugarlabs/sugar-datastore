@@ -1,10 +1,11 @@
-import os
 import logging
 import time
 import sys
 
 import xapian
 from xapian import WritableDatabase, Document, Enquire, Query, QueryParser
+
+from olpc.datastore import layoutmanager
 
 _MAX_LIMIT = 4096
 
@@ -22,8 +23,8 @@ _PREFIX_MIME_TYPE = 'M'
 _PROPERTIES_NOT_TO_INDEX = ['timestamp', 'activity_id', 'keep', 'preview']
 
 class IndexStore(object):
-    def __init__(self, root_path):
-        index_path = os.path.join(root_path, 'index')
+    def __init__(self):
+        index_path = layoutmanager.get_instance().get_index_path()
         self._database = WritableDatabase(index_path, xapian.DB_CREATE_OR_OPEN)
 
     def _document_exists(self, uid):
@@ -156,7 +157,8 @@ class IndexStore(object):
             start = time.mktime(time.strptime(start, DATE_FORMAT))
 
             end = mtime_range['end'][:-7]
-            # FIXME: this will give an unexpected result if the journal is in a different timezone
+            # FIXME: this will give an unexpected result if the journal is in a
+            # different timezone
             end = time.mktime(time.strptime(end, DATE_FORMAT))
 
             query['timestamp'] = {'start': int(start), 'end': int(end)}

@@ -8,12 +8,15 @@ except ImportError:
     import simplejson
     has_cjson = False
 
+from olpc.datastore import layoutmanager
+
 MAX_SIZE = 256
 
 class MetadataStore(object):
-    def store(self, uid, metadata, dir_path):
+    def store(self, uid, metadata):
         metadata = metadata.copy()
 
+        dir_path = layoutmanager.get_instance().get_entry_path(uid)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
 
@@ -28,10 +31,11 @@ class MetadataStore(object):
         metadata['uid'] = uid
         self._encode(metadata, os.path.join(dir_path, 'metadata'))
 
-    def retrieve(self, uid, dir_path, properties=[]):
+    def retrieve(self, uid, properties=None):
         import time
         t = time.time()
 
+        dir_path = layoutmanager.get_instance().get_entry_path(uid)
         if not os.path.exists(dir_path):
             raise ValueError('Unknown object: %r' % uid)
 
@@ -42,7 +46,7 @@ class MetadataStore(object):
             metadata = {}
 
         if properties:
-            for key, value in metadata.items():
+            for key, value_ in metadata.items():
                 if key not in properties:
                     del metadata[key]
         
@@ -53,14 +57,15 @@ class MetadataStore(object):
                     continue
                 file_path = os.path.join(extra_metadata_dir, key)
                 if not os.path.isdir(file_path):
-                    # TODO: This class shouldn't know anything about dbus, probably.
+                    # TODO: This class shouldn't know anything about dbus.
                     import dbus
                     metadata[key] = dbus.ByteArray(open(file_path).read())
 
         logging.debug('retrieve metadata: %r' % (time.time() - t))
         return metadata
 
-    def delete(self, uid, dir_path):
+    def delete(self, uid):
+        dir_path = layoutmanager.get_instance().get_entry_path(uid)
         metadata_path = os.path.join(dir_path, 'metadata')
         if os.path.isfile(metadata_path):
             os.remove(os.path.join(dir_path, 'metadata'))
@@ -71,7 +76,7 @@ class MetadataStore(object):
         if os.path.isdir(extra_metadata_path):
             for key in os.listdir(extra_metadata_path):
                 os.remove(os.path.join(extra_metadata_path, key))
-            os.removedirs(os.path.join(dir_path, 'extra_metadata'))
+            os.rmdir(os.path.join(dir_path, 'extra_metadata'))
         else:
             logging.warning('%s is not a valid path' % extra_metadata_path)
 
@@ -85,7 +90,7 @@ class MetadataStore(object):
 
     def _is_unicode(self, string):
         try:
-            temp = string.decode('utf-8')
+            string.decode('utf-8')
             return True
         except UnicodeDecodeError:
             return False

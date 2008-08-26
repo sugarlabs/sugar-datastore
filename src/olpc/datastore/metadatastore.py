@@ -116,7 +116,10 @@ class MetadataStore(object):
         # Hack because the current journal expects these properties to have some
         # predefined types
         if key in ['timestamp', 'keep']:
-            return int(value)
+            try:
+                return int(value)
+            except ValueError:
+                return value
         else:
             return value
 

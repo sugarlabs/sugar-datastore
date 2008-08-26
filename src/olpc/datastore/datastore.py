@@ -13,6 +13,7 @@ __license__  = 'The GNU Public License V2+'
 import logging
 import uuid
 import time
+import os
 
 import dbus
 
@@ -120,6 +121,9 @@ class DataStore(dbus.service.Object):
         entries = []
         for uid in uids:
             metadata = self._metadata_store.retrieve(uid, properties)
+            # Hack because the current journal expects the mountpoint property
+            # to be present.
+            metadata['mountpoint'] = '1'
             entries.append(metadata)
         logger.debug('find(): %r' % (time.time() - t))
         return entries, count
@@ -136,7 +140,11 @@ class DataStore(dbus.service.Object):
                          in_signature='s',
                          out_signature='a{sv}')
     def get_properties(self, uid):
-        return self._metadata_store.retrieve(uid)
+        metadata = self._metadata_store.retrieve(uid)
+        # Hack because the current journal expects the mountpoint property to be
+        # present.
+        metadata['mountpoint'] = '1'
+        return metadata
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='sa{sv}',

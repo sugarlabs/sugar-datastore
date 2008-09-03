@@ -2,6 +2,7 @@ import logging
 import time
 import sys
 
+import gobject
 import xapian
 from xapian import WritableDatabase, Document, Enquire, Query, QueryParser
 
@@ -20,12 +21,20 @@ _PREFIX_UID = 'Q'
 _PREFIX_ACTIVITY = 'A'
 _PREFIX_MIME_TYPE = 'M'
 
+# Force a flush every _n_ changes to the db
+_FLUSH_THRESHOLD = 20
+
+# Force a flush after _n_ seconds since the last change to the db
+_FLUSH_TIMEOUT = 60
+
 _PROPERTIES_NOT_TO_INDEX = ['timestamp', 'activity_id', 'keep', 'preview']
 
 class IndexStore(object):
     def __init__(self):
         index_path = layoutmanager.get_instance().get_index_path()
         self._database = WritableDatabase(index_path, xapian.DB_CREATE_OR_OPEN)
+        self._flush_timeout = None
+        self._pending_writes = 0
 
     def _document_exists(self, uid):
         postings = self._database.postlist(_PREFIX_UID + uid)
@@ -68,7 +77,7 @@ class IndexStore(object):
             self._database.add_document(document)
         else:
             self._database.replace_document(_PREFIX_UID + uid, document)
-        self._database.flush()
+        self._flush()
 
     def _extract_text(self, properties):
         text = ''
@@ -171,4 +180,24 @@ class IndexStore(object):
         for term in self._database.allterms(_PREFIX_ACTIVITY):
             activities.append(term.term[len(_PREFIX_ACTIVITY):])
         return activities
+
+    def _flush_timeout_cb(self):
+        self._flush(True)
+        return False
+
+    def _flush(self, force=False):
+        """Called after any database mutation"""
+        logging.debug('IndexStore.flush: %r %r' % (force, self._pending_writes))
+
+        if self._flush_timeout is not None:
+            gobject.source_remove(self._flush_timeout)
+            self._flush_timeout = None
+
+        self._pending_writes += 1
+        if force or self._pending_writes > _FLUSH_THRESHOLD:
+            self._database.flush()
+            self._pending_writes = 0
+        else:
+            self._flush_timeout = gobject.timeout_add(_FLUSH_TIMEOUT * 1000,
+                                                      self._flush_timeout_cb)
 

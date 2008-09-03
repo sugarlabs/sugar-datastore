@@ -38,7 +38,7 @@ class MetadataStore(object):
 
         metadata_path = os.path.join(dir_path, 'metadata')
         if os.path.isfile(metadata_path):
-            metadata = self._decode(os.path.join(dir_path, 'metadata'))
+            metadata = self._decode(metadata_path)
         else:
             metadata = {}
 

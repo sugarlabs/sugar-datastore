@@ -19,9 +19,13 @@ class FileStore(object):
             os.makedirs(dir_path)
 
         destination_path = os.path.join(dir_path, uid)
-        if os.path.exists(file_path):
+        if file_path:
+            if not os.path.isfile(file_path):
+                raise ValueError('No file at %r' % file_path)
             if transfer_ownership:
                 try:
+                    logging.debug('FileStore moving from %r to %r' % \
+                                  (file_path, destination_path))
                     os.rename(file_path, destination_path)
                     self._enqueue_checksum(uid)
                     completion_cb()
@@ -34,13 +38,17 @@ class FileStore(object):
             else:
                 self._async_copy(uid, file_path, destination_path,
                         completion_cb)
-        elif file_path == '' and os.path.exists(destination_path):
+        elif not file_path and os.path.exists(destination_path):
             os.remove(destination_path)
             completion_cb()
         else:
+            logging.debug('FileStore moving from %r to %r' % \
+                            (file_path, destination_path))
             completion_cb()
 
     def _async_copy(self, uid, file_path, destination_path, completion_cb):
+        logging.debug('FileStore copying from %r to %r' % \
+                      (file_path, destination_path))
         async_copy = AsyncCopy(file_path, destination_path,
                 lambda: self._async_copy_completion_cb(uid, completion_cb))
         async_copy.start()

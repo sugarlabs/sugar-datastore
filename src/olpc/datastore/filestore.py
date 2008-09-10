@@ -42,8 +42,7 @@ class FileStore(object):
             os.remove(destination_path)
             completion_cb()
         else:
-            logging.debug('FileStore moving from %r to %r' % \
-                            (file_path, destination_path))
+            logging.debug('FileStore: Nothing to do')
             completion_cb()
 
     def _async_copy(self, uid, file_path, destination_path, completion_cb):

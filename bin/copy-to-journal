@@ -11,6 +11,9 @@ import sys
 import os
 import optparse
 
+if os.path.exists("/tmp/olpc-session-bus"):
+    os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/tmp/olpc-session-bus"
+
 from sugar.datastore import datastore
 
 def build_option_parser():

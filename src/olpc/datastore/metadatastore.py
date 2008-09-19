@@ -1,6 +1,5 @@
 import os
 import logging
-import urllib
 
 from olpc.datastore import layoutmanager
 
@@ -29,36 +28,24 @@ class MetadataStore(object):
         self._encode(metadata, os.path.join(dir_path, 'metadata'))
 
     def retrieve(self, uid, properties=None):
-        import time
-        t = time.time()
-
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
         if not os.path.exists(dir_path):
             raise ValueError('Unknown object: %r' % uid)
 
         metadata_path = os.path.join(dir_path, 'metadata')
-        if os.path.isfile(metadata_path):
-            metadata = self._decode(metadata_path)
-        else:
-            metadata = {}
+        metadata = self._decode(metadata_path, properties)
 
-        if properties:
-            for key, value_ in metadata.items():
-                if key not in properties:
-                    del metadata[key]
-        
-        extra_metadata_dir = os.path.join(dir_path, 'extra_metadata')
-        if os.path.isdir(extra_metadata_dir):
-            for key in os.listdir(extra_metadata_dir):
-                if properties and key not in properties:
-                    continue
-                file_path = os.path.join(extra_metadata_dir, key)
-                if not os.path.isdir(file_path):
-                    # TODO: This class shouldn't know anything about dbus.
-                    import dbus
-                    metadata[key] = dbus.ByteArray(open(file_path).read())
-
-        logging.debug('retrieve metadata: %r' % (time.time() - t))
+        if not properties or len(properties) != len(metadata):
+            extra_metadata_dir = os.path.join(dir_path, 'extra_metadata')
+            if os.path.exists(extra_metadata_dir):
+                for key in os.listdir(extra_metadata_dir):
+                    if properties is not None and key not in properties:
+                        continue
+                    file_path = os.path.join(extra_metadata_dir, key)
+                    if not os.path.exists(file_path):
+                        # TODO: This class shouldn't know anything about dbus.
+                        import dbus
+                        metadata[key] = dbus.ByteArray(open(file_path).read())
         return metadata
 
     def delete(self, uid):
@@ -94,20 +81,53 @@ class MetadataStore(object):
 
     def _encode(self, metadata, file_path):
         f = open(file_path, 'w')
+        f.write('v1\n')
         for key, value in metadata.items():
+            if not key:
+                raise ValueError('Property keys cannot be empty')
+            if (' ' in key) or ('\t' in key):
+                raise ValueError('Property keys cannot contain tabulators: %r' \
+                                 % key)
             if value is None:
                 value = ''
-            f.write('%s %s\n' % (key, urllib.quote(str(value))))
+            else:
+                value = str(value)
+            f.write('%s\t%d\t%s\n' % (key, len(value), value))
         f.close()
 
-    def _decode(self, file_path):
+    def _decode(self, file_path, properties):
         f = open(file_path, 'r')
+        version_line = f.readline()
+        try:
+            version = int(version_line[1:-1])
+            if version != 1:
+                raise ValueError('Incompatible version %r' % version)
+        except:
+            logging.error('Invalid version line: %s' % version_line)
+            raise
+
         metadata = {}
-        for line in f.readlines():
-            key, value = line.split(' ', 1)
-            value = value[:-1] # Take out the trailing '\n'
-            value = self._cast_for_journal(key, urllib.unquote(value))
-            metadata[key] = value
+        while True:
+            line = f.readline()
+            if not line:
+                break
+
+            key, value_len, value = line.split('\t', 2)
+            value_len = int(value_len)
+
+            if len(value) == value_len + 1:
+                value = value[:-1] # skip the newline
+            else:
+                value += f.read(value_len - len(value))
+                f.seek(1, 1) # skip the newline
+
+            if properties is None:
+                metadata[key] = value
+            elif key in properties:
+                metadata[key] = value
+                if len(properties) == len(metadata):
+                    break
+
         f.close()
         return metadata
 

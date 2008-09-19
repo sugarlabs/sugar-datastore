@@ -62,7 +62,8 @@ class FileStore(object):
         logging.debug('_enqueue_checksum %r' % os.path.join(queue_path, uid))
         if self._enqueue_checksum_id is None:
             self._enqueue_checksum_id = \
-                    gobject.idle_add(self._compute_checksum_cb)
+                    gobject.idle_add(self._compute_checksum_cb,
+                                     priority=gobject.PRIORITY_LOW)
 
     def _identical_file_already_exists(self, checksum):
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()

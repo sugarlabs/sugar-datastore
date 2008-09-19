@@ -1,14 +1,14 @@
 import logging
 import time
 import sys
+import os
 
 import gobject
 import xapian
 from xapian import WritableDatabase, Document, Enquire, Query, QueryParser
 
 from olpc.datastore import layoutmanager
-
-_MAX_LIMIT = 4096
+from olpc.datastore.layoutmanager import MAX_QUERY_LIMIT
 
 _VALUE_UID = 0
 _VALUE_TIMESTAMP = 1
@@ -31,12 +31,24 @@ _PROPERTIES_NOT_TO_INDEX = ['timestamp', 'activity_id', 'keep', 'preview']
 
 class IndexStore(object):
     def __init__(self):
-        index_path = layoutmanager.get_instance().get_index_path()
-        self._database = WritableDatabase(index_path, xapian.DB_CREATE_OR_OPEN)
+        self._database = None
         self._flush_timeout = None
         self._pending_writes = 0
 
-    def _document_exists(self, uid):
+    def open_index(self):
+        index_path = layoutmanager.get_instance().get_index_path()
+        self._database = WritableDatabase(index_path, xapian.DB_CREATE_OR_OPEN)
+
+    def close_index(self):
+        self._database.flush()
+        self._database = None
+
+    def remove_index(self):
+        index_path = layoutmanager.get_instance().get_index_path()
+        for f in os.listdir(index_path):
+            os.remove(os.path.join(index_path, f))
+
+    def contains(self, uid):
         postings = self._database.postlist(_PREFIX_UID + uid)
         try:
             postlist_item = postings.next()
@@ -73,7 +85,7 @@ class IndexStore(object):
         term_generator.index_text_without_positions(
                 self._extract_text(properties), 1, '')
 
-        if not self._document_exists(uid):
+        if not self.contains(uid):
             self._database.add_document(document)
         else:
             self._database.replace_document(_PREFIX_UID + uid, document)
@@ -93,7 +105,7 @@ class IndexStore(object):
         enquire.set_query(self._parse_query(query))
 
         offset = query.get('offset', 0)
-        limit = query.get('limit', _MAX_LIMIT)
+        limit = query.get('limit', MAX_QUERY_LIMIT)
 
         # This will assure that the results count is exact.
         check_at_least = offset + limit + 1

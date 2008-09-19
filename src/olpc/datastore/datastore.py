@@ -16,8 +16,10 @@ import time
 import os
 
 import dbus
+import gobject
 
 from olpc.datastore import layoutmanager
+from olpc.datastore.layoutmanager import MAX_QUERY_LIMIT
 from olpc.datastore.metadatastore import MetadataStore
 from olpc.datastore.indexstore import IndexStore
 from olpc.datastore.filestore import FileStore
@@ -41,8 +43,42 @@ class DataStore(dbus.service.Object):
         dbus.service.Object.__init__(self, bus_name, DS_OBJECT_PATH)
 
         self._metadata_store = MetadataStore()
+
         self._index_store = IndexStore()
+        try:
+            self._index_store.open_index()
+        except Exception, e:
+            logging.error('Failed to open index, will rebuild: %r', e)
+            layoutmanager.get_instance().index_updated = False
+            self._index_store.remove_index()
+            self._index_store.open_index()
+
         self._file_store = FileStore()
+
+        if not layoutmanager.get_instance().index_updated:
+            logging.debug('Index is not up-to-date, will update')
+            self._rebuild_index()
+
+    def _rebuild_index(self):
+        uids = layoutmanager.get_instance().find_all()
+        gobject.idle_add(lambda: self.__rebuild_index_cb(uids),
+                         priority=gobject.PRIORITY_LOW)
+
+    def __rebuild_index_cb(self, uids):
+        uid = uids.pop()
+
+        logging.debug('Updating entry %r in index. %d to go.' % \
+                      (uid, len(uids)))
+
+        if not self._index_store.contains(uid):
+            props = self._metadata_store.retrieve(uid)
+            self._index_store.store(uid, props)
+
+        if not uids:
+            layoutmanager.get_instance().index_updated = True
+            return False
+        else:
+            return True
 
     def _create_completion_cb(self, async_cb, async_err_cb, uid, exc=None):
         logger.debug("_create_completion_cb(%r, %r, %r, %r)" % \
@@ -117,7 +153,27 @@ class DataStore(dbus.service.Object):
              out_signature='aa{sv}u')
     def find(self, query, properties):
         t = time.time()
-        uids, count = self._index_store.find(query)
+
+        if not layoutmanager.get_instance().index_updated:
+            logging.warning('Index updating, returning all entries')
+
+            uids = layoutmanager.get_instance().find_all()
+            count = len(uids)
+
+            offset = query.get('offset', 0)
+            limit = query.get('limit', MAX_QUERY_LIMIT)
+            uids = uids[offset, offset + limit]
+        else:
+            try:
+                uids, count = self._index_store.find(query)
+            except Exception, e:
+                logging.error('Failed to query index, will rebuild: %r', e)
+                layoutmanager.get_instance().index_updated = False
+                self._index_store.close_index()
+                self._index_store.remove_index()
+                self._index_store.open_index()
+                self._rebuild_index()
+
         entries = []
         for uid in uids:
             metadata = self._metadata_store.retrieve(uid, properties)
@@ -154,7 +210,11 @@ class DataStore(dbus.service.Object):
             raise ValueError('Only ''activity'' is a supported property name')
         if query:
             raise ValueError('The query parameter is not supported')
-        return self._index_store.get_activities()
+        if layoutmanager.get_instance().index_updated:
+            return self._index_store.get_activities()
+        else:
+            logging.warning('Index updating, returning an empty list')
+            return []
 
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
@@ -176,6 +236,7 @@ class DataStore(dbus.service.Object):
 
     def stop(self):
         """shutdown the service"""
+        self._index_store.close_index()
         self.Stopped()
 
     @dbus.service.signal(DS_DBUS_INTERFACE)

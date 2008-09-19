@@ -5,5 +5,4 @@ datastore_PYTHON = 		\
 	filestore.py		\
 	indexstore.py		\
 	layoutmanager.py	\
-	metadatastore.py	\
-	__version__.py
+	metadatastore.py

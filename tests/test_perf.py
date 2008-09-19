@@ -105,5 +105,5 @@ for i in range(n):
     t = time.time()
     results, count = data_store.find(query, properties)
     total += time.time() - t
-print 'Searched %r full entries in %.2f ms. avg' % (n, float(total * 1000) / len(uids))
+print 'Searched %r full entries in %.2f ms. avg' % (n, float(total * 1000) / n)
 

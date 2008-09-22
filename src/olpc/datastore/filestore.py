@@ -49,12 +49,15 @@ class FileStore(object):
         logging.debug('FileStore copying from %r to %r' % \
                       (file_path, destination_path))
         async_copy = AsyncCopy(file_path, destination_path,
-                lambda: self._async_copy_completion_cb(uid, completion_cb))
+                lambda exception: self._async_copy_completion_cb(uid,
+                                                                 completion_cb,
+                                                                 exception))
         async_copy.start()
 
-    def _async_copy_completion_cb(self, uid, completion_cb):
-        self._enqueue_checksum(uid)
-        completion_cb()
+    def _async_copy_completion_cb(self, uid, completion_cb, exception):
+        if exception is None:
+            self._enqueue_checksum(uid)
+        completion_cb(exception)
 
     def _enqueue_checksum(self, uid):
         queue_path = layoutmanager.get_instance().get_queue_path()

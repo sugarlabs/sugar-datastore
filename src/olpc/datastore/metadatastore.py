@@ -35,14 +35,14 @@ class MetadataStore(object):
         metadata_path = os.path.join(dir_path, 'metadata')
         metadata = self._decode(metadata_path, properties)
 
-        if not properties or len(properties) != len(metadata):
+        if properties is None or len(properties) != len(metadata):
             extra_metadata_dir = os.path.join(dir_path, 'extra_metadata')
             if os.path.exists(extra_metadata_dir):
                 for key in os.listdir(extra_metadata_dir):
                     if properties is not None and key not in properties:
                         continue
                     file_path = os.path.join(extra_metadata_dir, key)
-                    if not os.path.exists(file_path):
+                    if os.path.exists(file_path):
                         # TODO: This class shouldn't know anything about dbus.
                         import dbus
                         metadata[key] = dbus.ByteArray(open(file_path).read())

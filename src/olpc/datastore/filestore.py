@@ -7,6 +7,9 @@ import gobject
 from olpc.datastore import layoutmanager
 
 class FileStore(object):
+    """Handle the storage of one file per entry.
+
+    """
     def __init__(self): 
         self._enqueue_checksum_id = None
 
@@ -14,6 +17,9 @@ class FileStore(object):
         # that are being processed async.
 
     def store(self, uid, file_path, transfer_ownership, completion_cb):
+        """Store a file for a given entry.
+           
+        """
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
@@ -46,6 +52,9 @@ class FileStore(object):
             completion_cb()
 
     def _async_copy(self, uid, file_path, destination_path, completion_cb):
+        """Start copying a file asynchronously.
+        
+        """
         logging.debug('FileStore copying from %r to %r' % \
                       (file_path, destination_path))
         async_copy = AsyncCopy(file_path, destination_path,
@@ -55,11 +64,17 @@ class FileStore(object):
         async_copy.start()
 
     def _async_copy_completion_cb(self, uid, completion_cb, exception):
+        """Callback called when an asynchronous copy has finished.
+        
+        """
         if exception is None:
             self._enqueue_checksum(uid)
         completion_cb(exception)
 
     def _enqueue_checksum(self, uid):
+        """Add an entry to a queue of entries to be checked for duplicates.
+
+        """
         queue_path = layoutmanager.get_instance().get_queue_path()
         open(os.path.join(queue_path, uid), 'w').close()
         logging.debug('_enqueue_checksum %r' % os.path.join(queue_path, uid))
@@ -69,11 +84,17 @@ class FileStore(object):
                                      priority=gobject.PRIORITY_LOW)
 
     def _identical_file_already_exists(self, checksum):
+        """Check if we already have files with this checksum.
+
+        """
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
         return os.path.exists(checksum_path)
 
     def _get_file_from_checksum(self, checksum):
+        """Get a file that matches checksum.
+
+        """
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
         first_file_link = os.listdir(checksum_path)[0]
@@ -81,26 +102,37 @@ class FileStore(object):
         return first_file
 
     def _create_checksum_dir(self, checksum):
+        """Create directory that tracks files with this same checksum.
+        
+        """
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
         logging.debug('create dir %r' % checksum_path)
         os.mkdir(checksum_path)
 
     def _add_checksum_entry(self, uid, checksum):
+        """Create a symbolic link in the checksum dir to the file in the entry
+           dir and another one in the entry path to the checksum dir.
+
+        """
         entry_path = layoutmanager.get_instance().get_entry_path(uid)
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
 
-        logging.debug('symlink %r -> %r' % (os.path.join(entry_path, uid),
-                                            os.path.join(checksum_path, uid)))
+        logging.debug('symlink %r -> %r' % (os.path.join(checksum_path, uid),
+                                            os.path.join(entry_path, uid)))
         os.symlink(os.path.join(entry_path, uid),
                    os.path.join(checksum_path, uid))
 
         logging.debug('symlink %r -> %r' % \
-                (checksum_path, os.path.join(entry_path, 'checksum')))
+                (os.path.join(entry_path, 'checksum'), checksum_path))
         os.symlink(checksum_path, os.path.join(entry_path, 'checksum'))
 
     def _remove_checksum_entry(self, uid):
+        """Remove links created in _add_checksum_entry() and the checksum dir
+           if empty.
+
+        """
         entry_path = layoutmanager.get_instance().get_entry_path(uid)
         checksum = os.readlink(os.path.join(entry_path, 'checksum'))
 
@@ -117,11 +149,20 @@ class FileStore(object):
         os.remove(os.path.join(entry_path, 'checksum'))
 
     def _already_linked(self, uid, checksum):
+        """Check if this entry's file is already a hard link to the checksums
+           dir.
+        
+        """
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
         return os.path.exists(os.path.join(checksum_path, uid))
 
     def _compute_checksum_cb(self):
+        """Process one item in the checksums queue by calculating its checksum,
+           checking if there exist already an identical file, and in that case
+           substituting its file with a hard link to that pre-existing file.
+        
+        """
         queue_path = layoutmanager.get_instance().get_queue_path()
         queue = os.listdir(queue_path)
         if queue:
@@ -155,10 +196,17 @@ class FileStore(object):
             return True
 
     def _calculate_md5sum(self, path):
+        """Calculate the md5 checksum of a given file.
+        
+        """
         in_, out = os.popen2(['md5sum', path])
         return out.read().split(' ', 1)[0]
 
     def retrieve(self, uid, user_id):
+        """Place the file associated to a given entry into a directory where the
+            user can read it. The caller is reponsible for deleting this file.
+        
+        """
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
         file_path = os.path.join(dir_path, uid)
         if not os.path.exists(file_path):
@@ -181,7 +229,7 @@ class FileStore(object):
         destination_path = os.path.join(destination_dir, uid)
 
         # Try to make the original file readable. This can fail if the file is
-        # in FAT filesystem.
+        # in a FAT filesystem.
         try:
             os.chmod(file_path, 0604)
         except OSError, e:
@@ -201,13 +249,19 @@ class FileStore(object):
         return destination_path
 
     def delete(self, uid):
+        """Remove the file associated to a given entry.
+        
+        """
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
         file_path = os.path.join(dir_path, uid)
         if os.path.exists(file_path):
             self._remove_checksum_entry(uid)
             os.remove(file_path)
 
-class AsyncCopy:
+class AsyncCopy(object):
+    """Copy a file in chunks in the idle loop.
+    
+    """
     CHUNK_SIZE = 65536
 
     def __init__(self, src, dest, completion):

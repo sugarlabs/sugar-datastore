@@ -62,19 +62,21 @@ class DataStore(dbus.service.Object):
     def _rebuild_index(self):
         uids = layoutmanager.get_instance().find_all()
         gobject.idle_add(lambda: self.__rebuild_index_cb(uids),
-                         priority=gobject.PRIORITY_LOW)
+                            priority=gobject.PRIORITY_LOW)
 
     def __rebuild_index_cb(self, uids):
-        uid = uids.pop()
+        if uids:
+            uid = uids.pop()
 
-        logging.debug('Updating entry %r in index. %d to go.' % \
-                      (uid, len(uids)))
+            logging.debug('Updating entry %r in index. %d to go.' % \
+                          (uid, len(uids)))
 
-        if not self._index_store.contains(uid):
-            props = self._metadata_store.retrieve(uid)
-            self._index_store.store(uid, props)
+            if not self._index_store.contains(uid):
+                props = self._metadata_store.retrieve(uid)
+                self._index_store.store(uid, props)
 
         if not uids:
+            logging.debug('Finished updating index.')
             layoutmanager.get_instance().index_updated = True
             return False
         else:

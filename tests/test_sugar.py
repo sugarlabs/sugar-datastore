@@ -122,7 +122,8 @@ class FunctionalityTest(CommonTest):
         f = open(file_name, 'r')
         f.close()
 
-        results, count = self._data_store.find({'uid': uid}, ['uid', 'title'])
+        results, count = self._data_store.find({'uid': uid}, ['uid', 'title'],
+                                               byte_arrays=True)
         assert count == 1
         assert results[0]['uid'] == uid
         assert results[0]['title'] == 'Write Activity'

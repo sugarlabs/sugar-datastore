@@ -66,7 +66,7 @@ data_store = dbus.Interface(proxy, DS_DBUS_INTERFACE)
 
 uids = []
 
-n = 1000
+n = 100
 
 total = 0
 print 'Creating %r entries' % n

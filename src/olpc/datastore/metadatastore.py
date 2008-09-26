@@ -3,6 +3,7 @@ import logging
 import errno
 
 from olpc.datastore import layoutmanager
+from olpc.datastore import metadatareader
 
 MAX_SIZE = 256
 
@@ -26,30 +27,7 @@ class MetadataStore(object):
 
     def retrieve(self, uid, properties=None):
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
-        if not os.path.exists(dir_path):
-            raise ValueError('Unknown object: %r' % uid)
-
-        metadata_path = os.path.join(dir_path, 'metadata')
-        metadata = {}
-        if properties is None or not properties:
-            properties = os.listdir(metadata_path)
-
-        for key in properties:
-            property_path = metadata_path + '/' + key
-            try:
-                value = open(property_path, 'r').read()
-            except IOError, e:
-                if e.errno != errno.ENOENT:
-                    raise
-            else:
-                if not value:
-                    metadata[key] = ''
-                else:
-                    # TODO: This class shouldn't know anything about dbus.
-                    import dbus
-                    metadata[key] = dbus.ByteArray(value)
-            
-        return metadata
+        return metadatareader.retrieve(dir_path, properties)
 
     def delete(self, uid):
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
@@ -57,15 +35,4 @@ class MetadataStore(object):
         for key in os.listdir(metadata_path):
             os.remove(os.path.join(metadata_path, key))
         os.rmdir(metadata_path)
-
-    def _cast_for_journal(self, key, value):
-        # Hack because the current journal expects these properties to have some
-        # predefined types
-        if key in ['timestamp', 'keep']:
-            try:
-                return int(value)
-            except ValueError:
-                return value
-        else:
-            return value
 

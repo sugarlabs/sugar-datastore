@@ -21,7 +21,7 @@ class LayoutManager(object):
             os.makedirs(path)
 
     def get_entry_path(self, uid):
-        return os.path.join(self._root_path, uid[:2], uid)
+        return '%s/%s/%s' % (self._root_path, uid[:2], uid)
 
     def get_index_path(self):
         return os.path.join(self._root_path, 'index')

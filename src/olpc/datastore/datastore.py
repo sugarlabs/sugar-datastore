@@ -24,6 +24,7 @@ from olpc.datastore.layoutmanager import MAX_QUERY_LIMIT
 from olpc.datastore.metadatastore import MetadataStore
 from olpc.datastore.indexstore import IndexStore
 from olpc.datastore.filestore import FileStore
+from olpc.datastore.optimizer import Optimizer
 
 # the name used by the logger
 DS_LOG_CHANNEL = 'org.laptop.sugar.DataStore'
@@ -66,6 +67,8 @@ class DataStore(dbus.service.Object):
             logging.debug('Index is not up-to-date, will update')
             self._rebuild_index()
 
+        self._optimizer = Optimizer(self._file_store, self._metadata_store)
+
     def _rebuild_index(self):
         uids = layoutmanager.get_instance().find_all()
         logging.debug('Going to update the index with uids %r' % uids)
@@ -98,6 +101,7 @@ class DataStore(dbus.service.Object):
             return
 
         self.Created(uid)
+        self._optimizer.optimize(uid)
         logger.debug("created %s" % uid)
         async_cb(uid)
 
@@ -133,6 +137,7 @@ class DataStore(dbus.service.Object):
             return
 
         self.Updated(uid)
+        self._optimizer.optimize(uid)
         logger.debug("updated %s" % uid)
         async_cb()
 
@@ -148,6 +153,10 @@ class DataStore(dbus.service.Object):
 
         self._metadata_store.store(uid, props)
         self._index_store.store(uid, props)
+
+        if os.path.exists(self._file_store.get_file_path(uid)) and \
+                (not file_path or os.path.exists(file_path)):
+            self._optimizer.remove(uid)
         self._file_store.store(uid, file_path, transfer_ownership,
                 lambda *args: self._update_completion_cb(async_cb,
                                                          async_err_cb,
@@ -230,6 +239,8 @@ class DataStore(dbus.service.Object):
              in_signature='s',
              out_signature='')
     def delete(self, uid):
+        self._optimizer.remove(uid)
+
         self._index_store.delete(uid)
         self._file_store.delete(uid)
         self._metadata_store.delete(uid)

@@ -20,11 +20,7 @@ class MetadataStore(object):
 
         metadata['uid'] = uid
         for key, value in metadata.items():
-            f = open(os.path.join(metadata_path, key), 'w+')
-            try:
-                f.write(str(value))
-            finally:
-                f.close()
+            open(os.path.join(metadata_path, key), 'w').write(str(value))
 
     def retrieve(self, uid, properties=None):
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
@@ -36,4 +32,19 @@ class MetadataStore(object):
         for key in os.listdir(metadata_path):
             os.remove(os.path.join(metadata_path, key))
         os.rmdir(metadata_path)
+
+    def get_property(self, uid, key):
+        dir_path = layoutmanager.get_instance().get_entry_path(uid)
+        metadata_path = os.path.join(dir_path, 'metadata')
+        property_path = os.path.join(metadata_path, key)
+        if os.path.exists(property_path):
+            return open(property_path, 'r').read()
+        else:
+            return None
+
+    def set_property(self, uid, key, value):
+        dir_path = layoutmanager.get_instance().get_entry_path(uid)
+        metadata_path = os.path.join(dir_path, 'metadata')
+        property_path = os.path.join(metadata_path, key)
+        open(property_path, 'w').write(value)
 

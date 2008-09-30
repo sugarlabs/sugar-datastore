@@ -108,12 +108,14 @@ class FunctionalityTest(CommonTest):
         props = self._data_store.get_properties(uid, byte_arrays=True)
         del props['uid']
         del props['mountpoint']
+        del props['checksum']
         assert props == PROPS_WITHOUT_PREVIEW
 
         t = self.update(uid)
         props = self._data_store.get_properties(uid, byte_arrays=True)
         del props['uid']
         del props['mountpoint']
+        del props['checksum']
         assert props == PROPS_WITH_PREVIEW
 
         file_name = self._data_store.get_filename(uid)

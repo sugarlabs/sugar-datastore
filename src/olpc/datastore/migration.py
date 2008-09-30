@@ -1,7 +1,5 @@
 import os
 import logging
-import traceback
-import sys
 import shutil
 
 import cjson

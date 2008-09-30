@@ -1,6 +1,4 @@
 import os
-import logging
-import errno
 
 from olpc.datastore import layoutmanager
 from olpc.datastore import metadatareader

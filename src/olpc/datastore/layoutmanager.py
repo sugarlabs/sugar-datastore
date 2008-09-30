@@ -7,9 +7,12 @@ class LayoutManager(object):
         profile = os.environ.get('SUGAR_PROFILE', 'default')
         base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
 
-        self._root_path = os.path.join(base_dir, 'datastore2')
+        self._root_path = os.path.join(base_dir, 'datastore')
 
-        self._create_if_needed(self._root_path)
+        if not os.path.exists(self._root_path):
+            os.makedirs(self._root_path)
+            self.set_version(1)
+
         self._create_if_needed(self.get_checksums_dir())
         self._create_if_needed(self.get_queue_path())
 
@@ -20,8 +23,23 @@ class LayoutManager(object):
         if not os.path.exists(path):
             os.makedirs(path)
 
+    def get_version(self):
+        version_path = os.path.join(self._root_path, 'version')
+        version = 0
+        if os.path.exists(version_path):
+            version = int(open(version_path, 'r').read())
+        return version
+
+    def set_version(self, version):
+        version_path = os.path.join(self._root_path, 'version')
+        open(version_path, 'w').write(str(version))
+
     def get_entry_path(self, uid):
+        # os.path.join() is just too slow
         return '%s/%s/%s' % (self._root_path, uid[:2], uid)
+
+    def get_root_path(self):
+        return self._root_path
 
     def get_index_path(self):
         return os.path.join(self._root_path, 'index')
@@ -50,8 +68,10 @@ class LayoutManager(object):
     def find_all(self):
         uids = []
         for f in os.listdir(self._root_path):
-            if f not in ['index', 'checksums', 'queue', 'index_updated']:
-                uids.extend(os.listdir(os.path.join(self._root_path, f)))
+            if os.path.isdir(os.path.join(self._root_path, f)) and len(f) == 2:
+                for g in os.listdir(os.path.join(self._root_path, f)):
+                    if len(g) == 36:
+                        uids.append(g)
         return uids
 
 _instance = None

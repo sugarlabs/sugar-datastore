@@ -5,7 +5,8 @@ datastore_PYTHON = 		\
 	filestore.py		\
 	indexstore.py		\
 	layoutmanager.py	\
-	metadatastore.py
+	metadatastore.py	\
+	migration.py
 
 AM_CPPFLAGS = 			\
 	$(WARN_CFLAGS)		\

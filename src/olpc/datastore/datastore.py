@@ -19,6 +19,7 @@ import dbus
 import gobject
 
 from olpc.datastore import layoutmanager
+from olpc.datastore import migration
 from olpc.datastore.layoutmanager import MAX_QUERY_LIMIT
 from olpc.datastore.metadatastore import MetadataStore
 from olpc.datastore.indexstore import IndexStore
@@ -42,6 +43,12 @@ class DataStore(dbus.service.Object):
                                         allow_replacement=False)
         dbus.service.Object.__init__(self, bus_name, DS_OBJECT_PATH)
 
+        layout_manager = layoutmanager.get_instance()
+        if layout_manager.get_version() == 0:
+            migration.migrate_from_0()
+            layout_manager.set_version(1)
+            layout_manager.index_updated = False
+
         self._metadata_store = MetadataStore()
 
         self._index_store = IndexStore()
@@ -49,18 +56,19 @@ class DataStore(dbus.service.Object):
             self._index_store.open_index()
         except Exception, e:
             logging.error('Failed to open index, will rebuild: %r', e)
-            layoutmanager.get_instance().index_updated = False
+            layout_manager.index_updated = False
             self._index_store.remove_index()
             self._index_store.open_index()
 
         self._file_store = FileStore()
 
-        if not layoutmanager.get_instance().index_updated:
+        if not layout_manager.index_updated:
             logging.debug('Index is not up-to-date, will update')
             self._rebuild_index()
 
     def _rebuild_index(self):
         uids = layoutmanager.get_instance().find_all()
+        logging.debug('Going to update the index with uids %r' % uids)
         gobject.idle_add(lambda: self.__rebuild_index_cb(uids),
                             priority=gobject.PRIORITY_LOW)
 

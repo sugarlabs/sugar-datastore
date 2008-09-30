@@ -59,15 +59,14 @@ class Optimizer(object):
         checksum_path = os.path.join(checksums_dir, checksum)
         return os.path.exists(checksum_path)
 
-    def _get_file_from_checksum(self, checksum):
-        """Get a file that matches checksum.
+    def _get_uid_from_checksum(self, checksum):
+        """Get an existing entry which file matches checksum.
 
         """
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
-        first_file_link = os.listdir(checksum_path)[0]
-        first_file = os.readlink(os.path.join(checksum_path, first_file_link))
-        return first_file
+        first_uid = os.listdir(checksum_path)[0]
+        return first_uid
 
     def _create_checksum_dir(self, checksum):
         """Create directory that tracks files with this same checksum.
@@ -79,18 +78,14 @@ class Optimizer(object):
         os.mkdir(checksum_path)
 
     def _add_checksum_entry(self, uid, checksum):
-        """Create a symbolic link in the checksum dir to the file in the entry
-           dir.
+        """Create a file in the checksum dir with the uid of the entry
 
         """
-        entry_path = layoutmanager.get_instance().get_entry_path(uid)
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
 
-        logging.debug('symlink %r -> %r' % (os.path.join(checksum_path, uid),
-                                            os.path.join(entry_path, 'data')))
-        os.symlink(os.path.join(entry_path, 'data'),
-                   os.path.join(checksum_path, uid))
+        logging.debug('touch %r' % os.path.join(checksum_path, uid))
+        open(os.path.join(checksum_path, uid), 'w').close()
 
     def _already_linked(self, uid, checksum):
         """Check if this entry's file is already a hard link to the checksums
@@ -112,20 +107,14 @@ class Optimizer(object):
         if queue:
             uid = queue[0]
             logging.debug('_process_entry_cb processing %r' % uid)
-            entry_path = layoutmanager.get_instance().get_entry_path(uid)
-            file_in_entry_path = os.path.join(entry_path, 'data')
+            file_in_entry_path = self._file_store.get_file_path(uid)
             checksum = self._calculate_md5sum(file_in_entry_path)
             self._metadata_store.set_property(uid, 'checksum', checksum)
 
             if self._identical_file_already_exists(checksum):
                 if not self._already_linked(uid, checksum):
-                    logging.debug('delete %r' % file_in_entry_path)
-                    os.remove(file_in_entry_path)
-
-                    existing_file = self._get_file_from_checksum(checksum)
-                    logging.debug('link %r -> %r' % \
-                            (existing_file, file_in_entry_path))
-                    os.link(existing_file, file_in_entry_path)
+                    existing_entry_uid = self._get_uid_from_checksum(checksum)
+                    self._file_store.hard_link_entry(uid, existing_entry_uid)
 
                     self._add_checksum_entry(uid, checksum)
             else:

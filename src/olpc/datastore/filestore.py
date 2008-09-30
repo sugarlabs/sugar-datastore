@@ -114,6 +114,20 @@ class FileStore(object):
         if os.path.exists(file_path):
             os.remove(file_path)
 
+    def hard_link_entry(self, new_uid, existing_uid):
+        existing_file = os.path.join(
+                layoutmanager.get_instance().get_entry_path(existing_uid),
+                'data')
+        new_file = os.path.join(
+                layoutmanager.get_instance().get_entry_path(new_uid),
+                'data')
+
+        logging.debug('removing %r' % new_file)
+        os.remove(new_file)
+
+        logging.debug('hard linking %r -> %r' % (new_file, existing_file))
+        os.link(existing_file, new_file)
+
 class AsyncCopy(object):
     """Copy a file in chunks in the idle loop.
     

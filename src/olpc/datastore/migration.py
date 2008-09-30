@@ -2,6 +2,7 @@ import os
 import logging
 import traceback
 import sys
+import shutil
 
 import cjson
 
@@ -16,14 +17,22 @@ def migrate_from_0():
         if ext != '.metadata':
             continue
 
-        logging.info('Migrating entry %r' % uid)
+        logging.debug('Migrating entry %r' % uid)
         try:
             _migrate_metadata(root_path, old_root_path, uid)
             _migrate_file(root_path, old_root_path, uid)
             _migrate_preview(root_path, old_root_path, uid)
         except Exception:
-            logging.warning('Failed to migrate entry %r:%s\n' %(uid, 
-                ''.join(traceback.format_exception(*sys.exc_info()))))
+            #logging.warning('Failed to migrate entry %r:%s\n' %(uid, 
+            #    ''.join(traceback.format_exception(*sys.exc_info()))))
+            #
+            # In production, we may choose to ignore errors when failing to
+            # migrate some entries. But for now, raise them.
+            raise
+
+    # Just be paranoid, it's cheap.
+    if old_root_path.endswith('datastore/store'):
+        shutil.rmtree(old_root_path)
 
     logging.info('Migration finished')
 

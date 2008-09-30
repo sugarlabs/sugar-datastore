@@ -24,7 +24,7 @@ class FileStore(object):
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
 
-        destination_path = os.path.join(dir_path, uid)
+        destination_path = os.path.join(dir_path, 'data')
         if file_path:
             if not os.path.isfile(file_path):
                 raise ValueError('No file at %r' % file_path)
@@ -120,8 +120,8 @@ class FileStore(object):
         checksum_path = os.path.join(checksums_dir, checksum)
 
         logging.debug('symlink %r -> %r' % (os.path.join(checksum_path, uid),
-                                            os.path.join(entry_path, uid)))
-        os.symlink(os.path.join(entry_path, uid),
+                                            os.path.join(entry_path, 'data')))
+        os.symlink(os.path.join(entry_path, 'data'),
                    os.path.join(checksum_path, uid))
 
         logging.debug('symlink %r -> %r' % \
@@ -169,8 +169,8 @@ class FileStore(object):
             uid = queue[0]
             logging.debug('_compute_checksum_cb processing %r' % uid)
             entry_path = layoutmanager.get_instance().get_entry_path(uid)
-            file_in_entry_path = os.path.join(entry_path, uid)
-            checksum = self._calculate_md5sum(os.path.join(entry_path, uid))
+            file_in_entry_path = os.path.join(entry_path, 'data')
+            checksum = self._calculate_md5sum(file_in_entry_path)
 
             if self._identical_file_already_exists(checksum):
                 if not self._already_linked(uid, checksum):
@@ -208,7 +208,7 @@ class FileStore(object):
         
         """
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
-        file_path = os.path.join(dir_path, uid)
+        file_path = os.path.join(dir_path, 'data')
         if not os.path.exists(file_path):
             return ''
 
@@ -216,7 +216,7 @@ class FileStore(object):
                            os.getuid() != user_id
         if use_instance_dir:
             if not user_id:
-                raise ValueError("Couldn't determine the current user uid.")
+                raise ValueError('Couldnt determine the current user uid.')
             destination_dir = os.path.join(os.environ['HOME'], 'isolation', '1',
                                            'uid_to_instance_dir', str(user_id))
         else:
@@ -253,7 +253,7 @@ class FileStore(object):
         
         """
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
-        file_path = os.path.join(dir_path, uid)
+        file_path = os.path.join(dir_path, 'data')
         if os.path.exists(file_path):
             self._remove_checksum_entry(uid)
             os.remove(file_path)

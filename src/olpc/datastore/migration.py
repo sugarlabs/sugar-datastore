@@ -53,7 +53,8 @@ def _migrate_metadata(root_path, old_root_path, uid):
 def _migrate_file(root_path, old_root_path, uid):
     if os.path.exists(os.path.join(old_root_path, uid)):
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
-        os.rename(os.path.join(old_root_path, uid), os.path.join(dir_path, uid))
+        os.rename(os.path.join(old_root_path, uid),
+                  os.path.join(dir_path, 'data'))
 
 def _migrate_preview(root_path, old_root_path, uid):
     dir_path = layoutmanager.get_instance().get_entry_path(uid)

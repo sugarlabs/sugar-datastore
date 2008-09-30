@@ -14,6 +14,9 @@ class MetadataStore(object):
         metadata_path = os.path.join(dir_path, 'metadata')
         if not os.path.exists(metadata_path):
             os.makedirs(metadata_path)
+        else:
+            for key in os.listdir(metadata_path):
+                os.remove(os.path.join(metadata_path, key))
 
         metadata['uid'] = uid
         for key, value in metadata.items():

@@ -28,7 +28,7 @@ _FLUSH_TIMEOUT = 60
 
 _PROPERTIES_NOT_TO_INDEX = ['timestamp', 'activity_id', 'keep', 'preview']
 
-_MAX_RESULTS = 2 ** 31 - 1
+_MAX_RESULTS = int(2 ** 31 - 1)
 
 class IndexStore(object):
     def __init__(self):

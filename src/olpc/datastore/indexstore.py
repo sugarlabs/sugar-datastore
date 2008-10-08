@@ -66,7 +66,7 @@ class IndexStore(object):
         document.add_value(_VALUE_UID, uid)
         document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))
         document.add_value(_VALUE_ACTIVITY_ID, properties['activity_id'])
-        document.add_value(_VALUE_MIME_TYPE, str(properties['keep']))
+        document.add_value(_VALUE_MIME_TYPE, str(properties['mime_type']))
         document.add_value(_VALUE_ACTIVITY, properties['activity'])
 
         term_generator = xapian.TermGenerator()

@@ -34,9 +34,9 @@ DS_DBUS_PATH = "/org/laptop/sugar/DataStore"
 PROPS_WITHOUT_PREVIEW = {'activity_id': '37fa2f4013b17ae7fc6448f10fe5df53ef92de18',
         'title_set_by_user': '0',
         'title': 'Write Activity',
-        'timestamp': int(time.time()),
+        'timestamp': str(int(time.time())),
         'activity': 'org.laptop.AbiWordActivity',
-        'share-scope': 'private',
+        'share-scope': 'private\nmoc',
         'keep': '0',
         'icon-color': '#00588C,#00EA11',
         'mtime': datetime.now().isoformat(),
@@ -47,7 +47,7 @@ PROPS_WITH_PREVIEW = {'activity_id': 'e8594bea74faa80539d93ef1a10de3c712bb2eac',
         'title_set_by_user': '0',
         'title': 'Write Activity',
         'share-scope': 'private',
-        'timestamp': int(time.time()),
+        'timestamp': str(int(time.time())),
         'activity': 'org.laptop.AbiWordActivity',
         'fulltext': 'mec mac',
         'keep': '0',
@@ -82,7 +82,7 @@ class CommonTest(unittest.TestCase):
         query = {'order_by': ['-mtime'],
                  'limit': 80}
         t = time.time()
-        results, count = self._data_store.find(query, [])
+        results, count = self._data_store.find(query, ['uid', 'title'])
         t = time.time() - t
         return t
 
@@ -106,12 +106,16 @@ class FunctionalityTest(CommonTest):
     def testresume(self):
         t, uid = self.create()
         props = self._data_store.get_properties(uid, byte_arrays=True)
-        #del props['uid']
+        del props['uid']
+        del props['mountpoint']
+        del props['checksum']
         assert props == PROPS_WITHOUT_PREVIEW
 
         t = self.update(uid)
         props = self._data_store.get_properties(uid, byte_arrays=True)
-        #del props['uid']
+        del props['uid']
+        del props['mountpoint']
+        del props['checksum']
         assert props == PROPS_WITH_PREVIEW
 
         file_name = self._data_store.get_filename(uid)
@@ -119,6 +123,12 @@ class FunctionalityTest(CommonTest):
         assert os.path.exists(file_name)
         f = open(file_name, 'r')
         f.close()
+
+        results, count = self._data_store.find({'uid': uid}, ['uid', 'title'],
+                                               byte_arrays=True)
+        assert count == 1
+        assert results[0]['uid'] == uid
+        assert results[0]['title'] == 'Write Activity'
 
     """
     def testcustomproperties(self):
@@ -130,8 +140,7 @@ class FunctionalityTest(CommonTest):
         props = self._data_store.get_properties(uid)
         assert props['custom_property'] == 'test'
 
-        results, count = self._data_store.find({'custom_property': 'test'}, [])
-        assert count > 1
+        results, count = self._data_store.find({'custom_property': 'test'}, ['custom_property'])
         for entry in results:
             assert entry['custom_property'] == 'test'
             uid = entry['uid']
@@ -140,7 +149,10 @@ class FunctionalityTest(CommonTest):
     """
 
     def testfind(self):
-        t = self.find()
+        results, count = self._data_store.find({}, ['uid'])
+        assert count > 0
+
+        print self.find()
 
 class PerformanceTest(CommonTest):
 
@@ -176,7 +188,7 @@ class PerformanceTest(CommonTest):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    #suite.addTest(unittest.makeSuite(FunctionalityTest))
-    suite.addTest(unittest.makeSuite(PerformanceTest))
+    suite.addTest(unittest.makeSuite(FunctionalityTest))
+    #suite.addTest(unittest.makeSuite(PerformanceTest))
     unittest.TextTestRunner().run(suite)
     

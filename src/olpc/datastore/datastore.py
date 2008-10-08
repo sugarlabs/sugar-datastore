@@ -1,22 +1,35 @@
-""" 
-olpc.datastore.datastore
-~~~~~~~~~~~~~~~~~~~~~~~~
-the datastore facade
-
-""" 
-
-__author__ = 'Benjamin Saller <bcsaller@objectrealms.net>'
-__docformat__ = 'restructuredtext'
-__copyright__ = 'Copyright ObjectRealms, LLC, 2007'
-__license__  = 'The GNU Public License V2+'
-
-
+# Copyright (C) 2008, One Laptop Per Child
+# Based on code Copyright (C) 2007, ObjectRealms, LLC
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 import logging
-import dbus.service
-import dbus.mainloop.glib
+import uuid
+import time
+import os
 
-from olpc.datastore import utils
+import dbus
+import gobject
+
+from olpc.datastore import layoutmanager
+from olpc.datastore import migration
+from olpc.datastore.layoutmanager import MAX_QUERY_LIMIT
+from olpc.datastore.metadatastore import MetadataStore
+from olpc.datastore.indexstore import IndexStore
+from olpc.datastore.filestore import FileStore
+from olpc.datastore.optimizer import Optimizer
 
 # the name used by the logger
 DS_LOG_CHANNEL = 'org.laptop.sugar.DataStore'
@@ -27,468 +40,259 @@ DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
 
 logger = logging.getLogger(DS_LOG_CHANNEL)
 
-DEFAULT_LIMIT = 65536
-
 class DataStore(dbus.service.Object):
-
+    """D-Bus API and logic for connecting all the other components.
+    """ 
     def __init__(self, **options):
-        self.options = options
-        self.backends = []
-        self.mountpoints = {}
-        self.root = None
-        
-        # global handle to the main look
-        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-        session_bus = dbus.SessionBus()
+        bus_name = dbus.service.BusName(DS_SERVICE,
+                                        bus=dbus.SessionBus(),
+                                        replace_existing=False,
+                                        allow_replacement=False)
+        dbus.service.Object.__init__(self, bus_name, DS_OBJECT_PATH)
 
-        self.bus_name = dbus.service.BusName(DS_SERVICE,
-                                             bus=session_bus,
-                                             replace_existing=False,
-                                             allow_replacement=False)
-        dbus.service.Object.__init__(self, self.bus_name, DS_OBJECT_PATH)
+        layout_manager = layoutmanager.get_instance()
+        if layout_manager.get_version() == 0:
+            migration.migrate_from_0()
+            layout_manager.set_version(1)
+            layout_manager.index_updated = False
 
-        
-    ####
-    ## Backend API
-    ## register a set of datastore backend factories which will manage
-    ## storage
-    def registerBackend(self, backendClass):
-        self.backends.append(backendClass)
-        
-    ## MountPoint API
-    #@utils.sanitize_dbus
-    @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature="sa{sv}",
-                         out_signature='s')
-    def mount(self, uri, options=None):
-        """(re)Mount a new backingstore for this datastore.
-        Returns the mountpoint id or an empty string to indicate failure.
-        """
-        # on some media we don't want to write the indexes back to the
-        # medium (maybe an SD card for example) and we'd want to keep
-        # that on the XO itself. In these cases their might be very
-        # little identifying information on the media itself.
-        uri = str(uri)
+        self._metadata_store = MetadataStore()
 
-        _options = utils._convert(options)
-        if _options is None: _options = {}
-        
-        mp = self.connect_backingstore(uri, **_options)
-        if not mp: return ''
-        if mp.id in self.mountpoints:
-            self.mountpoints[mp.id].stop()
+        self._index_store = IndexStore()
+        try:
+            self._index_store.open_index()
+        except Exception, e:
+            logging.error('Failed to open index, will rebuild: %r', e)
+            layout_manager.index_updated = False
+            self._index_store.remove_index()
+            self._index_store.open_index()
 
-        mp.bind_to(self)
-        self.mountpoints[mp.id] = mp
-        if self.root is None:
-            self.root = mp
+        self._file_store = FileStore()
 
-        self.Mounted(mp.descriptor())
-        return mp.id
+        if not layout_manager.index_updated:
+            logging.debug('Index is not up-to-date, will update')
+            self._rebuild_index()
 
-    @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature="",
-                         out_signature="aa{sv}")
-    def mounts(self):
-        """return a list of mount point descriptiors where each
-        descriptor is a dict containing atleast the following keys:
-        'id' -- the id used to refer explicitly to the mount point
-        'title' -- Human readable identifier for the mountpoint
-        'uri' -- The uri which triggered the mount
-        """
-        return [mp.descriptor() for mp in self.mountpoints.itervalues()]
+        self._optimizer = Optimizer(self._file_store, self._metadata_store)
 
-    #@utils.sanitize_dbus
-    @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature="s",
-                         out_signature="")
-    def unmount(self, mountpoint_id):
-        """Unmount a mountpoint by id"""
-        if mountpoint_id not in self.mountpoints: return
-        mp = self.mountpoints[mountpoint_id]
-        mp.stop()
-            
-        del self.mountpoints[mountpoint_id]
-        self.Unmounted(mp.descriptor())
+    def _rebuild_index(self):
+        uids = layoutmanager.get_instance().find_all()
+        logging.debug('Going to update the index with uids %r' % uids)
+        gobject.idle_add(lambda: self.__rebuild_index_cb(uids),
+                            priority=gobject.PRIORITY_LOW)
 
-    @dbus.service.signal(DS_DBUS_INTERFACE, signature="a{sv}")
-    def Mounted(self, descriptior):
-        """indicates that a new backingstore has been mounted by the
-    datastore. Returns the mount descriptor, like mounts()"""
-        pass
+    def __rebuild_index_cb(self, uids):
+        if uids:
+            uid = uids.pop()
 
-    @dbus.service.signal(DS_DBUS_INTERFACE, signature="a{sv}")
-    def Unmounted(self, descriptor):
-        """indicates that a new backingstore has been mounted by the
-    datastore. Returns the mount descriptor, like mounts()"""
-        pass
-    
-    
-    ### End Mount Points
+            logging.debug('Updating entry %r in index. %d to go.' % \
+                          (uid, len(uids)))
 
-    ### Backup support
-    def pause(self, mountpoints=None):
-        """ Deprecated. """
+            if not self._index_store.contains(uid):
+                props = self._metadata_store.retrieve(uid)
+                self._index_store.store(uid, props)
 
-    def unpause(self, mountpoints=None):
-        """ Deprecated. """
-    ### End Backups
-            
-    def connect_backingstore(self, uri, **kwargs):
-        """
-        connect to a new backing store
-
-        @returns: Boolean for success condition
-        """
-        bs = None
-        for backend in self.backends:
-            if backend.parse(uri) is True:
-                bs = backend(uri, **kwargs)
-                bs.initialize_and_load()
-                # The backingstore should be ready to run
-                break
-        return bs
-    
-
-    def _resolveMountpoint(self, mountpoint=None):
-        if isinstance(mountpoint, dict):
-            mountpoint = mountpoint.pop('mountpoint', None)
-            
-        if mountpoint is not None:
-            # this should be the id of a mount point
-            mp = self.mountpoints[mountpoint]
+        if not uids:
+            logging.debug('Finished updating index.')
+            layoutmanager.get_instance().index_updated = True
+            return False
         else:
-            # the first one is the default
-            mp = self.root
-        return mp
+            return True
 
-    def _create_completion(self, async_cb, async_err_cb, exc=None, uid=None):
-        logger.debug("_create_completion_cb() called with %r / %r, exc %r, uid %r" % (async_cb, async_err_cb, exc, uid))
+    def _create_completion_cb(self, async_cb, async_err_cb, uid, exc=None):
+        logger.debug("_create_completion_cb(%r, %r, %r, %r)" % \
+            (async_cb, async_err_cb, uid, exc))
         if exc is not None:
             async_err_cb(exc)
             return
 
         self.Created(uid)
+        self._optimizer.optimize(uid)
         logger.debug("created %s" % uid)
         async_cb(uid)
 
-    # PUBLIC API
-    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='a{sv}sb',
                          out_signature='s',
                          async_callbacks=('async_cb', 'async_err_cb'),
                          byte_arrays=True)
-    def create(self, props, filelike=None, transfer_ownership=False, async_cb=None, async_err_cb=None):
-        """create a new entry in the datastore. If a file is passed it
-        will be consumed by the datastore. Because the repository has
-        a checkin/checkout model this will create a copy of the file
-        in the repository. Changes to this file will not automatically
-        be be saved. Rather it is recorded in its current state.
+    def create(self, props, file_path, transfer_ownership,
+               async_cb, async_err_cb):
+        uid = str(uuid.uuid4())
 
-        When many backing stores are associated with a datastore
-        new objects are created in the first datastore. More control
-        over this process can come at a later time.
-        """
-        mp = self._resolveMountpoint(props)
-        mp.create_async(props, filelike, can_move=transfer_ownership,
-            completion=lambda *args: self._create_completion(async_cb, async_err_cb, *args))
+        if not props.get('timestamp', ''):
+            props['timestamp'] = int(time.time())
+
+        self._metadata_store.store(uid, props)
+        self._index_store.store(uid, props)
+        self._file_store.store(uid, file_path, transfer_ownership,
+                lambda *args: self._create_completion_cb(async_cb,
+                                                         async_err_cb,
+                                                         uid,
+                                                         *args))
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
-    def Created(self, uid): pass
+    def Created(self, uid):
+        pass
 
-    def _single_search(self, mountpoint, query, order_by, limit, offset):
-        results, count = mountpoint.find(query.copy(), order_by,
-                                         limit + offset, offset)
-        return list(results), count, 1
-
-    def _multiway_search(self, query, order_by=None, limit=None, offset=None):
-        mountpoints = query.pop('mountpoints', self.mountpoints)
-        mountpoints = [self.mountpoints[str(m)] for m in mountpoints]
-
-        if len(mountpoints) == 1:
-            # Fast path the single mountpoint case
-            return self._single_search(mountpoints[0], query,
-        order_by, limit, offset)
-
-        results = []
-        # XXX: the merge will become *much* more complex in when
-        # distributed versioning is implemented.
-        # collect
-        #  some queries mutate the query-dict so we pass a copy each
-        #  time
-        for mp in mountpoints:
-            result, count =  mp.find(query.copy(), order_by, limit)
-            results.append(result)
-            
-        # merge
-        d = {}
-        for res in results:
-            for hit in res:
-                existing = d.get(hit.id)
-                if not existing or \
-                   existing.get_property('mtime') < hit.get_property('mtime'):
-                    # XXX: age/version check
-                    d[hit.id] = hit
-        return d, len(d), len(results)
-
-
-    @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='s',
-             out_signature='as')
-    def ids(self, mountpoint=None):
-        """return all the ids of objects living on a given
-             mountpoint"""
-        if str(mountpoint) == "": mountpoint=None
-        mp = self._resolveMountpoint(mountpoint)
-        return mp.ids()
-    
-
-    #@utils.sanitize_dbus    
-    @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='a{sv}as',
-             out_signature='aa{sv}u')
-    def find(self, query=None, properties=None, **kwargs):
-        """find(query)
-        takes a dict of parameters and returns data in the following
-             format
-
-             (results, count)
-
-             where results are:
-             [ {props}, {props}, ... ]
-
-        which is to be read, results is an ordered list of property
-        dicts, akin to what is returned from get_properties. 'uid' is
-        included in the properties dict as well and is the unique
-        identifier used in subsequent calls to refer to that object.
-
-        special keywords in the query that are supported are more
-        fully documented in the query.py::find method docstring.
-
-        The 'include_files' keyword will trigger the availability of
-        user accessible files. Because these are working copies we
-        don't want to generate them unless needed. In the case the
-        the full properties set matches doing the single roundtrip
-        to start an activity makes sense.
-
-        To order results by a given property you can specify:
-        >>> ds.find(order_by=['author', 'title'])
-
-        Order by must be a list of property names given in the order
-        of decreasing precedence.
-
-        """
-        # only goes to the primary now. Punting on the merge case
-        if isinstance(query, dict):
-            kwargs.update(query)
-        else:
-            if 'query' not in kwargs:
-                kwargs['query'] = query
-        
-        include_files = kwargs.pop('include_files', False)
-        order_by = kwargs.pop('order_by', [])
-
-        # XXX: this is a workaround, deal properly with n backends
-        limit = kwargs.pop('limit', DEFAULT_LIMIT)
-        offset = kwargs.pop('offset', 0)
-
-        # distribute the search to all the mountpoints unless a
-        # backingstore id set is specified
-        # backends may be able to return sorted results, if there is
-        # only a single backend in the query we can use pre-sorted
-        # results directly
-        results, count, results_from = self._multiway_search(kwargs,
-                                                             order_by,
-                                                             limit, offset)
-
-        
-        # ordering is difficult when we are dealing with sets from
-        # more than one source. The model is this.
-        # order by the primary (first) sort criteria, then do the rest
-        # in post processing. This allows use to assemble partially
-        # database sorted results from many sources and quickly
-        # combine them.
-        if results_from > 1:
-            if order_by:
-                # resolve key names to columns
-                if isinstance(order_by, basestring):
-                    order_by = [o.strip() for o in order_by.split(',')]
-
-                if not isinstance(order_by, list):
-                    logger.debug("bad query, order_by should be a list of property names")                
-                    order_by = None
-
-                # generate a sort function based on the complete set of
-                # ordering criteria which includes the primary sort
-                # criteria as well to keep it stable.
-                def comparator(a, b):
-                    # we only sort on properties so
-                    for criteria in order_by:
-                        mode = 1 # ascending
-                        if criteria.startswith('-'):
-                            mode = -1
-                            criteria = criteria[1:]
-                        pa = a.get_property(criteria, None)
-                        pb = b.get_property(criteria, None)
-                        r = cmp(pa, pb) * mode
-                        if r != 0: return r
-                    return 0
-
-
-                r = results.values()
-                r.sort(comparator)
-                results = r
-
-                results = results[offset:limit+offset]
-            else:
-                results = results.values()
-            
-        d = []
-        c = 0
-        for r in results:
-            props = r.properties
-            props['uid'] = r.id
-            props['mountpoint'] = r.backingstore.id
-            props['filename'] = ''
-            d.append(props)
-
-            if properties:
-                for name in props.keys():
-                    if name not in properties:
-                        del props[name]
-            c+= 1
-            if limit and c > limit: break
-            
-        return (d, count)
-
-    def get(self, uid):
-        mp = self._resolveMountpoint()
-        c = None
-        try:
-            c = mp.get(uid)
-            if c: return c
-        except KeyError:
-            pass
-            
-        if not c:
-            for mp in self.mountpoints.itervalues():
-                try:
-                    c = mp.get(uid)
-                    if c: break
-                except KeyError:
-                    continue
-        return c
-
-    #@utils.sanitize_dbus
-    @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='s',
-             out_signature='s',
-             sender_keyword='sender')
-    def get_filename(self, uid, sender=None):
-        content = self.get(uid)
-        if content:
-            # Assign to the backing store the uid of the process that called
-            # this method. This is needed for copying the file in the right
-            # place.
-            backingstore = content.backingstore
-            backingstore.current_user_id = dbus.Bus().get_unix_user(sender)
-            try:
-                # Retrieving the file path for the file will cause the file to be
-                # copied or linked to a directory accessible by the caller.
-                file_path = content.filename
-            except AttributeError:
-                file_path = ''
-            finally:
-                backingstore.current_user_id = None
-        return file_path
-        
-    #@utils.sanitize_dbus
-    @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature='s',
-                         out_signature='a{sv}')
-    def get_properties(self, uid):
-        content = self.get(uid)
-        props = content.properties
-        props['mountpoint'] = content.backingstore.id
-        return props
-
-    @dbus.service.method(DS_DBUS_INTERFACE,
-                         in_signature='sa{sv}',
-                         out_signature='as')
-    def get_uniquevaluesfor(self, propertyname, query=None):
-        propertyname = str(propertyname)
-        
-        if not query: query = {}
-        mountpoints = query.pop('mountpoints', self.mountpoints)
-        mountpoints = [self.mountpoints[str(m)] for m in mountpoints]
-        results = set()
-
-        for mp in mountpoints:
-            result = mp.get_uniquevaluesfor(propertyname)
-            results = results.union(result)
-        return results
-    
-    def _update_completion_cb(self, async_cb, async_err_cb, content, exc=None):
-        logger.debug("_update_completion_cb() called with %r / %r, exc %r" % (async_cb, async_err_cb, exc))
+    def _update_completion_cb(self, async_cb, async_err_cb, uid, exc=None):
+        logger.debug("_update_completion_cb() called with %r / %r, exc %r" % \
+            (async_cb, async_err_cb, exc))
         if exc is not None:
             async_err_cb(exc)
             return
 
-        self.Updated(content.id)
-        logger.debug("updated %s" % content.id)
+        self.Updated(uid)
+        self._optimizer.optimize(uid)
+        logger.debug("updated %s" % uid)
         async_cb()
 
-    #@utils.sanitize_dbus
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='sa{sv}sb',
              out_signature='',
              async_callbacks=('async_cb', 'async_err_cb'),
              byte_arrays=True)
-    def update(self, uid, props, filelike=None, transfer_ownership=False,
-            async_cb=None, async_err_cb=None):
-        """Record the current state of the object checked out for a
-        given uid. If contents have been written to another file for
-        example. You must create it
-        """
-        content = self.get(uid)
-        mountpoint = props.pop('mountpoint', None)
-        content.backingstore.update_async(uid, props, filelike, can_move=transfer_ownership,
-            completion=lambda *args: self._update_completion_cb(async_cb, async_err_cb, content, *args))
+    def update(self, uid, props, file_path, transfer_ownership,
+               async_cb, async_err_cb):
+        if not props.get('timestamp', ''):
+            props['timestamp'] = int(time.time())
+
+        self._metadata_store.store(uid, props)
+        self._index_store.store(uid, props)
+
+        if os.path.exists(self._file_store.get_file_path(uid)) and \
+                (not file_path or os.path.exists(file_path)):
+            self._optimizer.remove(uid)
+        self._file_store.store(uid, file_path, transfer_ownership,
+                lambda *args: self._update_completion_cb(async_cb,
+                                                         async_err_cb,
+                                                         uid,
+                                                         *args))
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
-    def Updated(self, uid): pass
+    def Updated(self, uid):
+        pass
 
-    #@utils.sanitize_dbus
+    @dbus.service.method(DS_DBUS_INTERFACE,
+             in_signature='a{sv}as',
+             out_signature='aa{sv}u')
+    def find(self, query, properties):
+        t = time.time()
+
+        if not layoutmanager.get_instance().index_updated:
+            logging.warning('Index updating, returning all entries')
+
+            uids = layoutmanager.get_instance().find_all()
+            count = len(uids)
+
+            offset = query.get('offset', 0)
+            limit = query.get('limit', MAX_QUERY_LIMIT)
+            uids = uids[offset, offset + limit]
+        else:
+            try:
+                uids, count = self._index_store.find(query)
+            except Exception, e:
+                logging.error('Failed to query index, will rebuild: %r', e)
+                layoutmanager.get_instance().index_updated = False
+                self._index_store.close_index()
+                self._index_store.remove_index()
+                self._index_store.open_index()
+                self._rebuild_index()
+
+        entries = []
+        for uid in uids:
+            metadata = self._metadata_store.retrieve(uid, properties)
+            # Hack because the current journal expects the mountpoint property
+            # to be present.
+            metadata['mountpoint'] = '1'
+            entries.append(metadata)
+        logger.debug('find(): %r' % (time.time() - t))
+        return entries, count
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+             in_signature='s',
+             out_signature='s',
+             sender_keyword='sender')
+    def get_filename(self, uid, sender=None):
+        user_id = dbus.Bus().get_unix_user(sender)
+        return self._file_store.retrieve(uid, user_id)
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature='s',
+                         out_signature='a{sv}')
+    def get_properties(self, uid):
+        metadata = self._metadata_store.retrieve(uid)
+        # Hack because the current journal expects the mountpoint property to be
+        # present.
+        metadata['mountpoint'] = '1'
+        return metadata
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature='sa{sv}',
+                         out_signature='as')
+    def get_uniquevaluesfor(self, propertyname, query=None):
+        if propertyname != 'activity':
+            raise ValueError('Only ''activity'' is a supported property name')
+        if query:
+            raise ValueError('The query parameter is not supported')
+        if layoutmanager.get_instance().index_updated:
+            return self._index_store.get_activities()
+        else:
+            logging.warning('Index updating, returning an empty list')
+            return []
+
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='')
     def delete(self, uid):
-        content = self.get(uid)
-        if content:
-            content.backingstore.delete(uid)
+        self._optimizer.remove(uid)
+
+        self._index_store.delete(uid)
+        self._file_store.delete(uid)
+        self._metadata_store.delete(uid)
+        
+        entry_path = layoutmanager.get_instance().get_entry_path(uid)
+        os.removedirs(entry_path)
+
         self.Deleted(uid)
         logger.debug("deleted %s" % uid)
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
-    def Deleted(self, uid): pass
+    def Deleted(self, uid):
+        pass
 
     def stop(self):
         """shutdown the service"""
+        self._index_store.close_index()
         self.Stopped()
-        self._connection.get_connection()._unregister_object_path(DS_OBJECT_PATH)
-        for mp in self.mountpoints.values(): mp.stop()
-
 
     @dbus.service.signal(DS_DBUS_INTERFACE)
-    def Stopped(self): pass
+    def Stopped(self):
+        pass
 
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='',
-             out_signature='')
-    def complete_indexing(self):
-        """Block waiting for all queued indexing operations to
-        complete. Used mostly in testing"""
-        for mp in self.mountpoints.itervalues():
-            mp.complete_indexing()
-            
+                         in_signature="sa{sv}",
+                         out_signature='s')
+    def mount(self, uri, options=None):
+        return ''
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature="",
+                         out_signature="aa{sv}")
+    def mounts(self):
+        return [{'id': 1}]
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature="s",
+                         out_signature="")
+    def unmount(self, mountpoint_id):
+        pass
+
+    @dbus.service.signal(DS_DBUS_INTERFACE, signature="a{sv}")
+    def Mounted(self, descriptior):
+        pass
+
+    @dbus.service.signal(DS_DBUS_INTERFACE, signature="a{sv}")
+    def Unmounted(self, descriptor):
+        pass
+

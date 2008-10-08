@@ -1,6 +1,5 @@
 import logging
 import time
-import sys
 import os
 
 import gobject
@@ -28,6 +27,8 @@ _FLUSH_THRESHOLD = 20
 _FLUSH_TIMEOUT = 60
 
 _PROPERTIES_NOT_TO_INDEX = ['timestamp', 'activity_id', 'keep', 'preview']
+
+_MAX_RESULTS = 2 ** 31 - 1
 
 class IndexStore(object):
     def __init__(self):
@@ -147,7 +148,7 @@ class IndexStore(object):
         self._replace_mtime(query_dict)
         if query_dict.has_key('timestamp'):
             start = str(query_dict['timestamp'].pop('start', 0))
-            end = str(query_dict['timestamp'].pop('end', sys.maxint))
+            end = str(query_dict['timestamp'].pop('end', _MAX_RESULTS))
             query = Query(Query.OP_VALUE_RANGE, _VALUE_TIMESTAMP, start, end)
             queries.append(query)
 

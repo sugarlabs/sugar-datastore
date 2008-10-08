@@ -60,6 +60,8 @@ def _migrate_metadata(root_path, old_root_path, uid):
 
     old_metadata_path = os.path.join(old_root_path, uid + '.metadata')
     metadata = cjson.decode(open(old_metadata_path, 'r').read())
+    if 'uid' not in metadata:
+        metadata['uid'] = uid
     for key, value in metadata.items():
         f = open(os.path.join(metadata_path, key), 'w')
         try:

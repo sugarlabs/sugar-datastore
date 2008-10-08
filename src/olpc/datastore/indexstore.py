@@ -97,7 +97,7 @@ class IndexStore(object):
             if key not in _PROPERTIES_NOT_TO_INDEX:
                 if text:
                     text += ' '
-                text += value
+                text += str(value)
         return text
 
     def find(self, query):

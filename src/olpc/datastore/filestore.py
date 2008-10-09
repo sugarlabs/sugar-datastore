@@ -96,13 +96,15 @@ class FileStore(object):
 
         destination_path = os.path.join(destination_dir, uid)
 
-        # Try to make the original file readable. This can fail if the file is
-        # in a FAT filesystem.
-        try:
-            os.chmod(file_path, 0604)
-        except OSError, e:
-            if e.errno != errno.EPERM:
-                raise
+        attempt = 1
+        while os.path.exists(destination_path):
+            if attempt > 10:
+                destination_path = tempfile.mkstemp(prefix=uid,
+                                                    dir=destination_dir)
+            else:
+                file_name = '%s_%s' % (uid, attempt)
+                destination_path = os.path.join(destination_dir, file_name)
+                attempt += 1
 
         # Try to hard link from the original file to the targetpath. This can
         # fail if the file is in a different filesystem. Do a symlink instead.
@@ -112,6 +114,14 @@ class FileStore(object):
             if e.errno == errno.EXDEV:
                 os.symlink(file_path, destination_path)
             else:
+                raise
+
+        # Try to make the original file readable. This can fail if the file is
+        # in a FAT filesystem.
+        try:
+            os.chmod(file_path, 0604)
+        except OSError, e:
+            if e.errno != errno.EPERM:
                 raise
 
         return destination_path

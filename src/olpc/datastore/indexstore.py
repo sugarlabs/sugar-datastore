@@ -116,7 +116,11 @@ class IndexStore(object):
             if key not in _PROPERTIES_NOT_TO_INDEX:
                 if text:
                     text += ' '
-                text += str(value)
+                if isinstance(value, unicode):
+                    value = value.encode('utf-8')
+                elif not isinstance(value, basestring):
+                    value = str(value)
+                text += value
         return text
 
     def find(self, query):

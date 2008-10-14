@@ -20,7 +20,15 @@ class MetadataStore(object):
 
         metadata['uid'] = uid
         for key, value in metadata.items():
-            open(os.path.join(metadata_path, key), 'w').write(str(value))
+            f = open(os.path.join(metadata_path, key), 'w')
+            try:
+                if isinstance(value, unicode):
+                    value = value.encode('utf-8')
+                elif not isinstance(value, basestring):
+                    value = str(value)
+                f.write(value)
+            finally:
+                f.close()
 
     def retrieve(self, uid, properties=None):
         dir_path = layoutmanager.get_instance().get_entry_path(uid)

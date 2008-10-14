@@ -65,7 +65,11 @@ def _migrate_metadata(root_path, old_root_path, uid):
     for key, value in metadata.items():
         f = open(os.path.join(metadata_path, key), 'w')
         try:
-            f.write(str(value))
+            if isinstance(value, unicode):
+                value = value.encode('utf-8')
+            if not isinstance(value, basestring):
+                value = str(value)
+            f.write(value)
         finally:
             f.close()
 

@@ -17,6 +17,7 @@
 import os
 import errno
 import logging
+import tempfile
 
 import gobject
 

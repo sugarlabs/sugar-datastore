@@ -103,6 +103,7 @@ class FileStore(object):
                 fd, destination_path = tempfile.mkstemp(prefix=uid,
                                                         dir=destination_dir)
                 del fd
+                os.unlink(destination_path)
                 break
             else:
                 file_name = '%s_%s' % (uid, attempt)

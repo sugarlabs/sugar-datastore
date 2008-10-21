@@ -100,8 +100,10 @@ class FileStore(object):
         attempt = 1
         while os.path.exists(destination_path):
             if attempt > 10:
-                destination_path = tempfile.mkstemp(prefix=uid,
-                                                    dir=destination_dir)
+                fd, destination_path = tempfile.mkstemp(prefix=uid,
+                                                        dir=destination_dir)
+                del fd
+                break
             else:
                 file_name = '%s_%s' % (uid, attempt)
                 destination_path = os.path.join(destination_dir, file_name)

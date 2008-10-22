@@ -24,7 +24,7 @@ class MetadataStore(object):
             # Hack to support activities that still pass properties named as for
             # example title:text.
             if ':' in key:
-                key = key.split(':', maxsplit=1)[0]
+                key = key.split(':', 1)[0]
 
             f = open(os.path.join(metadata_path, key), 'w')
             try:

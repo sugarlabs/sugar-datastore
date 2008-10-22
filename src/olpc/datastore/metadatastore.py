@@ -20,6 +20,12 @@ class MetadataStore(object):
 
         metadata['uid'] = uid
         for key, value in metadata.items():
+
+            # Hack to support activities that still pass properties named as for
+            # example title:text.
+            if ':' in key:
+                key = key.split(':', maxsplit=1)[0]
+
             f = open(os.path.join(metadata_path, key), 'w')
             try:
                 if isinstance(value, unicode):

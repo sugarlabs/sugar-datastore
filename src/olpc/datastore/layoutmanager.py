@@ -19,7 +19,8 @@ import os
 MAX_QUERY_LIMIT = 40960
 
 class LayoutManager(object):
-    """Provide the logic about how entries are stored inside the datastore directory
+    """Provide the logic about how entries are stored inside the datastore
+    directory
     """ 
     def __init__(self):
         profile = os.environ.get('SUGAR_PROFILE', 'default')

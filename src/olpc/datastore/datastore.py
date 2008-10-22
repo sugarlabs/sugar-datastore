@@ -23,6 +23,8 @@ import os
 import dbus
 import gobject
 
+from sugar import mime
+
 from olpc.datastore import layoutmanager
 from olpc.datastore import migration
 from olpc.datastore.layoutmanager import MAX_QUERY_LIMIT
@@ -215,7 +217,14 @@ class DataStore(dbus.service.Object):
              sender_keyword='sender')
     def get_filename(self, uid, sender=None):
         user_id = dbus.Bus().get_unix_user(sender)
-        return self._file_store.retrieve(uid, user_id)
+        extension = self._get_extension(uid)
+        return self._file_store.retrieve(uid, user_id, extension)
+
+    def _get_extension(self, uid):
+        mime_type = self._metadata_store.get_property(uid, 'mime_type')
+        if mime_type is None or not mime_type:
+            return ''
+        return mime.get_primary_extension(mime_type)
 
     @dbus.service.method(DS_DBUS_INTERFACE,
                          in_signature='s',

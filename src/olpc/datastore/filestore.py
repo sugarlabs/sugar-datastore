@@ -71,7 +71,7 @@ class FileStore(object):
         async_copy = AsyncCopy(file_path, destination_path, completion_cb)
         async_copy.start()
 
-    def retrieve(self, uid, user_id):
+    def retrieve(self, uid, user_id, extension):
         """Place the file associated to a given entry into a directory where the
             user can read it. The caller is reponsible for deleting this file.
         
@@ -95,18 +95,24 @@ class FileStore(object):
             if not os.path.exists(destination_dir):
                 os.makedirs(destination_dir)
 
-        destination_path = os.path.join(destination_dir, uid)
+        if extension is None:
+            extension = ''
+        elif extension:
+            extension = '.' + extension
+
+        destination_path = os.path.join(destination_dir, uid + extension)
 
         attempt = 1
         while os.path.exists(destination_path):
             if attempt > 10:
                 fd, destination_path = tempfile.mkstemp(prefix=uid,
+                                                        suffix=extension,
                                                         dir=destination_dir)
                 del fd
                 os.unlink(destination_path)
                 break
             else:
-                file_name = '%s_%s' % (uid, attempt)
+                file_name = '%s_%s%s' % (uid, attempt, extension)
                 destination_path = os.path.join(destination_dir, file_name)
                 attempt += 1
 

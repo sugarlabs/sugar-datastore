@@ -189,7 +189,7 @@ class DataStore(dbus.service.Object):
 
             offset = query.get('offset', 0)
             limit = query.get('limit', MAX_QUERY_LIMIT)
-            uids = uids[offset, offset + limit]
+            uids = uids[offset:offset + limit]
         else:
             try:
                 uids, count = self._index_store.find(query)

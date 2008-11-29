@@ -64,6 +64,8 @@ class IndexStore(object):
 
     def remove_index(self):
         index_path = layoutmanager.get_instance().get_index_path()
+        if not os.path.exists(index_path):
+            return
         for f in os.listdir(index_path):
             os.remove(os.path.join(index_path, f))
 

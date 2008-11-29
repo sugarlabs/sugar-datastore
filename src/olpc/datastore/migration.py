@@ -27,8 +27,12 @@ from olpc.datastore import layoutmanager
 
 def migrate_from_0():
     logging.info('Migrating datastore from version 0 to version 1')
+
     root_path = layoutmanager.get_instance().get_root_path()
     old_root_path = os.path.join(root_path, 'store')
+    if not os.path.exists(old_root_path):
+        return
+
     for f in os.listdir(old_root_path):
         uid, ext = os.path.splitext(f)
         if ext != '.metadata':

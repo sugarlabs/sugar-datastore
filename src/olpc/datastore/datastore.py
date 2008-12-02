@@ -121,6 +121,7 @@ class DataStore(dbus.service.Object):
     def create(self, props, file_path, transfer_ownership,
                async_cb, async_err_cb):
         uid = str(uuid.uuid4())
+        logging.debug('datastore.create %r' % uid)
 
         if not props.get('timestamp', ''):
             props['timestamp'] = int(time.time())
@@ -156,6 +157,8 @@ class DataStore(dbus.service.Object):
              byte_arrays=True)
     def update(self, uid, props, file_path, transfer_ownership,
                async_cb, async_err_cb):
+        logging.debug('datastore.update %r' % uid)
+
         if not props.get('timestamp', ''):
             props['timestamp'] = int(time.time())
 
@@ -179,6 +182,7 @@ class DataStore(dbus.service.Object):
              in_signature='a{sv}as',
              out_signature='aa{sv}u')
     def find(self, query, properties):
+        logging.debug('datastore.find %r' % query)
         t = time.time()
 
         if not layoutmanager.get_instance().index_updated:
@@ -213,6 +217,7 @@ class DataStore(dbus.service.Object):
              out_signature='s',
              sender_keyword='sender')
     def get_filename(self, uid, sender=None):
+        logging.debug('datastore.get_filename %r' % uid)
         user_id = dbus.Bus().get_unix_user(sender)
         extension = self._get_extension(uid)
         return self._file_store.retrieve(uid, user_id, extension)
@@ -227,6 +232,7 @@ class DataStore(dbus.service.Object):
                          in_signature='s',
                          out_signature='a{sv}')
     def get_properties(self, uid):
+        logging.debug('datastore.get_properties %r' % uid)
         metadata = self._metadata_store.retrieve(uid)
         return metadata
 

@@ -122,19 +122,26 @@ class Optimizer(object):
         if queue:
             uid = queue[0]
             logging.debug('_process_entry_cb processing %r' % uid)
+
             file_in_entry_path = self._file_store.get_file_path(uid)
-            checksum = self._calculate_md5sum(file_in_entry_path)
-            self._metadata_store.set_property(uid, 'checksum', checksum)
-
-            if self._identical_file_already_exists(checksum):
-                if not self._already_linked(uid, checksum):
-                    existing_entry_uid = self._get_uid_from_checksum(checksum)
-                    self._file_store.hard_link_entry(uid, existing_entry_uid)
-
-                    self._add_checksum_entry(uid, checksum)
+            if not os.path.exists(file_in_entry_path):
+                logging.info('non-existent entry in queue: %r' % uid)
             else:
-                self._create_checksum_dir(checksum)
-                self._add_checksum_entry(uid, checksum)
+                checksum = self._calculate_md5sum(file_in_entry_path)
+                self._metadata_store.set_property(uid, 'checksum', checksum)
+
+                if self._identical_file_already_exists(checksum):
+                    if not self._already_linked(uid, checksum):
+                        existing_entry_uid = \
+                                self._get_uid_from_checksum(checksum)
+
+                        self._file_store.hard_link_entry(uid,
+                                                         existing_entry_uid)
+
+                        self._add_checksum_entry(uid, checksum)
+                else:
+                    self._create_checksum_dir(checksum)
+                    self._add_checksum_entry(uid, checksum)
 
             os.remove(os.path.join(queue_path, uid))
 

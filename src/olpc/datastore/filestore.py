@@ -55,9 +55,13 @@ class FileStore(object):
                         raise
             else:
                 self._async_copy(file_path, destination_path, completion_cb)
+            """
+        TODO: How can we support deleting the file of an entry?
         elif not file_path and os.path.exists(destination_path):
+            logging.debug('FileStore: deleting %r' % destination_path)
             os.remove(destination_path)
             completion_cb()
+            """
         else:
             logging.debug('FileStore: Nothing to do')
             completion_cb()

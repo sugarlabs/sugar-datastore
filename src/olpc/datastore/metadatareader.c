@@ -49,6 +49,9 @@ add_property(char *metadata_path, char *property_name, PyObject *dict,
 
     if (file_size == 0) {
         // Empty property
+        fclose(file);
+        file = NULL;
+
         value = PyString_FromString("");
         if (value == NULL) {
             PyErr_SetString(PyExc_ValueError,

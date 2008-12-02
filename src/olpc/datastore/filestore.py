@@ -79,6 +79,7 @@ class FileStore(object):
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
         file_path = os.path.join(dir_path, 'data')
         if not os.path.exists(file_path):
+            logging.debug('Entry %r doesnt have any file' % uid)
             return ''
 
         use_instance_dir = os.path.exists('/etc/olpc-security') and \

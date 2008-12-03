@@ -98,7 +98,7 @@ class DataStore(dbus.service.Object):
                     self._index_store.store(uid, props)
                 except Exception:
                     logging.error('Error processing %r\n%s.' \
-                            % (uid, traceback.format_exc())
+                            % (uid, traceback.format_exc()))
 
         if not uids:
             logging.debug('Finished updating index.')

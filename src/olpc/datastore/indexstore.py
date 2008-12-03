@@ -27,10 +27,6 @@ from olpc.datastore.layoutmanager import MAX_QUERY_LIMIT
 
 _VALUE_UID = 0
 _VALUE_TIMESTAMP = 1
-_VALUE_ACTIVITY_ID = 2
-_VALUE_MIME_TYPE = 3
-_VALUE_ACTIVITY = 4
-_VALUE_KEEP = 5
 
 _PREFIX_UID = 'Q'
 _PREFIX_ACTIVITY = 'A'
@@ -80,14 +76,11 @@ class IndexStore(object):
     def store(self, uid, properties):
         document = Document()
         document.add_term(_PREFIX_UID + uid)
-        document.add_term(_PREFIX_ACTIVITY + properties['activity'])
+        document.add_term(_PREFIX_ACTIVITY + properties.get('activity', ''))
         document.add_term(_PREFIX_MIME_TYPE + properties['mime_type'])
 
         document.add_value(_VALUE_UID, uid)
         document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))
-        document.add_value(_VALUE_ACTIVITY_ID, properties['activity_id'])
-        document.add_value(_VALUE_MIME_TYPE, str(properties['mime_type']))
-        document.add_value(_VALUE_ACTIVITY, properties['activity'])
 
         term_generator = xapian.TermGenerator()
 

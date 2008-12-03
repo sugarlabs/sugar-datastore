@@ -19,6 +19,7 @@ import logging
 import uuid
 import time
 import os
+import traceback
 
 import dbus
 import gobject
@@ -63,8 +64,9 @@ class DataStore(dbus.service.Object):
         self._index_store = IndexStore()
         try:
             self._index_store.open_index()
-        except Exception, e:
-            logging.error('Failed to open index, will rebuild: %r', e)
+        except Exception:
+            logging.error('Failed to open index, will rebuild\n%r' \
+                    % traceback.format_exc())
             layout_manager.index_updated = False
             self._index_store.remove_index()
             self._index_store.open_index()
@@ -91,8 +93,12 @@ class DataStore(dbus.service.Object):
                           (uid, len(uids)))
 
             if not self._index_store.contains(uid):
-                props = self._metadata_store.retrieve(uid)
-                self._index_store.store(uid, props)
+                try:
+                    props = self._metadata_store.retrieve(uid)
+                    self._index_store.store(uid, props)
+                except Exception:
+                    logging.error('Error processing %r\n%s.' \
+                            % (uid, traceback.format_exc())
 
         if not uids:
             logging.debug('Finished updating index.')
@@ -197,8 +203,9 @@ class DataStore(dbus.service.Object):
         else:
             try:
                 uids, count = self._index_store.find(query)
-            except Exception, e:
-                logging.error('Failed to query index, will rebuild: %r', e)
+            except Exception:
+                logging.error('Failed to query index, will rebuild\n%r' \
+                        % traceback.format_exc())
                 layoutmanager.get_instance().index_updated = False
                 self._index_store.close_index()
                 self._index_store.remove_index()

@@ -77,7 +77,7 @@ class IndexStore(object):
         document = Document()
         document.add_term(_PREFIX_UID + uid)
         document.add_term(_PREFIX_ACTIVITY + properties.get('activity', ''))
-        document.add_term(_PREFIX_MIME_TYPE + properties['mime_type'])
+        document.add_term(_PREFIX_MIME_TYPE + properties.get('mime_type', ''))
 
         document.add_value(_VALUE_UID, uid)
         document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))

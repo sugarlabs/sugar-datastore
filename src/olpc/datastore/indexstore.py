@@ -30,6 +30,7 @@ _VALUE_TIMESTAMP = 1
 
 _PREFIX_UID = 'Q'
 _PREFIX_ACTIVITY = 'A'
+_PREFIX_ACTIVITY_ID = 'I'
 _PREFIX_MIME_TYPE = 'M'
 
 # Force a flush every _n_ changes to the db
@@ -78,6 +79,8 @@ class IndexStore(object):
         document.add_term(_PREFIX_UID + uid)
         document.add_term(_PREFIX_ACTIVITY + properties.get('activity', ''))
         document.add_term(_PREFIX_MIME_TYPE + properties.get('mime_type', ''))
+        document.add_term(_PREFIX_ACTIVITY_ID +
+                          properties.get('activity_id', ''))
 
         document.add_value(_VALUE_UID, uid)
         document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))
@@ -143,7 +146,8 @@ class IndexStore(object):
         logging.debug('_parse_query %r' % query_dict)
         queries = []
 
-        if query_dict.has_key('query'):
+        query_str = query_dict.pop('query', None)
+        if query_str is not None:
             query_parser = QueryParser()
             query_parser.set_database(self._database)
             #query_parser.set_default_op(Query.OP_AND)
@@ -153,7 +157,7 @@ class IndexStore(object):
             #query_parser.set_stemming_strategy(qp.STEM_SOME)
 
             query = query_parser.parse_query(
-                    query_dict['query'],
+                    query_str['query'],
                     QueryParser.FLAG_PHRASE |
                             QueryParser.FLAG_BOOLEAN |
                             QueryParser.FLAG_LOVEHATE |
@@ -163,26 +167,38 @@ class IndexStore(object):
             queries.append(query)
 
         self._replace_mtime(query_dict)
-        if query_dict.has_key('timestamp'):
-            start = str(query_dict['timestamp'].pop('start', 0))
-            end = str(query_dict['timestamp'].pop('end', _MAX_RESULTS))
+        timestamp = query_dict.pop('timestamp', None)
+        if timestamp is not None:
+            start = str(timestamp.pop('start', 0))
+            end = str(timestamp.pop('end', _MAX_RESULTS))
             query = Query(Query.OP_VALUE_RANGE, _VALUE_TIMESTAMP, start, end)
             queries.append(query)
 
-        if query_dict.has_key('uid'):
-            queries.append(Query(_PREFIX_UID + query_dict['uid']))
+        uid = query_dict.pop('uid', None)
+        if uid is not None:
+            queries.append(Query(_PREFIX_UID + uid))
 
-        if query_dict.has_key('activity'):
-            queries.append(Query(_PREFIX_ACTIVITY + query_dict['activity']))
+        activity = query_dict.pop('activity', None)
+        if activity is not None:
+            queries.append(Query(_PREFIX_ACTIVITY + activity))
 
-        if query_dict.has_key('mime_type'):
+        activity_id = query_dict.pop('activity_id', None)
+        if activity_id is not None:
+            query = Query(_PREFIX_ACTIVITY_ID + activity_id)
+            queries.append(query)
+
+        mime_type = query_dict.pop('mime_type', None)
+        if mime_type is not None:
             mime_queries = []
-            for mime_type in query_dict['mime_type']:
+            for mime_type in mime_type:
                 mime_queries.append(Query(_PREFIX_MIME_TYPE + mime_type))
             queries.append(Query(Query.OP_OR, mime_queries))
 
         if not queries:
             queries.append(Query(''))
+
+        if query_dict:
+            logging.warning('Unknown term(s): %r' % query_dict)
         
         return Query(Query.OP_AND, queries)
 

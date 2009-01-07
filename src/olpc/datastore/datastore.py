@@ -191,16 +191,7 @@ class DataStore(dbus.service.Object):
         logging.debug('datastore.find %r' % query)
         t = time.time()
 
-        if not layoutmanager.get_instance().index_updated:
-            logging.warning('Index updating, returning all entries')
-
-            uids = layoutmanager.get_instance().find_all()
-            count = len(uids)
-
-            offset = query.get('offset', 0)
-            limit = query.get('limit', MAX_QUERY_LIMIT)
-            uids = uids[offset:offset + limit]
-        else:
+        if layoutmanager.get_instance().index_updated:
             try:
                 uids, count = self._index_store.find(query)
             except Exception:
@@ -211,6 +202,16 @@ class DataStore(dbus.service.Object):
                 self._index_store.remove_index()
                 self._index_store.open_index()
                 self._rebuild_index()
+
+        if not layoutmanager.get_instance().index_updated:
+            logging.warning('Index updating, returning all entries')
+
+            uids = layoutmanager.get_instance().find_all()
+            count = len(uids)
+
+            offset = query.get('offset', 0)
+            limit = query.get('limit', MAX_QUERY_LIMIT)
+            uids = uids[offset:offset + limit]
 
         entries = []
         for uid in uids:

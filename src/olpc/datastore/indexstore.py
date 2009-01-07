@@ -157,7 +157,7 @@ class IndexStore(object):
             #query_parser.set_stemming_strategy(qp.STEM_SOME)
 
             query = query_parser.parse_query(
-                    query_str['query'],
+                    query_str,
                     QueryParser.FLAG_PHRASE |
                             QueryParser.FLAG_BOOLEAN |
                             QueryParser.FLAG_LOVEHATE |

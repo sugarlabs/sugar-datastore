@@ -32,6 +32,7 @@ _PREFIX_UID = 'Q'
 _PREFIX_ACTIVITY = 'A'
 _PREFIX_ACTIVITY_ID = 'I'
 _PREFIX_MIME_TYPE = 'M'
+_PREFIX_KEEP = 'K'
 
 # Force a flush every _n_ changes to the db
 _FLUSH_THRESHOLD = 20
@@ -81,6 +82,7 @@ class IndexStore(object):
         document.add_term(_PREFIX_MIME_TYPE + properties.get('mime_type', ''))
         document.add_term(_PREFIX_ACTIVITY_ID +
                           properties.get('activity_id', ''))
+        document.add_term(_PREFIX_KEEP + str(properties.get('keep', 0)))
 
         document.add_value(_VALUE_UID, uid)
         document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))
@@ -185,6 +187,11 @@ class IndexStore(object):
         activity_id = query_dict.pop('activity_id', None)
         if activity_id is not None:
             query = Query(_PREFIX_ACTIVITY_ID + activity_id)
+            queries.append(query)
+
+        keep = query_dict.pop('keep', None)
+        if keep is not None:
+            query = Query(_PREFIX_KEEP + str(keep))
             queries.append(query)
 
         mime_type = query_dict.pop('mime_type', None)

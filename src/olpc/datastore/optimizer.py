@@ -17,6 +17,7 @@
 import os
 import errno
 import logging
+import subprocess
 
 import gobject
 
@@ -155,6 +156,7 @@ class Optimizer(object):
         """Calculate the md5 checksum of a given file.
         
         """
-        in_, out = os.popen2(['md5sum', path])
-        return out.read().split(' ', 1)[0]
+        popen = subprocess.Popen(['md5sum', path], stdout=subprocess.PIPE)
+        stdout, stderr_ = popen.communicate()
+        return stdout.split(' ', 1)[0]
 

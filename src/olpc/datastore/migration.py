@@ -25,6 +25,8 @@ import cjson
 
 from olpc.datastore import layoutmanager
 
+DATE_FORMAT = '%Y-%m-%dT%H:%M:%S'
+
 def migrate_from_0():
     logging.info('Migrating datastore from version 0 to version 1')
 
@@ -44,12 +46,8 @@ def migrate_from_0():
             _migrate_file(root_path, old_root_path, uid)
             _migrate_preview(root_path, old_root_path, uid)
         except Exception:
-            #logging.warning('Failed to migrate entry %r:%s\n' %(uid, 
-            #    ''.join(traceback.format_exception(*sys.exc_info()))))
-            #
-            # In production, we may choose to ignore errors when failing to
-            # migrate some entries. But for now, raise them.
-            raise
+            logging.error('Error while migrating entry %r: %s\n' % \
+                          (uid, traceback.format_exc()))
 
     # Just be paranoid, it's cheap.
     if old_root_path.endswith('datastore/store'):
@@ -64,18 +62,29 @@ def _migrate_metadata(root_path, old_root_path, uid):
 
     old_metadata_path = os.path.join(old_root_path, uid + '.metadata')
     metadata = cjson.decode(open(old_metadata_path, 'r').read())
+
     if 'uid' not in metadata:
         metadata['uid'] = uid
+
+    if 'timestamp' not in metadata and 'mtime' in metadata:
+        metadata['timestamp'] = \
+                time.mktime(time.strptime(metadata['mtime'], DATE_FORMAT))
+
     for key, value in metadata.items():
-        f = open(os.path.join(metadata_path, key), 'w')
         try:
-            if isinstance(value, unicode):
-                value = value.encode('utf-8')
-            if not isinstance(value, basestring):
-                value = str(value)
-            f.write(value)
-        finally:
-            f.close()
+            f = open(os.path.join(metadata_path, key), 'w')
+            try:
+                if isinstance(value, unicode):
+                    value = value.encode('utf-8')
+                if not isinstance(value, basestring):
+                    value = str(value)
+                f.write(value)
+            finally:
+                f.close()
+        except Exception:
+            logging.error(
+                    'Error while migrating property %s of entry %s: %s\n' % \
+                    (key, uid, traceback.format_exc()))
 
 def _migrate_file(root_path, old_root_path, uid):
     if os.path.exists(os.path.join(old_root_path, uid)):

@@ -168,7 +168,6 @@ class IndexStore(object):
 
             queries.append(query)
 
-        self._replace_mtime(query_dict)
         timestamp = query_dict.pop('timestamp', None)
         if timestamp is not None:
             start = str(timestamp.pop('start', 0))
@@ -208,22 +207,6 @@ class IndexStore(object):
             logging.warning('Unknown term(s): %r' % query_dict)
         
         return Query(Query.OP_AND, queries)
-
-    def _replace_mtime(self, query):
-        # TODO: Just a hack for the current journal that filters by mtime
-        DATE_FORMAT = '%Y-%m-%dT%H:%M:%S'
-        if query.has_key('mtime'):
-            mtime_range = query.pop('mtime')
-
-            start = mtime_range['start'][:-7]
-            start = time.mktime(time.strptime(start, DATE_FORMAT))
-
-            end = mtime_range['end'][:-7]
-            # FIXME: this will give an unexpected result if the journal is in a
-            # different timezone
-            end = time.mktime(time.strptime(end, DATE_FORMAT))
-
-            query['timestamp'] = {'start': int(start), 'end': int(end)}
 
     def delete(self, uid):
         self._database.delete_document(_PREFIX_UID + uid)

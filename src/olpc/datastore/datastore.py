@@ -65,7 +65,7 @@ class DataStore(dbus.service.Object):
         try:
             self._index_store.open_index()
         except Exception:
-            logging.error('Failed to open index, will rebuild\n%r' \
+            logging.error('Failed to open index, will rebuild\n%s' \
                     % traceback.format_exc())
             layout_manager.index_updated = False
             self._index_store.remove_index()
@@ -195,7 +195,7 @@ class DataStore(dbus.service.Object):
             try:
                 uids, count = self._index_store.find(query)
             except Exception:
-                logging.error('Failed to query index, will rebuild\n%r' \
+                logging.error('Failed to query index, will rebuild\n%s' \
                         % traceback.format_exc())
                 layoutmanager.get_instance().index_updated = False
                 self._index_store.close_index()

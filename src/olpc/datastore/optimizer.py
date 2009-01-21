@@ -63,12 +63,13 @@ class Optimizer(object):
             logging.debug('remove %r' % checksum_entry_path)
             os.remove(checksum_entry_path)
 
-        try:
-            os.rmdir(checksum_path)
-            logging.debug('removed %r' % checksum_path)
-        except OSError, e:
-            if e.errno != errno.ENOTEMPTY:
-                raise
+        if os.path.exists(checksum_path):
+            try:
+                os.rmdir(checksum_path)
+                logging.debug('removed %r' % checksum_path)
+            except OSError, e:
+                if e.errno != errno.ENOTEMPTY:
+                    raise
 
     def _identical_file_already_exists(self, checksum):
         """Check if we already have files with this checksum.

@@ -57,9 +57,12 @@ class Optimizer(object):
 
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
+        checksum_entry_path = os.path.join(checksum_path, uid)
 
-        logging.debug('remove %r' % os.path.join(checksum_path, uid))
-        os.remove(os.path.join(checksum_path, uid))
+        if os.path.exists(checksum_entry_path):
+            logging.debug('remove %r' % checksum_entry_path)
+            os.remove(checksum_entry_path)
+
         try:
             os.rmdir(checksum_path)
             logging.debug('removed %r' % checksum_path)

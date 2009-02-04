@@ -21,7 +21,7 @@ import tempfile
 
 import gobject
 
-from olpc.datastore import layoutmanager
+from carquinyol import layoutmanager
 
 class FileStore(object):
     """Handle the storage of one file per entry.

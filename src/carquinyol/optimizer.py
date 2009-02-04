@@ -21,7 +21,7 @@ import subprocess
 
 import gobject
 
-from olpc.datastore import layoutmanager
+from carquinyol import layoutmanager
 
 class Optimizer(object):
     """Optimizes disk space usage by detecting duplicates and sharing storage.

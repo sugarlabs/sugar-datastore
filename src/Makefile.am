@@ -1,1 +1,1 @@
-SUBDIRS = olpc
+SUBDIRS = carquinyol

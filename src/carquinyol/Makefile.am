@@ -1,4 +1,4 @@
-datastoredir = $(pythondir)/olpc/datastore
+datastoredir = $(pythondir)/carquinyol
 datastore_PYTHON = 		\
 	__init__.py		\
 	datastore.py		\
@@ -16,7 +16,7 @@ AM_CPPFLAGS = 			\
 
 AM_LDFLAGS = -module -avoid-version
 
-pkgpyexecdir = $(pythondir)/olpc/datastore
+pkgpyexecdir = $(pythondir)/carquinyol
 pkgpyexec_LTLIBRARIES = metadatareader.la
 
 metadatareader_la_SOURCES = 	\

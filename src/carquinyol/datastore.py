@@ -26,13 +26,13 @@ import gobject
 
 from sugar import mime
 
-from olpc.datastore import layoutmanager
-from olpc.datastore import migration
-from olpc.datastore.layoutmanager import MAX_QUERY_LIMIT
-from olpc.datastore.metadatastore import MetadataStore
-from olpc.datastore.indexstore import IndexStore
-from olpc.datastore.filestore import FileStore
-from olpc.datastore.optimizer import Optimizer
+from carquinyol import layoutmanager
+from carquinyol import migration
+from carquinyol.layoutmanager import MAX_QUERY_LIMIT
+from carquinyol.metadatastore import MetadataStore
+from carquinyol.indexstore import IndexStore
+from carquinyol.filestore import FileStore
+from carquinyol.optimizer import Optimizer
 
 # the name used by the logger
 DS_LOG_CHANNEL = 'org.laptop.sugar.DataStore'

@@ -25,7 +25,7 @@ import traceback
 
 import cjson
 
-from olpc.datastore import layoutmanager
+from carquinyol import layoutmanager
 
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S'
 

@@ -21,8 +21,8 @@ import gobject
 import xapian
 from xapian import WritableDatabase, Document, Enquire, Query, QueryParser
 
-from olpc.datastore import layoutmanager
-from olpc.datastore.layoutmanager import MAX_QUERY_LIMIT
+from carquinyol import layoutmanager
+from carquinyol.layoutmanager import MAX_QUERY_LIMIT
 
 _VALUE_UID = 0
 _VALUE_TIMESTAMP = 1

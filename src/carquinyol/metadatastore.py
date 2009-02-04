@@ -1,7 +1,7 @@
 import os
 
-from olpc.datastore import layoutmanager
-from olpc.datastore import metadatareader
+from carquinyol import layoutmanager
+from carquinyol import metadatareader
 
 MAX_SIZE = 256
 

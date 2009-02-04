@@ -4,7 +4,7 @@ import gobject
 import dbus.service
 import dbus.mainloop.glib
 import dbus.glib
-from olpc.datastore.datastore import DataStore
+from carquinyol.datastore import DataStore
 from sugar import logger
 
 # Path handling

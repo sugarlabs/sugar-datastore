@@ -101,11 +101,12 @@ if __name__ == "__main__":
         outext = sugar.mime.get_primary_extension(mimetype)
         if outext == None:
             outext = "dsobject"
+        outext = '.' + outext    
 
     # Lastly, actually copy the file out of the datastore and onto the
     # filesystem.
-    shutil.copyfile(dsentry.get_file_path(), outroot + '.' + outext)
-    print '%s -> %s' % (dsentry.get_file_path(), outroot + '.' + outext)
+    shutil.copyfile(dsentry.get_file_path(), outroot + outext)
+    print '%s -> %s' % (dsentry.get_file_path(), outroot + outext)
 
     # Cleanup.
     dsentry.destroy()

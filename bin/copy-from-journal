@@ -21,23 +21,20 @@ RETURN_LIMIT = 2
 
 def build_option_parser():
 
-    usage = "Usage: %prog [-o OBJECT_ID] [-q SEARCH_STR] [-t SEARCH_STR] [-m] OUTFILE"
+    usage = "Usage: %prog [-o OBJECT_ID] [-q SEARCH_STR] [-m] OUTFILE"
     parser = optparse.OptionParser(usage=usage)
 
     parser.add_option("-o", "--object_id", action="store", dest="object_id",
-     help="Retrieve object with explicit ID OBJECT_ID", metavar="OBJECT_ID",
-     default=None)
+                      help="Retrieve object with explicit ID OBJECT_ID", 
+                      metavar="OBJECT_ID", default=None)
 
     parser.add_option("-q", "--query", action="store", dest="query",
-     help="Full-text-search the metadata for SEARCH_STR", metavar="SEARCH_STR",
-     default=None)
-
-    parser.add_option("-t", "--title", action="store", dest="title",
-     help="Full-text-search the title for SEARCH_STR", metavar="SEARCH_STR",
-     default=None)
+                      help="Full-text-search the metadata for SEARCH_STR", 
+                      metavar="SEARCH_STR", default=None)
 
     parser.add_option("-m", "--metadata", action="store_true", dest="show_meta",
-     help="Show all non-preview metadata [default: hide]", default=False)
+                      help="Show all non-preview metadata [default: hide]", 
+                      default=False)
 
     return parser
 
@@ -61,8 +58,6 @@ if __name__ == "__main__":
 
         if options.query is not None:
             query['query'] = options.query
-        if options.title is not None:
-            query['title'] = options.title
 
         # We only want a single file at a time; limit the number of objects
         # returned to two, as anything more than one means the criteria were

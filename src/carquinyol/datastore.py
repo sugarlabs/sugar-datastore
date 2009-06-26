@@ -215,8 +215,11 @@ class DataStore(dbus.service.Object):
 
         entries = []
         for uid in uids:
-            metadata = self._metadata_store.retrieve(uid, properties)
-            entries.append(metadata)
+            if os.path.exists(layoutmanager.get_instance().get_entry_path(uid)):
+                metadata = self._metadata_store.retrieve(uid, properties)
+                entries.append(metadata)
+            else:
+                logging.debug('Skipping entry %r without metadata dir' % uid)
         logger.debug('find(): %r' % (time.time() - t))
         return entries, count
 

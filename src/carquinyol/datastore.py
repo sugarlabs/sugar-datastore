@@ -220,6 +220,7 @@ class DataStore(dbus.service.Object):
                 entries.append(metadata)
             else:
                 logging.debug('Skipping entry %r without metadata dir' % uid)
+                count = count - 1
         logger.debug('find(): %r' % (time.time() - t))
         return entries, count
 

@@ -56,7 +56,10 @@ class DataStore(dbus.service.Object):
         layout_manager = layoutmanager.get_instance()
         if layout_manager.get_version() == 0:
             migration.migrate_from_0()
-            layout_manager.set_version(1)
+            layout_manager.set_version(2)
+            layout_manager.index_updated = False
+        elif layout_manager.get_version() == 1:
+            layout_manager.set_version(2)
             layout_manager.index_updated = False
 
         self._metadata_store = MetadataStore()

@@ -26,6 +26,7 @@ from carquinyol.layoutmanager import MAX_QUERY_LIMIT
 
 _VALUE_UID = 0
 _VALUE_TIMESTAMP = 1
+_VALUE_TITLE = 2
 
 _PREFIX_UID = 'Q'
 _PREFIX_ACTIVITY = 'A'
@@ -85,6 +86,7 @@ class IndexStore(object):
 
         document.add_value(_VALUE_UID, uid)
         document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))
+        document.add_value(_VALUE_TITLE, properties.get('title', '').trim())
 
         term_generator = xapian.TermGenerator()
 
@@ -123,16 +125,31 @@ class IndexStore(object):
         return text
 
     def find(self, query):
+        offset = query.pop('offset', 0)
+        limit = query.pop('limit', MAX_QUERY_LIMIT)
+        order_by = query.pop('order_by', [])
+
         enquire = Enquire(self._database)
         enquire.set_query(self._parse_query(query))
-
-        offset = query.get('offset', 0)
-        limit = query.get('limit', MAX_QUERY_LIMIT)
 
         # This will assure that the results count is exact.
         check_at_least = offset + limit + 1
 
-        enquire.set_sort_by_value(_VALUE_TIMESTAMP, True)
+        if not order_by:
+            order_by = '+timestamp'
+        else:
+            order_by = order_by[0]
+
+        if order_by == '+timestamp':
+            enquire.set_sort_by_value(_VALUE_TIMESTAMP, True)
+        elif order_by == '-timestamp':
+            enquire.set_sort_by_value(_VALUE_TIMESTAMP, False)
+        elif order_by == '+title':
+            enquire.set_sort_by_value(_VALUE_TITLE, True)
+        elif order_by == '-title':
+            enquire.set_sort_by_value(_VALUE_TITLE, False)
+        else:
+            logging.warning('Unsupported property for sorting: %s' % order_by)
 
         query_result = enquire.get_mset(offset, limit, check_at_least)
         total_count = query_result.get_matches_estimated()

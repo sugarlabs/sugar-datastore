@@ -205,23 +205,42 @@ class DataStore(dbus.service.Object):
 
         if not layoutmanager.get_instance().index_updated:
             logging.warning('Index updating, returning all entries')
-
-            uids = layoutmanager.get_instance().find_all()
-            count = len(uids)
-
-            offset = query.get('offset', 0)
-            limit = query.get('limit', MAX_QUERY_LIMIT)
-            uids = uids[offset:offset + limit]
+            return self._find_all(query, properties)
 
         entries = []
         for uid in uids:
-            if os.path.exists(layoutmanager.get_instance().get_entry_path(uid)):
-                metadata = self._metadata_store.retrieve(uid, properties)
-                entries.append(metadata)
-            else:
-                logging.debug('Skipping entry %r without metadata dir' % uid)
-                count = count - 1
+            entry_path = layoutmanager.get_instance().get_entry_path(uid)
+            if not os.path.exists(entry_path):
+                logging.warning('Inconsistency detected, returning all entries')
+
+                layoutmanager.get_instance().index_updated = False
+                self._index_store.close_index()
+                self._index_store.remove_index()
+                self._index_store.open_index()
+                self._rebuild_index()
+
+                return self._find_all(query, properties)
+
+            metadata = self._metadata_store.retrieve(uid, properties)
+            entries.append(metadata)
+
         logger.debug('find(): %r' % (time.time() - t))
+
+        return entries, count
+
+    def _find_all(self, query, properties):
+        uids = layoutmanager.get_instance().find_all()
+        count = len(uids)
+
+        offset = query.get('offset', 0)
+        limit = query.get('limit', MAX_QUERY_LIMIT)
+        uids = uids[offset:offset + limit]
+
+        entries = []
+        for uid in uids:
+            metadata = self._metadata_store.retrieve(uid, properties)
+            entries.append(metadata)
+
         return entries, count
 
     @dbus.service.method(DS_DBUS_INTERFACE,

@@ -86,7 +86,7 @@ class IndexStore(object):
 
         document.add_value(_VALUE_UID, uid)
         document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))
-        document.add_value(_VALUE_TITLE, properties.get('title', '').trim())
+        document.add_value(_VALUE_TITLE, properties.get('title', '').strip())
 
         term_generator = xapian.TermGenerator()
 

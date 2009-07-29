@@ -5,7 +5,9 @@ from carquinyol import metadatareader
 
 MAX_SIZE = 256
 
+
 class MetadataStore(object):
+
     def store(self, uid, metadata):
         dir_path = layoutmanager.get_instance().get_entry_path(uid)
         if not os.path.exists(dir_path):
@@ -21,8 +23,8 @@ class MetadataStore(object):
         metadata['uid'] = uid
         for key, value in metadata.items():
 
-            # Hack to support activities that still pass properties named as for
-            # example title:text.
+            # Hack to support activities that still pass properties named as
+            # for example title:text.
             if ':' in key:
                 key = key.split(':', 1)[0]
 
@@ -61,4 +63,3 @@ class MetadataStore(object):
         metadata_path = os.path.join(dir_path, 'metadata')
         property_path = os.path.join(metadata_path, key)
         open(property_path, 'w').write(value)
-

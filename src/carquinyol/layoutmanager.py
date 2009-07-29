@@ -18,10 +18,12 @@ import os
 
 MAX_QUERY_LIMIT = 40960
 
+
 class LayoutManager(object):
     """Provide the logic about how entries are stored inside the datastore
     directory
-    """ 
+    """
+
     def __init__(self):
         profile = os.environ.get('SUGAR_PROFILE', 'default')
         base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
@@ -65,7 +67,7 @@ class LayoutManager(object):
 
     def get_checksums_dir(self):
         return os.path.join(self._root_path, 'checksums')
- 
+
     def get_queue_path(self):
         return os.path.join(self.get_checksums_dir(), 'queue')
 
@@ -93,10 +95,10 @@ class LayoutManager(object):
                         uids.append(g)
         return uids
 
+
 _instance = None
 def get_instance():
     global _instance
     if _instance is None:
         _instance = LayoutManager()
     return _instance
-

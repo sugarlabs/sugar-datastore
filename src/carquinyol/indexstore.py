@@ -44,9 +44,11 @@ _PROPERTIES_NOT_TO_INDEX = ['timestamp', 'activity_id', 'keep', 'preview']
 
 _MAX_RESULTS = int(2 ** 31 - 1)
 
+
 class IndexStore(object):
     """Index metadata and provide rich query facilities on it.
-    """ 
+    """
+
     def __init__(self):
         self._database = None
         self._flush_timeout = None
@@ -221,7 +223,7 @@ class IndexStore(object):
 
         if query_dict:
             logging.warning('Unknown term(s): %r' % query_dict)
-        
+
         return Query(Query.OP_AND, queries)
 
     def delete(self, uid):
@@ -239,7 +241,8 @@ class IndexStore(object):
 
     def _flush(self, force=False):
         """Called after any database mutation"""
-        logging.debug('IndexStore.flush: %r %r' % (force, self._pending_writes))
+        logging.debug('IndexStore.flush: %r %r' %
+            (force, self._pending_writes))
 
         if self._flush_timeout is not None:
             gobject.source_remove(self._flush_timeout)
@@ -252,4 +255,3 @@ class IndexStore(object):
         else:
             self._flush_timeout = gobject.timeout_add(_FLUSH_TIMEOUT * 1000,
                                                       self._flush_timeout_cb)
-

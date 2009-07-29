@@ -23,9 +23,11 @@ import gobject
 
 from carquinyol import layoutmanager
 
+
 class Optimizer(object):
     """Optimizes disk space usage by detecting duplicates and sharing storage.
     """
+
     def __init__(self, file_store, metadata_store):
         self._file_store = file_store
         self._metadata_store = metadata_store
@@ -90,7 +92,7 @@ class Optimizer(object):
 
     def _create_checksum_dir(self, checksum):
         """Create directory that tracks files with this same checksum.
-        
+
         """
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
@@ -110,7 +112,7 @@ class Optimizer(object):
     def _already_linked(self, uid, checksum):
         """Check if this entry's file is already a hard link to the checksums
            dir.
-        
+
         """
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
@@ -120,7 +122,7 @@ class Optimizer(object):
         """Process one item in the checksums queue by calculating its checksum,
            checking if there exist already an identical file, and in that case
            substituting its file with a hard link to that pre-existing file.
-        
+
         """
         queue_path = layoutmanager.get_instance().get_queue_path()
         queue = os.listdir(queue_path)
@@ -158,9 +160,8 @@ class Optimizer(object):
 
     def _calculate_md5sum(self, path):
         """Calculate the md5 checksum of a given file.
-        
+
         """
         popen = subprocess.Popen(['md5sum', path], stdout=subprocess.PIPE)
         stdout, stderr_ = popen.communicate()
         return stdout.split(' ', 1)[0]
-

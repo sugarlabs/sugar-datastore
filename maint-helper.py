@@ -22,12 +22,16 @@ import re
 import datetime
 import subprocess
 
-source_exts = [ '.py', '.c', '.h', '.cpp' ]
+
+SOURCE_EXTS = ['.py', '.c', '.h', '.cpp']
+COPYRIGHT = 'Copyright (C) '
+
 
 def is_source(path):
-    for ext in source_exts:
+    for ext in SOURCE_EXTS:
         if path.endswith(ext):
             return True
+
 
 def get_name_and_version():
     f = open('configure.ac', 'r')
@@ -40,7 +44,8 @@ def get_name_and_version():
         print 'Cannot find the package name and version.'
         sys.exit(0)
 
-    return [ match.group(2), match.group(1) ]
+    return (match.group(2), match.group(1))
+
 
 def cmd_help():
     print 'Usage: \n\
@@ -48,8 +53,9 @@ maint-helper.py build-snapshot       - build a source snapshot \n\
 maint-helper.py fix-copyright [path] - fix the copyright year \n\
 maint-helper.py check-licenses       - check licenses in the source'
 
+
 def cmd_build_snapshot():
-    [ name, version ] = get_name_and_version()
+    name, version = get_name_and_version()
 
     print 'Update git...'
 
@@ -70,7 +76,7 @@ def cmd_build_snapshot():
 
     print 'Update NEWS.sugar...'
 
-    if os.environ.has_key('SUGAR_NEWS'):
+    if 'SUGAR_NEWS' in os.environ:
         sugar_news_path = os.environ['SUGAR_NEWS']
         if os.path.isfile(sugar_news_path):
             f = open(sugar_news_path, 'r')
@@ -79,7 +85,7 @@ def cmd_build_snapshot():
         else:
             sugar_news = ''
 
-        [ name, version ] = get_name_and_version()
+        name, version = get_name_and_version()
         sugar_news += '%s - %s - %s\n\n' % (name, version, alphatag)
 
         f = open('NEWS', 'r')
@@ -119,9 +125,10 @@ def cmd_build_snapshot():
 
     print 'Done.'
 
+
 def check_licenses(path, license, missing):
-    matchers = { 'LGPL' : 'GNU Lesser General Public',
-                 'GPL'  : 'GNU General Public License' }
+    matchers = {'LGPL': 'GNU Lesser General Public',
+                 'GPL': 'GNU General Public License'}
 
     license_file = os.path.join(path, '.license')
     if os.path.isfile(license_file):
@@ -156,9 +163,10 @@ def check_licenses(path, license, missing):
                     miss_license = False
 
                 if miss_license:
-                    if not missing.has_key(license):
+                    if license not in missing:
                         missing[license] = []
                     missing[license].append(full_path)
+
 
 def cmd_check_licenses():
     missing = {}
@@ -170,7 +178,6 @@ def cmd_check_licenses():
             print path
         print '\n'
 
-COPYRIGHT = 'Copyright (C) '
 
 def fix_copyright(path):
     for item in os.listdir(path):
@@ -208,8 +215,10 @@ def fix_copyright(path):
                     f.write(result)
                     f.close()
 
+
 def cmd_fix_copyright(path):
     fix_copyright(path)
+
 
 if len(sys.argv) < 2:
     cmd_help()

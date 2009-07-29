@@ -43,9 +43,11 @@ DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
 
 logger = logging.getLogger(DS_LOG_CHANNEL)
 
+
 class DataStore(dbus.service.Object):
     """D-Bus API and logic for connecting all the other components.
-    """ 
+    """
+
     def __init__(self, **options):
         bus_name = dbus.service.BusName(DS_SERVICE,
                                         bus=dbus.SessionBus(),
@@ -214,7 +216,8 @@ class DataStore(dbus.service.Object):
         for uid in uids:
             entry_path = layoutmanager.get_instance().get_entry_path(uid)
             if not os.path.exists(entry_path):
-                logging.warning('Inconsistency detected, returning all entries')
+                logging.warning(
+                    'Inconsistency detected, returning all entries')
 
                 layoutmanager.get_instance().index_updated = False
                 self._index_store.close_index()
@@ -293,7 +296,7 @@ class DataStore(dbus.service.Object):
         self._index_store.delete(uid)
         self._file_store.delete(uid)
         self._metadata_store.delete(uid)
-        
+
         entry_path = layoutmanager.get_instance().get_entry_path(uid)
         os.removedirs(entry_path)
 
@@ -338,4 +341,3 @@ class DataStore(dbus.service.Object):
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="a{sv}")
     def Unmounted(self, descriptor):
         pass
-

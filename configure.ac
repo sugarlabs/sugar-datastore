@@ -10,7 +10,7 @@ AM_INIT_AUTOMAKE([1.9 foreign dist-bzip2 no-dist-gzip])
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 
-AM_PATH_PYTHON
+AM_PATH_PYTHON([2.5])
 AM_CHECK_PYTHON_HEADERS(,[AC_MSG_ERROR(could not find Python headers)])
 
 AC_OUTPUT([

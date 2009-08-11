@@ -22,6 +22,7 @@ import os
 import traceback
 
 import dbus
+import dbus.service
 import gobject
 
 from sugar import mime

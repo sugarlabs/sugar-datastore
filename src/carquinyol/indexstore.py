@@ -66,7 +66,7 @@ class TermGenerator (xapian.TermGenerator):
         document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))
         document.add_value(_VALUE_TITLE, properties.get('title', '').strip())
 
-        xapian.TermGenerator.set_document(self, document)
+        self.set_document(document)
 
         properties = dict(properties)
         self._index_known(document, properties)
@@ -171,7 +171,7 @@ class QueryParser (xapian.QueryParser):
                 '')
 
         except xapian.QueryParserError, exception:
-            logging.warning('Invalid query string: '+exception.get_msg())
+            logging.warning('Invalid query string: ' + exception.get_msg())
             return Query()
 
     def parse_query(self, query_dict, query_string):
@@ -179,7 +179,7 @@ class QueryParser (xapian.QueryParser):
         queries = []
         query_dict = dict(query_dict)
 
-        if query_string:
+        if query_string is not None:
             queries.append(self._parse_query_xapian(str(query_string)))
 
         for name, value in query_dict.items():

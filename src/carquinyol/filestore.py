@@ -45,8 +45,8 @@ class FileStore(object):
                 raise ValueError('No file at %r' % file_path)
             if transfer_ownership:
                 try:
-                    logging.debug('FileStore moving from %r to %r' % \
-                                  (file_path, destination_path))
+                    logging.debug('FileStore moving from %r to %r', file_path,
+                        destination_path)
                     os.rename(file_path, destination_path)
                     completion_cb()
                 except OSError, e:
@@ -72,8 +72,8 @@ class FileStore(object):
         """Start copying a file asynchronously.
 
         """
-        logging.debug('FileStore copying from %r to %r' % \
-                      (file_path, destination_path))
+        logging.debug('FileStore copying from %r to %r', file_path,
+            destination_path)
         async_copy = AsyncCopy(file_path, destination_path, completion_cb)
         async_copy.start()
 
@@ -85,7 +85,7 @@ class FileStore(object):
         """
         file_path = layoutmanager.get_instance().get_data_path(uid)
         if not os.path.exists(file_path):
-            logging.debug('Entry %r doesnt have any file' % uid)
+            logging.debug('Entry %r doesnt have any file', uid)
             return ''
 
         use_instance_dir = os.path.exists('/etc/olpc-security') and \
@@ -158,10 +158,10 @@ class FileStore(object):
         existing_file = layoutmanager.get_instance().get_data_path(existing_uid)
         new_file = layoutmanager.get_instance().get_data_path(new_uid)
 
-        logging.debug('removing %r' % new_file)
+        logging.debug('removing %r', new_file)
         os.remove(new_file)
 
-        logging.debug('hard linking %r -> %r' % (new_file, existing_file))
+        logging.debug('hard linking %r -> %r', new_file, existing_file)
         os.link(existing_file, new_file)
 
 
@@ -193,7 +193,7 @@ class AsyncCopy(object):
             # error writing data to file?
             if count < len(data):
                 logging.error('AC: Error writing %s -> %s: wrote less than '
-                        'expected' % (self.src, self.dest))
+                        'expected', self.src, self.dest)
                 self._cleanup()
                 self.completion(RuntimeError(
                         'Error writing data to destination file'))
@@ -207,8 +207,8 @@ class AsyncCopy(object):
                 self.completion(None)
                 return False
         except Exception, err:
-            logging.error("AC: Error copying %s -> %s: %r" % \
-                    (self.src, self.dest, err))
+            logging.error('AC: Error copying %s -> %s: %r', self.src, self.
+                dest, err)
             self._cleanup()
             self.completion(err)
             return False

@@ -304,8 +304,7 @@ class IndexStore(object):
 
     def _flush(self, force=False):
         """Called after any database mutation"""
-        logging.debug('IndexStore.flush: %r %r' %
-            (force, self._pending_writes))
+        logging.debug('IndexStore.flush: %r %r', force, self._pending_writes)
 
         if self._flush_timeout is not None:
             gobject.source_remove(self._flush_timeout)

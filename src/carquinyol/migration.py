@@ -43,14 +43,13 @@ def migrate_from_0():
         if ext != '.metadata':
             continue
 
-        logging.debug('Migrating entry %r' % uid)
+        logging.debug('Migrating entry %r', uid)
         try:
             _migrate_metadata(root_path, old_root_path, uid)
             _migrate_file(root_path, old_root_path, uid)
             _migrate_preview(root_path, old_root_path, uid)
         except Exception:
-            logging.error('Error while migrating entry %r: %s\n' % \
-                          (uid, traceback.format_exc()))
+            logging.exception('Error while migrating entry %r', uid)
 
     # Just be paranoid, it's cheap.
     if old_root_path.endswith('datastore/store'):
@@ -86,9 +85,8 @@ def _migrate_metadata(root_path, old_root_path, uid):
             finally:
                 f.close()
         except Exception:
-            logging.error(
-                    'Error while migrating property %s of entry %s: %s\n' % \
-                    (key, uid, traceback.format_exc()))
+            logging.exception(
+                    'Error while migrating property %s of entry %s', key, uid)
 
 
 def _migrate_file(root_path, old_root_path, uid):

@@ -42,7 +42,7 @@ class Optimizer(object):
 
         queue_path = layoutmanager.get_instance().get_queue_path()
         open(os.path.join(queue_path, uid), 'w').close()
-        logging.debug('optimize %r' % os.path.join(queue_path, uid))
+        logging.debug('optimize %r', os.path.join(queue_path, uid))
 
         if self._enqueue_checksum_id is None:
             self._enqueue_checksum_id = \
@@ -62,13 +62,13 @@ class Optimizer(object):
         checksum_entry_path = os.path.join(checksum_path, uid)
 
         if os.path.exists(checksum_entry_path):
-            logging.debug('remove %r' % checksum_entry_path)
+            logging.debug('remove %r', checksum_entry_path)
             os.remove(checksum_entry_path)
 
         if os.path.exists(checksum_path):
             try:
                 os.rmdir(checksum_path)
-                logging.debug('removed %r' % checksum_path)
+                logging.debug('removed %r', checksum_path)
             except OSError, e:
                 if e.errno != errno.ENOTEMPTY:
                     raise
@@ -96,7 +96,7 @@ class Optimizer(object):
         """
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
-        logging.debug('create dir %r' % checksum_path)
+        logging.debug('create dir %r', checksum_path)
         os.mkdir(checksum_path)
 
     def _add_checksum_entry(self, uid, checksum):
@@ -106,7 +106,7 @@ class Optimizer(object):
         checksums_dir = layoutmanager.get_instance().get_checksums_dir()
         checksum_path = os.path.join(checksums_dir, checksum)
 
-        logging.debug('touch %r' % os.path.join(checksum_path, uid))
+        logging.debug('touch %r', os.path.join(checksum_path, uid))
         open(os.path.join(checksum_path, uid), 'w').close()
 
     def _already_linked(self, uid, checksum):
@@ -128,11 +128,11 @@ class Optimizer(object):
         queue = os.listdir(queue_path)
         if queue:
             uid = queue[0]
-            logging.debug('_process_entry_cb processing %r' % uid)
+            logging.debug('_process_entry_cb processing %r', uid)
 
             file_in_entry_path = self._file_store.get_file_path(uid)
             if not os.path.exists(file_in_entry_path):
-                logging.info('non-existent entry in queue: %r' % uid)
+                logging.info('non-existent entry in queue: %r', uid)
             else:
                 checksum = self._calculate_md5sum(file_in_entry_path)
                 self._metadata_store.set_property(uid, 'checksum', checksum)

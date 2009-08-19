@@ -39,7 +39,7 @@ class FileStore(object):
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
 
-        destination_path = os.path.join(dir_path, 'data')
+        destination_path = layoutmanager.get_instance().get_data_path(uid)
         if file_path:
             if not os.path.isfile(file_path):
                 raise ValueError('No file at %r' % file_path)
@@ -83,8 +83,7 @@ class FileStore(object):
            deleting this file.
 
         """
-        dir_path = layoutmanager.get_instance().get_entry_path(uid)
-        file_path = os.path.join(dir_path, 'data')
+        file_path = layoutmanager.get_instance().get_data_path(uid)
         if not os.path.exists(file_path):
             logging.debug('Entry %r doesnt have any file' % uid)
             return ''
@@ -145,25 +144,19 @@ class FileStore(object):
         return destination_path
 
     def get_file_path(self, uid):
-        dir_path = layoutmanager.get_instance().get_entry_path(uid)
-        return os.path.join(dir_path, 'data')
+        return layoutmanager.get_instance().get_data_path(uid)
 
     def delete(self, uid):
         """Remove the file associated to a given entry.
 
         """
-        dir_path = layoutmanager.get_instance().get_entry_path(uid)
-        file_path = os.path.join(dir_path, 'data')
+        file_path = layoutmanager.get_instance().get_data_path(uid)
         if os.path.exists(file_path):
             os.remove(file_path)
 
     def hard_link_entry(self, new_uid, existing_uid):
-        existing_file = os.path.join(
-                layoutmanager.get_instance().get_entry_path(existing_uid),
-                'data')
-        new_file = os.path.join(
-                layoutmanager.get_instance().get_entry_path(new_uid),
-                'data')
+        existing_file = layoutmanager.get_instance().get_data_path(existing_uid)
+        new_file = layoutmanager.get_instance().get_data_path(new_uid)
 
         logging.debug('removing %r' % new_file)
         os.remove(new_file)

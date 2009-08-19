@@ -61,7 +61,7 @@ def migrate_from_0():
 
 def _migrate_metadata(root_path, old_root_path, uid):
     dir_path = layoutmanager.get_instance().get_entry_path(uid)
-    metadata_path = os.path.join(dir_path, 'metadata')
+    metadata_path = layoutmanager.get_instance().get_metadata_path(uid)
     os.makedirs(metadata_path)
 
     old_metadata_path = os.path.join(old_root_path, uid + '.metadata')
@@ -93,13 +93,13 @@ def _migrate_metadata(root_path, old_root_path, uid):
 
 def _migrate_file(root_path, old_root_path, uid):
     if os.path.exists(os.path.join(old_root_path, uid)):
-        dir_path = layoutmanager.get_instance().get_entry_path(uid)
+        new_data_path = layoutmanager.get_instance().get_data_path(uid)
         os.rename(os.path.join(old_root_path, uid),
-                  os.path.join(dir_path, 'data'))
+                  new_data_path)
 
 
 def _migrate_preview(root_path, old_root_path, uid):
     dir_path = layoutmanager.get_instance().get_entry_path(uid)
-    metadata_path = os.path.join(dir_path, 'metadata')
+    metadata_path = layoutmanager.get_instance().get_metadata_path(uid)
     os.rename(os.path.join(old_root_path, 'preview', uid),
               os.path.join(metadata_path, 'preview'))

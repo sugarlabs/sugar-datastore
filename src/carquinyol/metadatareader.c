@@ -8,7 +8,7 @@
 static PyObject *byte_array_type = NULL;
 
 int
-add_property(char *metadata_path, char *property_name, PyObject *dict,
+add_property(const char *metadata_path, char *property_name, PyObject *dict,
              int must_exist)
 {
     int file_path_size;
@@ -125,7 +125,7 @@ cleanup:
 }
 
 static PyObject *
-read_from_properties_list (char *metadata_path, PyObject *properties)
+read_from_properties_list (const char *metadata_path, PyObject *properties)
 {
     PyObject *dict = PyDict_New();
 
@@ -148,7 +148,7 @@ cleanup:
 }
 
 static PyObject *
-read_all_properties (char *metadata_path)
+read_all_properties (const char *metadata_path)
 {
     PyObject *dict = PyDict_New();
 	DIR *dir_stream = NULL;
@@ -198,20 +198,10 @@ metadatareader_retrieve(PyObject *unused, PyObject *args)
 {
     PyObject *dict = NULL;
     PyObject *properties = NULL;
-    const char *dir_path = NULL;
-    char *metadata_path = NULL;
+    const char *metadata_path = NULL;
 
-    if (!PyArg_ParseTuple(args, "sO:retrieve", &dir_path, &properties))
+    if (!PyArg_ParseTuple(args, "sO:retrieve", &metadata_path, &properties))
         return NULL;
-
-    // Build path to the metadata directory
-    int metadata_path_size = strlen(dir_path) + 10;
-    metadata_path = PyMem_Malloc(metadata_path_size);
-	if (metadata_path == NULL) {
-        PyErr_NoMemory();
-        return NULL;
-	}
-    snprintf (metadata_path, metadata_path_size, "%s/%s", dir_path, "metadata");
 
     if ((properties != Py_None) && (PyList_Size(properties) > 0)) {
         dict = read_from_properties_list(metadata_path, properties);
@@ -219,13 +209,13 @@ metadatareader_retrieve(PyObject *unused, PyObject *args)
         dict = read_all_properties(metadata_path);
     }
 
-    PyMem_Free(metadata_path);
-
     return dict;
 }
 
 static PyMethodDef metadatareader_functions[] = {
-    {"retrieve", metadatareader_retrieve, METH_VARARGS, PyDoc_STR("Read a dictionary from a file")},
+    {"retrieve", metadatareader_retrieve, METH_VARARGS,
+        PyDoc_STR("Read a dictionary from a directory with a single file " \
+	      "(containing the content) per key")},
     {NULL, NULL, 0, NULL}
 };
 

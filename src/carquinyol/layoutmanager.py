@@ -65,6 +65,12 @@ class LayoutManager(object):
         # os.path.join() is just too slow
         return '%s/%s/%s' % (self._root_path, uid[:2], uid)
 
+    def get_data_path(self, uid):
+        return '%s/%s/%s/data' % (self._root_path, uid[:2], uid)
+
+    def get_metadata_path(self, uid):
+        return '%s/%s/%s/metadata' % (self._root_path, uid[:2], uid)
+
     def get_root_path(self):
         return self._root_path
 

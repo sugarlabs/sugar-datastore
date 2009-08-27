@@ -89,6 +89,8 @@ add_property(const char *metadata_path, char *property_name, PyObject *dict,
         value_buf = NULL;
 
         value = PyObject_CallObject(byte_array_type, args);
+        Py_DECREF(args);
+
         if (value == NULL) {
             PyErr_SetString(PyExc_ValueError,
                             "Failed to convert value to dbus.ByteArray");

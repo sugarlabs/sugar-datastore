@@ -195,9 +195,6 @@ class QueryParser (xapian.QueryParser):
         if not queries:
             queries.append(Query(''))
 
-        if query_dict:
-            logging.warning('Unknown term(s): %r', query_dict)
-
         logging.debug('queries: %r', [str(q) for q in queries])
         return Query(Query.OP_AND, queries)
 

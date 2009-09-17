@@ -10,6 +10,7 @@
 import sys
 import os
 import optparse
+from gettext import gettext as _
 
 if os.path.exists("/tmp/olpc-session-bus"):
     os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/tmp/olpc-session-bus"
@@ -68,11 +69,13 @@ if __name__ == "__main__":
         if options.title:
             entry.metadata['title'] = options.title
         else:
-            entry.metadata['title'] = fname
+            entry.metadata['title'] = os.path.basename(fname)
 
         # Use the description given, otherwise leave it blank.
         if options.description:
             entry.metadata['description'] = options.description
+        else:
+            entry.metadata['description'] = _('From: %s') % fname
 
         # Lastly, if any tags are given, combine them into a single string
         # and save them.

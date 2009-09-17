@@ -1,0 +1,17 @@
+About
+=====
+
+Provides activities with a way to store data and metadata and the journal
+with means for querying, including full text search.
+
+Resources
+=========
+
+Code Repository
+    http://git.sugarlabs.org/projects/sugar-datastore/
+
+Bug Tracking
+    http://dev.sugarlabs.org/
+
+Home Page
+    http://wiki.sugarlabs.org/

@@ -30,7 +30,7 @@ add_property(char *metadata_path, char *property_name, PyObject *dict,
 
     if ((!must_exist) && (stat(file_path, &file_stat) != 0)) {
         PyMem_Free(file_path);
-        return;
+        return 1;
     }
 
     file = fopen(file_path, "r");

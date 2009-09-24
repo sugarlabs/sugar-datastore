@@ -1,2 +1,8 @@
+v0.86.0 2009-09-21
+* fix 'error return without exception set' on ARM (#1404)
+* eliminate incorrect warning about unknown search terms (#1363)
+* Fix AUTHORS file
+* Add AM_MAINTAINER_MODE macro to configure.ac
+
 v0.85.4 2009-09-17
-- Use basename for uploaded files by default in copy-to-journal script #1372
+* Use basename for uploaded files by default in copy-to-journal script #1372

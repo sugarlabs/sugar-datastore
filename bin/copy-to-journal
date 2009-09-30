@@ -11,6 +11,7 @@ import sys
 import os
 import optparse
 from gettext import gettext as _
+import dbus
 
 if os.path.exists("/tmp/olpc-session-bus"):
     os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/tmp/olpc-session-bus"
@@ -88,5 +89,10 @@ if __name__ == "__main__":
     
         entry.destroy()
     
+    except dbus.DBusException:
+        print 'ERROR: Unable to connect to the datastore.\n'\
+              'Check that you are running in the same environment as the '\
+              'datastore service.'
+
     except Exception, e:
-        print 'Error: %s' % (e)
+        print 'ERROR: %s' % (e)

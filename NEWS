@@ -1,3 +1,6 @@
+v0.86.1 2009-10-01
+* Screenshot file is not deleted #1445
+
 v0.86.0 2009-09-21
 * fix 'error return without exception set' on ARM (#1404)
 * eliminate incorrect warning about unknown search terms (#1363)

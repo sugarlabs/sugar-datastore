@@ -52,11 +52,12 @@ class FileStore(object):
                 except OSError, e:
                     if e.errno == errno.EXDEV:
                         self._async_copy(file_path, destination_path,
-                                         completion_cb)
+                                         completion_cb, unlink_src=True)
                     else:
                         raise
             else:
-                self._async_copy(file_path, destination_path, completion_cb)
+                self._async_copy(file_path, destination_path, completion_cb,
+                        unlink_src=False)
             """
         TODO: How can we support deleting the file of an entry?
         elif not file_path and os.path.exists(destination_path):
@@ -68,13 +69,15 @@ class FileStore(object):
             logging.debug('FileStore: Nothing to do')
             completion_cb()
 
-    def _async_copy(self, file_path, destination_path, completion_cb):
+    def _async_copy(self, file_path, destination_path, completion_cb,
+            unlink_src):
         """Start copying a file asynchronously.
 
         """
         logging.debug('FileStore copying from %r to %r', file_path,
             destination_path)
-        async_copy = AsyncCopy(file_path, destination_path, completion_cb)
+        async_copy = AsyncCopy(file_path, destination_path, completion_cb,
+                unlink_src)
         async_copy.start()
 
     def retrieve(self, uid, user_id, extension):
@@ -171,10 +174,11 @@ class AsyncCopy(object):
     """
     CHUNK_SIZE = 65536
 
-    def __init__(self, src, dest, completion):
+    def __init__(self, src, dest, completion, unlink_src=False):
         self.src = src
         self.dest = dest
         self.completion = completion
+        self._unlink_src = unlink_src
         self.src_fp = -1
         self.dest_fp = -1
         self.written = 0
@@ -194,8 +198,7 @@ class AsyncCopy(object):
             if count < len(data):
                 logging.error('AC: Error writing %s -> %s: wrote less than '
                         'expected', self.src, self.dest)
-                self._cleanup()
-                self.completion(RuntimeError(
+                self._complete(RuntimeError(
                         'Error writing data to destination file'))
                 return False
 
@@ -203,17 +206,21 @@ class AsyncCopy(object):
 
             # done?
             if len(data) < AsyncCopy.CHUNK_SIZE:
-                self._cleanup()
-                self.completion(None)
+                self._complete(None)
                 return False
         except Exception, err:
             logging.error('AC: Error copying %s -> %s: %r', self.src, self.
                 dest, err)
-            self._cleanup()
-            self.completion(err)
+            self._complete(err)
             return False
 
         return True
+
+    def _complete(self, *args):
+        self._cleanup()
+        if self._unlink_src:
+            os.unlink(self.src)
+        self.completion(*args)
 
     def start(self):
         self.src_fp = os.open(self.src, os.O_RDONLY)

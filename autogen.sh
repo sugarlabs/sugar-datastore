@@ -2,4 +2,4 @@
 export ACLOCAL="aclocal -I m4"
 
 autoreconf -i
-./configure "$@"
+./configure --enable-maintainer-mode "$@"

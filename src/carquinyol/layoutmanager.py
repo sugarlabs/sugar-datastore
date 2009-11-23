@@ -15,6 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 import os
+import logging
 
 MAX_QUERY_LIMIT = 40960
 CURRENT_LAYOUT_VERSION = 2
@@ -54,7 +55,12 @@ class LayoutManager(object):
         version_path = os.path.join(self._root_path, 'version')
         version = 0
         if os.path.exists(version_path):
-            version = int(open(version_path, 'r').read())
+            try:
+                version = int(open(version_path, 'r').read())
+            except ValueError:
+                logging.exception('Can not read layout version')
+                version = 0
+
         return version
 
     def set_version(self, version):

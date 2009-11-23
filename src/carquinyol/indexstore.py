@@ -312,5 +312,5 @@ class IndexStore(object):
             self._database.flush()
             self._pending_writes = 0
         else:
-            self._flush_timeout = gobject.timeout_add(_FLUSH_TIMEOUT * 1000,
+            self._flush_timeout = gobject.timeout_add_seconds(_FLUSH_TIMEOUT,
                                                       self._flush_timeout_cb)

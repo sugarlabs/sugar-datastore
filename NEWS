@@ -1,3 +1,7 @@
+v0.87.1 2009-12-01
+* Make reading version file more robust (sayamindu) #1562
+* Use gobject_timeout_add_seconds to make power usage more efficient (sayamindu) #1567
+
 v0.86.1 2009-10-01
 * Screenshot file is not deleted #1445
 

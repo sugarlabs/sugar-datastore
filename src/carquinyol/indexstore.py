@@ -56,7 +56,7 @@ _QUERY_TERM_MAP = {
 }
 
 _QUERY_VALUE_MAP = {
-    'timestamp': _VALUE_TIMESTAMP,
+    'timestamp': {'number': _VALUE_TIMESTAMP, 'type': float},
 }
 
 
@@ -132,33 +132,36 @@ class QueryParser (xapian.QueryParser):
         else:
             return Query(_PREFIX_NONE + str(value))
 
-    def _parse_query_value_range(self, name, value, value_no):
+    def _parse_query_value_range(self, name, info, value):
         if len(value) != 2:
             raise TypeError(
                 'Only tuples of size 2 have a defined meaning. '
                 'Did you mean to pass a list instead?')
 
         start, end = value
-        return Query(Query.OP_VALUE_RANGE, value_no, str(start), str(end))
+        return Query(Query.OP_VALUE_RANGE, info['number'],
+            self._convert_value(info, start), self._convert_value(info, end))
 
-    def _parse_query_value(self, name, value_no, value):
+    def _convert_value(self, info, value):
+        return str(info['type'](value))
+
+    def _parse_query_value(self, name, info, value):
         if isinstance(value, list):
-            subqueries = [self._parse_query_value(name, value_no, word)
+            subqueries = [self._parse_query_value(name, info, word)
                 for word in value]
             return Query(Query.OP_OR, subqueries)
 
         elif isinstance(value, tuple):
-            return self._parse_query_value_range(name, value, value_no)
+            return self._parse_query_value_range(name, info, value)
 
         elif isinstance(value, dict):
             # compatibility option for timestamp: {'start': 0, 'end': 1}
             start = value.get('start', 0)
             end = value.get('end', sys.maxint)
-            return self._parse_query_value_range(name, (start, end), value_no)
+            return self._parse_query_value_range(name, info, (start, end))
 
         else:
-            return Query(Query.OP_VALUE_RANGE,
-                _QUERY_VALUE_MAP[name], str(value), str(value))
+            return self._parse_query_value_range(name, info, (value, value))
 
     def _parse_query_xapian(self, query_str):
         try:

@@ -63,7 +63,8 @@ _QUERY_VALUE_MAP = {
 class TermGenerator (xapian.TermGenerator):
 
     def index_document(self, document, properties):
-        document.add_value(_VALUE_TIMESTAMP, str(properties['timestamp']))
+        document.add_value(_VALUE_TIMESTAMP,
+            xapian.sortable_serialise(float(properties['timestamp'])))
         document.add_value(_VALUE_TITLE, properties.get('title', '').strip())
 
         self.set_document(document)
@@ -143,6 +144,9 @@ class QueryParser (xapian.QueryParser):
             self._convert_value(info, start), self._convert_value(info, end))
 
     def _convert_value(self, info, value):
+        if info['type'] in (float, int, long):
+            return xapian.sortable_serialise(info['type'](value))
+
         return str(info['type'](value))
 
     def _parse_query_value(self, name, info, value):

@@ -110,21 +110,10 @@ class FileStore(object):
         elif extension:
             extension = '.' + extension
 
-        destination_path = os.path.join(destination_dir, uid + extension)
-
-        attempt = 1
-        while os.path.exists(destination_path):
-            if attempt > 10:
-                fd_, destination_path = tempfile.mkstemp(prefix=uid,
-                                                         suffix=extension,
-                                                         dir=destination_dir)
-                del fd_
-                os.unlink(destination_path)
-                break
-            else:
-                file_name = '%s_%s%s' % (uid, attempt, extension)
-                destination_path = os.path.join(destination_dir, file_name)
-                attempt += 1
+        fd, destination_path = tempfile.mkstemp(prefix=uid, suffix=extension,
+            dir=destination_dir)
+        os.close(fd)
+        os.unlink(destination_path)
 
         # Try to hard link from the original file to the targetpath. This can
         # fail if the file is in a different filesystem. Do a symlink instead.

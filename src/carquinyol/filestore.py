@@ -110,8 +110,8 @@ class FileStore(object):
         elif extension:
             extension = '.' + extension
 
-        fd, destination_path = tempfile.mkstemp(prefix=uid, suffix=extension,
-            dir=destination_dir)
+        fd, destination_path = tempfile.mkstemp(prefix=uid + '_',
+                suffix=extension, dir=destination_dir)
         os.close(fd)
         os.unlink(destination_path)
 

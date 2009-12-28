@@ -1,0 +1,12 @@
+v0.84.1 2009-12-28
+~~~~~~~~~~~~~~~~~~
+* Add standard info files
+* Add AM_MAINTAINER_MODE macro to configure.ac
+* file descriptor leak in filestore.retrieve() #1550
+* Make reading version file more robust (sayamindu) #1562
+* Use gobject_timeout_add_seconds to make power usage more efficient (sayamindu) #1567
+* Rebuild index when an inconsistency between the index and the metadata is detected
+* Return a consistent entry count when some entries are missing (dsd)
+* Don't include in find() results entries without metadata
+* Only one dot for the filename if we specify an extension
+* Remove title option #896

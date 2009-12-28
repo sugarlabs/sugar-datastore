@@ -6,5 +6,4 @@ test:
 	@cd tests
 	$(MAKE) -C tests test
 
-EXTRA_DIST = README.txt LICENSE.GPL
-
+EXTRA_DIST = AUTHORS COPYING NEWS README

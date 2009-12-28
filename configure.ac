@@ -1,4 +1,4 @@
-AC_INIT([sugar-datastore],[0.84.0],[],[sugar-datastore])
+AC_INIT([sugar-datastore],[0.84.1],[],[sugar-datastore])
 
 AC_PREREQ([2.59])
 

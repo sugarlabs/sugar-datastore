@@ -74,7 +74,7 @@ class DataStore(dbus.service.Object):
             self._rebuild_index()
             return
 
-        if not layout_manager.index_updated:
+        if not layoutmanager.get_instance().index_updated:
             logging.debug('Index is not up-to-date, will update')
             self._update_index()
 

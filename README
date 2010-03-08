@@ -4,6 +4,7 @@ About
 Provides activities with a way to store data and metadata and the journal
 with means for querying, including full text search.
 
+
 Resources
 =========
 
@@ -15,3 +16,19 @@ Bug Tracking
 
 Home Page
     http://wiki.sugarlabs.org/
+
+
+Storage format history
+======================
+
+0   0.82.x
+    Initial format
+
+1   0.84.x
+    Refactoring, start using indexes
+
+2   0.86.x
+    Add sorting by title and mtime
+
+3   not-mainstream
+    test versioning support

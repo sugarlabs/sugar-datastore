@@ -220,6 +220,10 @@ class IndexStore(object):
         self._database = WritableDatabase(index_path, xapian.DB_CREATE_OR_OPEN)
 
     def close_index(self):
+        """Close index database if it is open."""
+        if not self._database:
+            return
+
         self._database.flush()
         self._database = None
 

@@ -32,3 +32,11 @@ Storage format history
 
 3   not-mainstream
     test versioning support
+
+4   0.88, 0.86.2
+    version bump to force index rebuild that may have been missed during the
+    migration to version 2 (SL#1787)
+
+5   not-mainstream
+    test versioning support (version bump for SL#1787)
+

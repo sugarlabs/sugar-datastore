@@ -18,7 +18,7 @@ import os
 import logging
 
 MAX_QUERY_LIMIT = 40960
-CURRENT_LAYOUT_VERSION = 2
+CURRENT_LAYOUT_VERSION = 4
 
 class LayoutManager(object):
     """Provide the logic about how entries are stored inside the datastore

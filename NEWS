@@ -1,3 +1,6 @@
+v0.87.3 2010-03-08
+* rebuild index on migration #1787
+
 v0.87.2 2009-12-21
 * copy-to-journal dbus error #573
 * file descriptor leak in filestore.retrieve() #1550
@@ -7,6 +10,9 @@ v0.87.2 2009-12-21
 v0.87.1 2009-12-01
 * Make reading version file more robust (sayamindu) #1562
 * Use gobject_timeout_add_seconds to make power usage more efficient (sayamindu) #1567
+
+v0.86.2 2010-03-08
+* rebuild index on migration #1787
 
 v0.86.1 2009-10-01
 * Screenshot file is not deleted #1445

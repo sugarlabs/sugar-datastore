@@ -56,41 +56,62 @@ class DataStore(dbus.service.Object):
                                         allow_replacement=False)
         dbus.service.Object.__init__(self, bus_name, DS_OBJECT_PATH)
 
-        layout_manager = layoutmanager.get_instance()
-        if layout_manager.get_version() == 0:
-            migration.migrate_from_0()
-            layout_manager.set_version(layoutmanager.CURRENT_LAYOUT_VERSION)
-            layout_manager.index_updated = False
-        elif layout_manager.get_version() == 1:
-            layout_manager.set_version(layoutmanager.CURRENT_LAYOUT_VERSION)
-            layout_manager.index_updated = False
+        migrated = self._migrate()
 
         self._metadata_store = MetadataStore()
-
+        self._file_store = FileStore()
+        self._optimizer = Optimizer(self._file_store, self._metadata_store)
         self._index_store = IndexStore()
+
+        if migrated:
+            self._rebuild_index()
+            return
+
         try:
             self._index_store.open_index()
         except Exception:
             logging.exception('Failed to open index, will rebuild')
-            layout_manager.index_updated = False
-            self._index_store.remove_index()
-            self._index_store.open_index()
-
-        self._file_store = FileStore()
+            self._rebuild_index()
+            return
 
         if not layout_manager.index_updated:
             logging.debug('Index is not up-to-date, will update')
-            self._rebuild_index()
+            self._update_index()
 
-        self._optimizer = Optimizer(self._file_store, self._metadata_store)
+    def _migrate(self):
+        """Check version of data store on disk and migrate if necessary.
+
+        Returns True if migration was done and an index rebuild is required,
+        False otherwise.
+        """
+        layout_manager = layoutmanager.get_instance()
+        old_version = layout_manager.get_version()
+        if old_version == layoutmanager.CURRENT_LAYOUT_VERSION:
+            return False
+
+        if old_version == 0:
+            migration.migrate_from_0()
+
+        layout_manager.set_version(layoutmanager.CURRENT_LAYOUT_VERSION)
+        return True
 
     def _rebuild_index(self):
+        """Remove and recreate index."""
+        layoutmanager.get_instance().index_updated = False
+        self._index_store.close_index()
+        self._index_store.remove_index()
+        self._index_store.open_index()
+        self._update_index()
+
+    def _update_index(self):
+        """Find entries that are not yet in the index and add them."""
         uids = layoutmanager.get_instance().find_all()
-        logging.debug('Going to update the index with uids %r', uids)
-        gobject.idle_add(lambda: self.__rebuild_index_cb(uids),
+        logging.debug('Going to update the index with object_ids %r',
+            uids)
+        gobject.idle_add(lambda: self.__update_index_cb(uids),
                             priority=gobject.PRIORITY_LOW)
 
-    def __rebuild_index_cb(self, uids):
+    def __update_index_cb(self, uids):
         if uids:
             uid = uids.pop()
 
@@ -200,10 +221,6 @@ class DataStore(dbus.service.Object):
                 uids, count = self._index_store.find(query)
             except Exception:
                 logging.exception('Failed to query index, will rebuild')
-                layoutmanager.get_instance().index_updated = False
-                self._index_store.close_index()
-                self._index_store.remove_index()
-                self._index_store.open_index()
                 self._rebuild_index()
 
         if not layoutmanager.get_instance().index_updated:
@@ -216,13 +233,7 @@ class DataStore(dbus.service.Object):
             if not os.path.exists(entry_path):
                 logging.warning(
                     'Inconsistency detected, returning all entries')
-
-                layoutmanager.get_instance().index_updated = False
-                self._index_store.close_index()
-                self._index_store.remove_index()
-                self._index_store.open_index()
                 self._rebuild_index()
-
                 return self._find_all(query, properties)
 
             metadata = self._metadata_store.retrieve(uid, properties)

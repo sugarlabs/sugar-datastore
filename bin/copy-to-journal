@@ -17,10 +17,11 @@ if os.path.exists("/tmp/olpc-session-bus"):
     os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/tmp/olpc-session-bus"
 
 from sugar.datastore import datastore
+from sugar import mime
 
 def build_option_parser():
 
-    usage = "Usage: %prog <file> -m MIMETYPE [-t TITLE] [-d DESC] [-T tag1 [-T tag2 ...]]"
+    usage = "Usage: %prog <file> [-m MIMETYPE] [-t TITLE] [-d DESC] [-T tag1 [-T tag2 ...]]"
     parser = optparse.OptionParser(usage=usage)
 
     parser.add_option("-t", "--title", action="store", dest="title",
@@ -54,17 +55,15 @@ if __name__ == "__main__":
         parser.print_help()
         exit(0)
 
-    if not options.mimetype:
-        print 'Error: No MIME-type given.'
-        parser.print_help()
-        exit(0)
-    
     try:
         entry = datastore.create()
         entry.set_file_path(absname)
 
         # Set the mimetype to the provided one.
-        entry.metadata['mime_type'] = options.mimetype
+        if options.mimetype is None:
+            entry.metadata['mime_type'] = mime.get_for_file(absname)
+        else:
+            entry.metadata['mime_type'] = options.mimetype
 
         # If no title is given, use the filename.
         if options.title:

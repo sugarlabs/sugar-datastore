@@ -4,6 +4,7 @@ from carquinyol import layoutmanager
 from carquinyol import metadatareader
 
 MAX_SIZE = 256
+_INTERNAL_KEYS = ['checksum']
 
 
 class MetadataStore(object):
@@ -14,7 +15,8 @@ class MetadataStore(object):
             os.makedirs(metadata_path)
         else:
             for key in os.listdir(metadata_path):
-                os.remove(os.path.join(metadata_path, key))
+                if key not in _INTERNAL_KEYS:
+                    os.remove(os.path.join(metadata_path, key))
 
         metadata['uid'] = uid
         for key, value in metadata.items():

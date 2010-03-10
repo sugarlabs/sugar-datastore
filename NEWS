@@ -1,3 +1,7 @@
+v0.87.4 2010-03-10
+* Do not remove internal metadata fields while rewriting object #1813
+* Auto detect mime type in copy-to-journal #586 (tomeu)
+
 v0.87.3 2010-03-08
 * rebuild index on migration #1787
 

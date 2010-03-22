@@ -114,6 +114,14 @@ class LayoutManager(object):
         return uids
 
     def _is_empty(self):
+        """Check if there is any existing entry.
+
+        All data store layout versions are handled. Will err on the safe
+        side (i.e. return False if there might be any entry)."""
+        if os.path.exists(os.path.join(self._root_path, 'store')):
+            # unmigrated 0.82 data store
+            return False
+
         for f in os.listdir(self._root_path):
             if os.path.isdir(os.path.join(self._root_path, f)) and len(f) == 2:
                 for g in os.listdir(os.path.join(self._root_path, f)):

@@ -1,3 +1,6 @@
+v0.88.0 2010-03-29
+* fix migration from 0.82 data store (#1838)
+
 v0.87.4 2010-03-10
 * Do not remove internal metadata fields while rewriting object #1813
 * Auto detect mime type in copy-to-journal #586 (tomeu)

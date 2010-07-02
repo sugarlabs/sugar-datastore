@@ -121,7 +121,15 @@ class DataStore(dbus.service.Object):
 
             if not self._index_store.contains(uid):
                 try:
+                    update_metadata = False
                     props = self._metadata_store.retrieve(uid)
+                    if 'filesize' not in props:
+                        path = self._file_store.get_file_path(uid)
+                        if os.path.exists(path):
+                            props['filesize'] = os.stat(path).st_size
+                            update_metadata = True
+                    if update_metadata:
+                        self._metadata_store.store(uid, props)
                     self._index_store.store(uid, props)
                 except Exception:
                     logging.exception('Error processing %r', uid)

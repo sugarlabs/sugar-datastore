@@ -214,6 +214,8 @@ class IndexStore(object):
         self._database = None
         self._flush_timeout = None
         self._pending_writes = 0
+        self._index_updated_path = os.path.join(
+                layoutmanager.get_instance().get_root_path(), 'index_updated')
 
     def open_index(self):
         index_path = layoutmanager.get_instance().get_index_path()
@@ -298,6 +300,7 @@ class IndexStore(object):
 
     def delete(self, uid):
         self._database.delete_document(_PREFIX_FULL_VALUE + _PREFIX_UID + uid)
+        self._flush()
 
     def get_activities(self):
         activities = []
@@ -305,6 +308,25 @@ class IndexStore(object):
         for term in self._database.allterms(prefix):
             activities.append(term.term[len(prefix):])
         return activities
+
+    def flush(self):
+        self._flush(True)
+
+    def get_index_updated(self):
+        return os.path.exists(self._index_updated_path)
+
+    index_updated = property(get_index_updated)
+
+    def _set_index_updated(self, index_updated):
+        if index_updated != self.index_updated:
+            if index_updated:
+                index_updated_file = open(self._index_updated_path, 'w')
+                # index_updated = True will happen every
+                # indexstore._FLUSH_TIMEOUT seconds, so it is ok to fsync
+                os.fsync(index_updated_file.fileno())
+                index_updated_file.close()
+            else:
+                os.remove(self._index_updated_path)
 
     def _flush_timeout_cb(self):
         self._flush(True)
@@ -314,6 +336,8 @@ class IndexStore(object):
         """Called after any database mutation"""
         logging.debug('IndexStore.flush: %r %r', force, self._pending_writes)
 
+        self._set_index_updated(False)
+
         if self._flush_timeout is not None:
             gobject.source_remove(self._flush_timeout)
             self._flush_timeout = None
@@ -322,6 +346,7 @@ class IndexStore(object):
         if force or self._pending_writes > _FLUSH_THRESHOLD:
             self._database.flush()
             self._pending_writes = 0
+            self._set_index_updated(True)
         else:
             self._flush_timeout = gobject.timeout_add_seconds(_FLUSH_TIMEOUT,
                                                       self._flush_timeout_cb)

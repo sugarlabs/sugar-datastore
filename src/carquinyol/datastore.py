@@ -62,6 +62,7 @@ class DataStore(dbus.service.Object):
         self._file_store = FileStore()
         self._optimizer = Optimizer(self._file_store, self._metadata_store)
         self._index_store = IndexStore()
+        self._index_updating = False
 
         if migrated:
             self._rebuild_index()
@@ -74,7 +75,7 @@ class DataStore(dbus.service.Object):
             self._rebuild_index()
             return
 
-        if not layoutmanager.get_instance().index_updated:
+        if not self._index_store.index_updated:
             logging.debug('Index is not up-to-date, will update')
             self._update_index()
 
@@ -97,7 +98,6 @@ class DataStore(dbus.service.Object):
 
     def _rebuild_index(self):
         """Remove and recreate index."""
-        layoutmanager.get_instance().index_updated = False
         self._index_store.close_index()
         self._index_store.remove_index()
         self._index_store.open_index()
@@ -108,6 +108,7 @@ class DataStore(dbus.service.Object):
         uids = layoutmanager.get_instance().find_all()
         logging.debug('Going to update the index with object_ids %r',
             uids)
+        self._index_updating = True
         gobject.idle_add(lambda: self.__update_index_cb(uids),
                             priority=gobject.PRIORITY_LOW)
 
@@ -126,8 +127,9 @@ class DataStore(dbus.service.Object):
                     logging.exception('Error processing %r', uid)
 
         if not uids:
+            self._index_store.flush()
+            self._index_updating = False
             logging.debug('Finished updating index.')
-            layoutmanager.get_instance().index_updated = True
             return False
         else:
             return True
@@ -216,14 +218,14 @@ class DataStore(dbus.service.Object):
         logging.debug('datastore.find %r', query)
         t = time.time()
 
-        if layoutmanager.get_instance().index_updated:
+        if not self._index_updating:
             try:
                 uids, count = self._index_store.find(query)
             except Exception:
                 logging.exception('Failed to query index, will rebuild')
                 self._rebuild_index()
 
-        if not layoutmanager.get_instance().index_updated:
+        if self._index_updating:
             logging.warning('Index updating, returning all entries')
             return self._find_all(query, properties)
 
@@ -290,7 +292,7 @@ class DataStore(dbus.service.Object):
             raise ValueError('Only ''activity'' is a supported property name')
         if query:
             raise ValueError('The query parameter is not supported')
-        if layoutmanager.get_instance().index_updated:
+        if not self._index_updating:
             return self._index_store.get_activities()
         else:
             logging.warning('Index updating, returning an empty list')

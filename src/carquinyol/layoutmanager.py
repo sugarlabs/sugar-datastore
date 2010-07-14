@@ -37,16 +37,6 @@ class LayoutManager(object):
         self._create_if_needed(self.get_checksums_dir())
         self._create_if_needed(self.get_queue_path())
 
-        index_updated_path = os.path.join(self._root_path, 'index_updated')
-        if os.path.exists(index_updated_path):
-            self._index_updated = True
-        elif self._is_empty():
-            open(index_updated_path, 'w').close()
-            self.set_version(CURRENT_LAYOUT_VERSION)
-            self._index_updated = True
-        else:
-            self._index_updated = False
-
     def _create_if_needed(self, path):
         if not os.path.exists(path):
             os.makedirs(path)
@@ -88,21 +78,6 @@ class LayoutManager(object):
 
     def get_queue_path(self):
         return os.path.join(self.get_checksums_dir(), 'queue')
-
-    def _is_index_updated(self):
-        return self._index_updated
-
-    def _set_index_updated(self, index_updated):
-        if index_updated != self._index_updated:
-            self._index_updated = index_updated
-
-            index_updated_path = os.path.join(self._root_path, 'index_updated')
-            if os.path.exists(index_updated_path):
-                os.remove(index_updated_path)
-            else:
-                open(index_updated_path, 'w').close()
-
-    index_updated = property(_is_index_updated, _set_index_updated)
 
     def find_all(self):
         uids = []

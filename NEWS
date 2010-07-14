@@ -1,3 +1,6 @@
+v0.89.1 2010-07-14
+* Invert index_updated logic #2095
+
 v0.88.0 2010-03-29
 * fix migration from 0.82 data store (#1838)
 

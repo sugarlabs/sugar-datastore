@@ -226,7 +226,7 @@ class IndexStore(object):
         if not self._database:
             return
 
-        self._database.flush()
+        self._flush(True)
         self._database = None
 
     def remove_index(self):
@@ -334,7 +334,8 @@ class IndexStore(object):
 
     def _flush(self, force=False):
         """Called after any database mutation"""
-        logging.debug('IndexStore.flush: %r %r', force, self._pending_writes)
+        logging.debug('IndexStore.flush: force=%r _pending_writes=%r',
+                force, self._pending_writes)
 
         self._set_index_updated(False)
 

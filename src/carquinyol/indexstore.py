@@ -41,7 +41,7 @@ _PREFIX_KEEP = 'K'
 _FLUSH_THRESHOLD = 20
 
 # Force a flush after _n_ seconds since the last change to the db
-_FLUSH_TIMEOUT = 60
+_FLUSH_TIMEOUT = 5
 
 _PROPERTIES_NOT_TO_INDEX = ['timestamp', 'preview']
 

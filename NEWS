@@ -1,3 +1,7 @@
+v0.89.2 2010-08-04
+* sl#2132: reduce _FLUSH_TIMEOUT to 5 seconds
+* Set index_updated flag on ds shutting down #2095
+
 v0.89.1 2010-07-14
 * Invert index_updated logic #2095
 

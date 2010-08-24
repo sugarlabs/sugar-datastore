@@ -28,6 +28,8 @@ from carquinyol.layoutmanager import MAX_QUERY_LIMIT
 _VALUE_UID = 0
 _VALUE_TIMESTAMP = 1
 _VALUE_TITLE = 2
+# 3 reserved for version support
+_VALUE_FILESIZE = 4
 
 _PREFIX_NONE = 'N'
 _PREFIX_FULL_VALUE = 'F'
@@ -57,6 +59,7 @@ _QUERY_TERM_MAP = {
 
 _QUERY_VALUE_MAP = {
     'timestamp': {'number': _VALUE_TIMESTAMP, 'type': float},
+    'filesize': {'number': _VALUE_FILESIZE, 'type': int},
 }
 
 
@@ -66,6 +69,13 @@ class TermGenerator (xapian.TermGenerator):
         document.add_value(_VALUE_TIMESTAMP,
             xapian.sortable_serialise(float(properties['timestamp'])))
         document.add_value(_VALUE_TITLE, properties.get('title', '').strip())
+        if 'filesize' in properties:
+            try:
+                document.add_value(_VALUE_FILESIZE,
+                    xapian.sortable_serialise(int(properties['filesize'])))
+            except (ValueError, TypeError):
+                logging.debug('Invalid value for filesize property: %s',
+                              properties['filesize'])
 
         self.set_document(document)
 
@@ -286,6 +296,10 @@ class IndexStore(object):
             enquire.set_sort_by_value(_VALUE_TITLE, True)
         elif order_by == '-title':
             enquire.set_sort_by_value(_VALUE_TITLE, False)
+        elif order_by == '+filesize':
+            enquire.set_sort_by_value(_VALUE_FILESIZE, True)
+        elif order_by == '-filesize':
+            enquire.set_sort_by_value(_VALUE_FILESIZE, False)
         else:
             logging.warning('Unsupported property for sorting: %s', order_by)
 

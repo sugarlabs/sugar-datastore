@@ -159,6 +159,12 @@ class DataStore(dbus.service.Object):
         if not props.get('timestamp', ''):
             props['timestamp'] = int(time.time())
 
+        if os.path.exists(file_path):
+            stat = os.stat(file_path)
+            props['filesize'] = stat.st_size
+        else:
+            props['filesize'] = 0
+
         self._metadata_store.store(uid, props)
         self._index_store.store(uid, props)
         self._file_store.store(uid, file_path, transfer_ownership,
@@ -194,6 +200,12 @@ class DataStore(dbus.service.Object):
 
         if not props.get('timestamp', ''):
             props['timestamp'] = int(time.time())
+
+        if os.path.exists(file_path):
+            stat = os.stat(file_path)
+            props['filesize'] = stat.st_size
+        else:
+            props['filesize'] = 0
 
         self._metadata_store.store(uid, props)
         self._index_store.store(uid, props)

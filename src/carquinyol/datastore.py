@@ -130,9 +130,13 @@ class DataStore(dbus.service.Object):
                             update_metadata = True
                     if 'creation_time' not in props:
                         if 'ctime' in props:
-                            props['creation_time'] = time.mktime(time.strptime(
-                                props['ctime'], migration.DATE_FORMAT))
-                        else:
+                            try:
+                                props['creation_time'] = time.mktime(
+                                        time.strptime(props['ctime'],
+                                            migration.DATE_FORMAT))
+                            except (TypeError, ValueError):
+                                pass
+                        if 'creation_time' not in props:
                             props['creation_time'] = props['timestamp']
                         update_metadata = True
                     if update_metadata:
@@ -183,7 +187,7 @@ class DataStore(dbus.service.Object):
                 pass
 
         if 'creation_time' not in props:
-            props['creation_time'] = time.time()
+            props['creation_time'] = props['timestamp']
 
         if os.path.exists(file_path):
             stat = os.stat(file_path)
@@ -236,7 +240,7 @@ class DataStore(dbus.service.Object):
                 pass
 
         if 'creation_time' not in props:
-            props['creation_time'] = time.time()
+            props['creation_time'] = props['timestamp']
 
         if os.path.exists(file_path):
             stat = os.stat(file_path)

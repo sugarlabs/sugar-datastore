@@ -64,6 +64,7 @@ def migrate_from_0():
 
 
 def _migrate_metadata(root_path, old_root_path, uid):
+    metadata_path = layoutmanager.get_instance().get_metadata_path(uid)
     old_metadata_path = os.path.join(old_root_path, uid + '.metadata')
     metadata = cjson.decode(open(old_metadata_path, 'r').read())
 

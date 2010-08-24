@@ -128,6 +128,13 @@ class DataStore(dbus.service.Object):
                         if os.path.exists(path):
                             props['filesize'] = os.stat(path).st_size
                             update_metadata = True
+                    if 'creation_time' not in props:
+                        if 'ctime' in props:
+                            props['creation_time'] = time.mktime(time.strptime(
+                                props['ctime'], migration.DATE_FORMAT))
+                        else:
+                            props['creation_time'] = props['timestamp']
+                        update_metadata = True
                     if update_metadata:
                         self._metadata_store.store(uid, props)
                     self._index_store.store(uid, props)

@@ -1,3 +1,8 @@
+v0.89.3 2010-08-24
+* New metadata fields, creation_time and filesize to support sorting
+  in the Journal #1915
+* Create target directory before importing previews (carrott) #2149
+
 v0.89.2 2010-08-04
 * sl#2132: reduce _FLUSH_TIMEOUT to 5 seconds
 * Set index_updated flag on ds shutting down #2095

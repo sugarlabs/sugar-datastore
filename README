@@ -1,13 +1,11 @@
 About
-=====
-
+~~~~~
 Provides activities with a way to store data and metadata and the journal
 with means for querying, including full text search.
 
 
 Resources
-=========
-
+~~~~~~~~~
 Code Repository
     http://git.sugarlabs.org/projects/sugar-datastore/
 
@@ -19,8 +17,7 @@ Home Page
 
 
 Storage format history
-======================
-
+~~~~~~~~~~~~~~~~~~~~~~
 0   0.82.x
     Initial format
 
@@ -38,4 +35,9 @@ Storage format history
     migration to version 2 (SL#1787)
 
 5   not-mainstream
-    test versioning support (version bump for SL#1787)
+    pre v6 testing
+
+6   0.90
+    new metadata fields:
+    - creation_time, time of ds entry creation in seconds since the epoch
+    - filesize, size of ds entry data file in bytes

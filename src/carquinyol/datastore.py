@@ -167,6 +167,17 @@ class DataStore(dbus.service.Object):
         if not props.get('timestamp', ''):
             props['timestamp'] = int(time.time())
 
+        # FIXME: Support for the deprecated ctime property. Remove in 0.92.
+        if 'ctime' in props:
+            try:
+                props['creation_time'] = time.mktime(time.strptime(
+                    migration.DATE_FORMAT, props['ctime']))
+            except (TypeError, ValueError):
+                pass
+
+        if 'creation_time' not in props:
+            props['creation_time'] = time.time()
+
         if os.path.exists(file_path):
             stat = os.stat(file_path)
             props['filesize'] = stat.st_size
@@ -208,6 +219,17 @@ class DataStore(dbus.service.Object):
 
         if not props.get('timestamp', ''):
             props['timestamp'] = int(time.time())
+
+        # FIXME: Support for the deprecated ctime property. Remove in 0.92.
+        if 'ctime' in props:
+            try:
+                props['creation_time'] = time.mktime(time.strptime(
+                    migration.DATE_FORMAT, props['ctime']))
+            except (TypeError, ValueError):
+                pass
+
+        if 'creation_time' not in props:
+            props['creation_time'] = time.time()
 
         if os.path.exists(file_path):
             stat = os.stat(file_path)

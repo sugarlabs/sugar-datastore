@@ -30,6 +30,7 @@ _VALUE_TIMESTAMP = 1
 _VALUE_TITLE = 2
 # 3 reserved for version support
 _VALUE_FILESIZE = 4
+_VALUE_CREATION_TIME = 5
 
 _PREFIX_NONE = 'N'
 _PREFIX_FULL_VALUE = 'F'
@@ -60,6 +61,7 @@ _QUERY_TERM_MAP = {
 _QUERY_VALUE_MAP = {
     'timestamp': {'number': _VALUE_TIMESTAMP, 'type': float},
     'filesize': {'number': _VALUE_FILESIZE, 'type': int},
+    'creation_time': {'number': _VALUE_CREATION_TIME, 'type': float},
 }
 
 
@@ -76,6 +78,15 @@ class TermGenerator (xapian.TermGenerator):
             except (ValueError, TypeError):
                 logging.debug('Invalid value for filesize property: %s',
                               properties['filesize'])
+        if 'creation_time' in properties:
+            try:
+                document.add_value(
+                    _VALUE_CREATION_TIME, xapian.sortable_serialise(
+                        float(properties['creation_time'])))
+            except (ValueError, TypeError):
+                logging.debug('Invalid value for creation_time property: %s',
+                              properties['creation_time'])
+
 
         self.set_document(document)
 
@@ -300,6 +311,10 @@ class IndexStore(object):
             enquire.set_sort_by_value(_VALUE_FILESIZE, True)
         elif order_by == '-filesize':
             enquire.set_sort_by_value(_VALUE_FILESIZE, False)
+        elif order_by == '+creation_time':
+            enquire.set_sort_by_value(_VALUE_CREATION_TIME, True)
+        elif order_by == '-creation_time':
+            enquire.set_sort_by_value(_VALUE_CREATION_TIME, False)
         else:
             logging.warning('Unsupported property for sorting: %s', order_by)
 

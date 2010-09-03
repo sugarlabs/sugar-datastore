@@ -56,7 +56,7 @@ class DataStore(dbus.service.Object):
                                         allow_replacement=False)
         dbus.service.Object.__init__(self, bus_name, DS_OBJECT_PATH)
 
-        migrated = self._migrate()
+        migrated, initiated = self._open_layout()
 
         self._metadata_store = MetadataStore()
         self._file_store = FileStore()
@@ -75,26 +75,36 @@ class DataStore(dbus.service.Object):
             self._rebuild_index()
             return
 
-        if not self._index_store.index_updated:
+        if initiated:
+            logging.debug('Initiate datastore')
+            self._index_store.flush()
+        elif not self._index_store.index_updated:
             logging.debug('Index is not up-to-date, will update')
             self._update_index()
 
-    def _migrate(self):
-        """Check version of data store on disk and migrate if necessary.
+    def _open_layout(self):
+        """Open layout manager, check version of data store on disk and
+        migrate if necessary.
 
-        Returns True if migration was done and an index rebuild is required,
-        False otherwise.
+        Returns a pair of booleans. For the first, True if migration was done
+        and an index rebuild is required. For the second, True if datastore was
+        just initiated.
         """
         layout_manager = layoutmanager.get_instance()
+
+        if layout_manager.is_empty():
+            layout_manager.set_version(layoutmanager.CURRENT_LAYOUT_VERSION)
+            return False, True
+
         old_version = layout_manager.get_version()
         if old_version == layoutmanager.CURRENT_LAYOUT_VERSION:
-            return False
+            return False, False
 
         if old_version == 0:
             migration.migrate_from_0()
 
         layout_manager.set_version(layoutmanager.CURRENT_LAYOUT_VERSION)
-        return True
+        return True, False
 
     def _rebuild_index(self):
         """Remove and recreate index."""

@@ -88,7 +88,7 @@ class LayoutManager(object):
                         uids.append(g)
         return uids
 
-    def _is_empty(self):
+    def is_empty(self):
         """Check if there is any existing entry.
 
         All data store layout versions are handled. Will err on the safe

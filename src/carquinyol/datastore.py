@@ -252,11 +252,14 @@ class DataStore(dbus.service.Object):
         if 'creation_time' not in props:
             props['creation_time'] = props['timestamp']
 
-        if os.path.exists(file_path):
-            stat = os.stat(file_path)
-            props['filesize'] = stat.st_size
-        else:
-            props['filesize'] = 0
+        if file_path:
+            # Empty file_path means skipping storage stage, see filestore.py
+            # TODO would be more useful to update filesize after real file save
+            if os.path.exists(file_path):
+                stat = os.stat(file_path)
+                props['filesize'] = stat.st_size
+            else:
+                props['filesize'] = 0
 
         self._metadata_store.store(uid, props)
         self._index_store.store(uid, props)

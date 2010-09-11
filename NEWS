@@ -1,3 +1,8 @@
+v0.89.4 2010-09-11
+* metadata-only update sets filesize property to 0 #2229
+* commit 3644fac reintroduced race condition, broke test suite #2104
+* autogen.sh: pass --enable-maintainer-mode to configure
+
 v0.89.3 2010-08-24
 * New metadata fields, creation_time and filesize to support sorting
   in the Journal #1915

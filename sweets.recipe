@@ -8,8 +8,8 @@ version   = 0.88.0
 stability = testing
 
 [Component]
-requires  = sugar-base; python-cjson; xapian-bindings-python
-binding   = PATH bin; PYTHONPATH = python; XDG_DATA_DIRS share
+requires  = sugar-toolkit; python-cjson; xapian-bindings-python
+binding   = PATH bin; PYTHONPATH python; XDG_DATA_DIRS share
 arch      = any
 
 [Build]

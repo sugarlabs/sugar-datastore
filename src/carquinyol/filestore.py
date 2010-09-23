@@ -43,6 +43,14 @@ class FileStore(object):
         if file_path:
             if not os.path.isfile(file_path):
                 raise ValueError('No file at %r' % file_path)
+
+            if os.path.islink(file_path):
+                # Can't keep symlinks (especially pointed to removable medias).
+                # Later, optimizer will help with saving duplicates
+                file_path = os.path.realpath(file_path)
+                # We should not move original file
+                transfer_ownership = False
+
             if transfer_ownership:
                 try:
                     logging.debug('FileStore moving from %r to %r', file_path,

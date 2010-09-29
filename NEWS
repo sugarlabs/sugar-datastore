@@ -1,3 +1,6 @@
+v0.90.0 2010-09-29
+* Do not store symlinks #2362
+
 v0.89.4 2010-09-11
 * metadata-only update sets filesize property to 0 #2229
 * commit 3644fac reintroduced race condition, broke test suite #2104

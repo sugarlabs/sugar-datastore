@@ -201,6 +201,7 @@ class QueryParser (xapian.QueryParser):
             logging.warning('Invalid query string: ' + exception.get_msg())
             return Query()
 
+    # pylint: disable=W0221
     def parse_query(self, query_dict, query_string):
         logging.debug('parse_query %r %r', query_dict, query_string)
         queries = []

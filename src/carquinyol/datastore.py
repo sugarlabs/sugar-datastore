@@ -19,7 +19,6 @@ import logging
 import uuid
 import time
 import os
-import traceback
 
 import dbus
 import dbus.service

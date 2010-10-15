@@ -87,7 +87,6 @@ class TermGenerator (xapian.TermGenerator):
                 logging.debug('Invalid value for creation_time property: %s',
                               properties['creation_time'])
 
-
         self.set_document(document)
 
         properties = dict(properties)

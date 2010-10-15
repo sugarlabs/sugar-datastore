@@ -155,7 +155,8 @@ class FileStore(object):
             os.remove(file_path)
 
     def hard_link_entry(self, new_uid, existing_uid):
-        existing_file = layoutmanager.get_instance().get_data_path(existing_uid)
+        existing_file = layoutmanager.get_instance().get_data_path(
+            existing_uid)
         new_file = layoutmanager.get_instance().get_data_path(new_uid)
 
         logging.debug('removing %r', new_file)

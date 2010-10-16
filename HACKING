@@ -1,0 +1,15 @@
+Before committing
+~~~~~~~~~~~~~~~~~
+All source files need to be passed through sugar-lint[1] command.
+Follow sugar-lint home page instructions and especially
+"Lint files before committing" section.
+
+
+Send patches
+~~~~~~~~~~~~
+Create your patches using "git format" command and send them to all maintainers
+from AUTHORS file with CCing to sugar-devel@lists.sugarlabs.org.
+The easiest way it just using "git send-email" command.
+
+
+[1] http://wiki.sugarlabs.org/go/Activity_Team/Sugar_Lint

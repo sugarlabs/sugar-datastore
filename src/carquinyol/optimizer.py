@@ -163,5 +163,5 @@ class Optimizer(object):
 
         """
         popen = subprocess.Popen(['md5sum', path], stdout=subprocess.PIPE)
-        stdout, stderr_ = popen.communicate()
-        return stdout.split(' ', 1)[0]
+        stdout, __ = popen.communicate()
+        return str(stdout).split(' ', 1)[0]

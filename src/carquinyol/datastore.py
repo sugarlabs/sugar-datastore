@@ -15,6 +15,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+# pylint fails on @debian's arguments
+# pylint: disable=C0322
+
 import logging
 import uuid
 import time
@@ -207,10 +210,10 @@ class DataStore(dbus.service.Object):
         self._metadata_store.store(uid, props)
         self._index_store.store(uid, props)
         self._file_store.store(uid, file_path, transfer_ownership,
-                lambda *args: self._create_completion_cb(async_cb,
+                lambda * args: self._create_completion_cb(async_cb,
                                                          async_err_cb,
                                                          uid,
-                                                         *args))
+                                                         * args))
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Created(self, uid):
@@ -267,10 +270,10 @@ class DataStore(dbus.service.Object):
                 (not file_path or os.path.exists(file_path)):
             self._optimizer.remove(uid)
         self._file_store.store(uid, file_path, transfer_ownership,
-                lambda *args: self._update_completion_cb(async_cb,
+                lambda * args: self._update_completion_cb(async_cb,
                                                          async_err_cb,
                                                          uid,
-                                                         *args))
+                                                         * args))
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Updated(self, uid):

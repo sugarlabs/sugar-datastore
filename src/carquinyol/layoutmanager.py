@@ -106,6 +106,8 @@ class LayoutManager(object):
         return True
 
 _instance = None
+
+
 def get_instance():
     global _instance
     if _instance is None:

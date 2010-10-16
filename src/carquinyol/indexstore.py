@@ -261,7 +261,7 @@ class IndexStore(object):
         postings = self._database.postlist(_PREFIX_FULL_VALUE + \
             _PREFIX_UID + uid)
         try:
-            postlist_item = postings.next()
+            __ = postings.next()
         except StopIteration:
             return False
         return True

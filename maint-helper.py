@@ -126,21 +126,21 @@ def cmd_build_snapshot():
     print 'Done.'
 
 
-def check_licenses(path, license, missing):
+def check_licenses(path, license_text, missing):
     matchers = {'LGPL': 'GNU Lesser General Public',
                  'GPL': 'GNU General Public License'}
 
     license_file = os.path.join(path, '.license')
     if os.path.isfile(license_file):
         f = open(license_file, 'r')
-        license = f.readline().strip()
+        license_text = f.readline().strip()
         f.close()
 
     for item in os.listdir(path):
         full_path = os.path.join(path, item)
 
         if os.path.isdir(full_path):
-            check_licenses(full_path, license, missing)
+            check_licenses(full_path, license_text, missing)
         else:
             check_source = is_source(item)
 
@@ -155,7 +155,7 @@ def check_licenses(path, license, missing):
                 f.close()
 
                 miss_license = True
-                if source.find(matchers[license]) > 0:
+                if source.find(matchers[license_text]) > 0:
                     miss_license = False
 
                 # Special cases.
@@ -163,9 +163,9 @@ def check_licenses(path, license, missing):
                     miss_license = False
 
                 if miss_license:
-                    if license not in missing:
-                        missing[license] = []
-                    missing[license].append(full_path)
+                    if license_text not in missing:
+                        missing[license_text] = []
+                    missing[license_text].append(full_path)
 
 
 def cmd_check_licenses():

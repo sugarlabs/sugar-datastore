@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-import sys, os, signal, logging
+import sys
+import os
+import signal
+import logging
 import gobject
 import dbus.service
 import dbus.mainloop.glib
@@ -11,7 +14,8 @@ from sugar import logger
 profile = os.environ.get('SUGAR_PROFILE', 'default')
 base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
 log_dir = os.path.join(base_dir, "logs")
-if not os.path.exists(log_dir): os.makedirs(log_dir)
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
 
 # setup logger
 logger.start('datastore')
@@ -23,16 +27,16 @@ connected = True
 
 ds = DataStore()
 
-# and run it 
+# and run it
 mainloop = gobject.MainLoop()
 
+
 def handle_disconnect():
-    global mainloop
     mainloop.quit()
     logging.debug("Datastore disconnected from the bus.")
 
+
 def handle_shutdown(signum, frame):
-    global mainloop
     mainloop.quit()
     raise SystemExit("Shutting down on signal %s" % signum)
 
@@ -44,6 +48,7 @@ bus.add_signal_receiver(handle_disconnect,
 signal.signal(signal.SIGHUP, handle_shutdown)
 signal.signal(signal.SIGTERM, handle_shutdown)
 
+
 def main():
     try:
         mainloop.run()
@@ -51,8 +56,7 @@ def main():
         logging.info("DataStore shutdown by user")
     except:
         logging.error("Datastore shutdown with error", exc_info=sys.exc_info())
-     
+
 main()
 
 ds.stop()
-

@@ -7,7 +7,6 @@
 # to support adding metadata.  Note that the MIME-type is required,
 # as otherwise the datastore will not accept the file.
 
-import sys
 import os
 import optparse
 from gettext import gettext as _
@@ -19,9 +18,11 @@ if os.path.exists("/tmp/olpc-session-bus"):
 from sugar.datastore import datastore
 from sugar import mime
 
+
 def build_option_parser():
 
-    usage = "Usage: %prog <file> [-m MIMETYPE] [-t TITLE] [-d DESC] [-T tag1 [-T tag2 ...]]"
+    usage = "Usage: %prog <file> [-m MIMETYPE] [-t TITLE] [-d DESC] " \
+            "[-T tag1 [-T tag2 ...]]"
     parser = optparse.OptionParser(usage=usage)
 
     parser.add_option("-t", "--title", action="store", dest="title",
@@ -36,23 +37,24 @@ def build_option_parser():
      help="Set the file's MIME-type to MIMETYPE",
      default=None)
     parser.add_option("-T", "--tag", action="append", dest="tag_list",
-     help="Add tag TAG to the journal entry's tags; this option can be repeated",
+     help="Add tag TAG to the journal entry's tags; " \
+             "this option can be repeated",
      metavar="TAG")
     return parser
 
 if __name__ == "__main__":
 
-    parser = build_option_parser()
-    options, args = parser.parse_args()
+    option_parser = build_option_parser()
+    options, args = option_parser.parse_args()
     if len(args) < 1:
-        parser.print_help()
+        option_parser.print_help()
         exit(0)
-    
+
     fname = args[0]
     absname = os.path.abspath(fname)
     if not os.path.exists(absname):
         print 'Error: File does not exist.'
-        parser.print_help()
+        option_parser.print_help()
         exit(0)
 
     try:
@@ -85,9 +87,9 @@ if __name__ == "__main__":
 
         datastore.write(entry)
         print 'Created as %s' % (entry.object_id)
-    
+
         entry.destroy()
-    
+
     except dbus.DBusException:
         print 'ERROR: Unable to connect to the datastore.\n'\
               'Check that you are running in the same environment as the '\

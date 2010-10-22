@@ -1,0 +1,32 @@
+[DEFAULT]
+sweet     = sugar-datastore
+summary   = Backend of the Sugar Journal
+license   = LGPLv2.1+
+homepage  = http://git.sugarlabs.org/projects/sugar-datastore
+
+version   = 0.90.0
+stability = testing
+
+[Component]
+requires  = sugar-toolkit; python-cjson; xapian-bindings-python
+binding   = PATH bin; PYTHONPATH python; XDG_DATA_DIRS share
+arch      = any
+
+[Build]
+requires  = pkg-config; intltool >= 0.33; make; gcc-c; python
+cleanup   = make distclean
+configure = ./configure
+                --prefix=%(PREFIX)s
+                am_cv_python_pythondir=%(PREFIX)s/python
+                am_cv_python_pyexecdir=%(PREFIX)s/python
+                CFLAGS="%(CFLAGS)s"
+make      = make
+install   = make DESTDIR=%(DISTDIR)s install
+implement = %(install)s &&
+            rm -rf %(DISTDIR)s/%(PREFIX)s/{bin,python} &&
+            ln -s %(BUILDDIR)s/bin %(DISTDIR)s/%(PREFIX)s/ &&
+            ln -s %(BUILDDIR)s/src %(DISTDIR)s/%(PREFIX)s/python &&
+            ln -fs .libs/metadatareader.so src/carquinyol/
+
+[Source]
+exec      = ./autogen.sh && make distcheck

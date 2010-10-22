@@ -14,18 +14,18 @@ arch      = any
 
 [Build]
 requires  = pkg-config; intltool >= 0.33; make; gcc-c; python
-cleanup   = make distclean
+cleanup   = make distclean; ./autogen.sh
 configure = ./configure
                 --prefix=%(PREFIX)s
                 am_cv_python_pythondir=%(PREFIX)s/python
                 am_cv_python_pyexecdir=%(PREFIX)s/python
                 CFLAGS="%(CFLAGS)s"
 make      = make
-install   = make DESTDIR=%(DISTDIR)s install
+install   = make DESTDIR=%(DESTDIR)s install
 implement = %(install)s &&
-            rm -rf %(DISTDIR)s/%(PREFIX)s/{bin,python} &&
-            ln -s %(BUILDDIR)s/bin %(DISTDIR)s/%(PREFIX)s/ &&
-            ln -s %(BUILDDIR)s/src %(DISTDIR)s/%(PREFIX)s/python &&
+            rm -rf %(DESTDIR)s/%(PREFIX)s/{bin,python} &&
+            ln -s %(BUILDDIR)s/bin %(DESTDIR)s/%(PREFIX)s/ &&
+            ln -s %(BUILDDIR)s/src %(DESTDIR)s/%(PREFIX)s/python &&
             ln -fs .libs/metadatareader.so src/carquinyol/
 
 [Source]

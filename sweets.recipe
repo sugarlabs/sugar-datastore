@@ -23,7 +23,8 @@ configure = ./configure
 make      = make
 install   = make DESTDIR=%(DESTDIR)s install
 implement = %(install)s &&
-            rm -rf %(DESTDIR)s/%(PREFIX)s/{bin,python} &&
+            rm -rf %(DESTDIR)s/%(PREFIX)s/bin &&
+            rm -rf %(DESTDIR)s/%(PREFIX)s/python &&
             ln -s %(BUILDDIR)s/bin %(DESTDIR)s/%(PREFIX)s/ &&
             ln -s %(BUILDDIR)s/src %(DESTDIR)s/%(PREFIX)s/python &&
             ln -fs .libs/metadatareader.so src/carquinyol/

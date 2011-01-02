@@ -1,6 +1,8 @@
 How to contribute
 =================
 
+Useful notes how to contribute to the project.
+
 Before committing
 -----------------
 All source files need to be passed through `sugar-lint`_ command.

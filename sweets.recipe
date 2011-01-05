@@ -17,7 +17,8 @@ requires  = sugar-toolkit; python-cjson; xapian-bindings-python
 arch      = any
 
 [Build]
-requires  = pkg-config; intltool >= 0.33; make; gcc-c; python
+requires  = gnome-common; pkg-config
+            intltool >= 0.33; libtool; make; gcc-c; python
 configure = make distclean;
             ./autogen.sh
                 --prefix=%(PREFIX)s

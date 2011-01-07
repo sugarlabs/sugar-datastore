@@ -1,4 +1,4 @@
-[DEFAULT]
+[Application]
 sweet     = sugar-datastore
 summary   = Backend of the Sugar Journal
 license   = LGPLv2.1+
@@ -7,20 +7,26 @@ homepage  = http://git.sugarlabs.org/projects/sugar-datastore
 version   = 0.88.0
 stability = testing
 
-[Component]
+exec      = %(BUILDDIR)s/bin/datastore-service
+binding   = PATH %(BUILDDIR)s/bin
+            PYTHONPATH %(BUILDDIR)s/src
+            XDG_DATA_DIRS share
 requires  = sugar-toolkit; python-cjson; xapian-bindings-python
-binding   = PATH bin; PYTHONPATH python; XDG_DATA_DIRS share
+
+[Archive]
 arch      = any
 
 [Build]
-requires  = pkg-config; intltool >= 0.33; make; gcc-c; python
-configure = %(SRCDIR)s/configure
+requires  = gnome-common; pkg-config
+            intltool >= 0.33; libtool; make; gcc-c; python
+configure = make distclean;
+            ./autogen.sh
                 --prefix=%(PREFIX)s
-                am_cv_python_pythondir=%(PREFIX)s/python
-                am_cv_python_pyexecdir=%(PREFIX)s/python
+                am_cv_python_pythondir=%(PREFIX)s/src
+                am_cv_python_pyexecdir=%(PREFIX)s/src
                 CFLAGS="%(CFLAGS)s"
 make      = make
-install   = make DESTDIR=%(DISTDIR)s install
+install   = make DESTDIR=%(DESTDIR)s install
 
 [Source]
 exec      = ./autogen.sh && make distcheck

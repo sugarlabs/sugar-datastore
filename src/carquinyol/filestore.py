@@ -221,6 +221,9 @@ class AsyncCopy(object):
         self.completion(*args)
 
     def start(self):
+        if os.path.exists(self.dest):
+            os.unlink(self.dest)
+
         self.src_fp = os.open(self.src, os.O_RDONLY)
         self.dest_fp = os.open(self.dest, os.O_RDWR | os.O_TRUNC | os.O_CREAT,
                 0644)

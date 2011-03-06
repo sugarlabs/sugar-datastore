@@ -133,14 +133,6 @@ class FileStore(object):
             else:
                 raise
 
-        # Try to make the original file readable. This can fail if the file is
-        # in a FAT filesystem.
-        try:
-            os.chmod(file_path, 0604)
-        except OSError, e:
-            if e.errno != errno.EPERM:
-                raise
-
         return destination_path
 
     def get_file_path(self, uid):
@@ -226,7 +218,7 @@ class AsyncCopy(object):
 
         self.src_fp = os.open(self.src, os.O_RDONLY)
         self.dest_fp = os.open(self.dest, os.O_RDWR | os.O_TRUNC | os.O_CREAT,
-                0644)
+                0444)
 
         stat = os.fstat(self.src_fp)
         self.size = stat[6]

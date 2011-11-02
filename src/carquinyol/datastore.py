@@ -310,6 +310,7 @@ class DataStore(dbus.service.Object):
                 return self._find_all(query, properties)
 
             metadata = self._metadata_store.retrieve(uid, properties)
+            self._fill_internal_props(metadata, uid, properties)
             entries.append(metadata)
 
         logger.debug('find(): %r', time.time() - t)
@@ -327,9 +328,27 @@ class DataStore(dbus.service.Object):
         entries = []
         for uid in uids:
             metadata = self._metadata_store.retrieve(uid, properties)
+            self._fill_internal_props(metadata, uid, properties)
             entries.append(metadata)
 
         return entries, count
+
+    def _fill_internal_props(self, metadata, uid, names=None):
+        """Fill in internal / computed properties in metadata
+
+        Properties are only set if they appear in names or if names is
+        empty.
+        """
+        if not names or 'uid' in names:
+            metadata['uid'] = uid
+
+        if not names or 'filesize' in names:
+            file_path = self._file_store.get_file_path(uid)
+            if os.path.exists(file_path):
+                stat = os.stat(file_path)
+                metadata['filesize'] = str(stat.st_size)
+            else:
+                metadata['filesize'] = '0'
 
     @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
@@ -353,6 +372,7 @@ class DataStore(dbus.service.Object):
     def get_properties(self, uid):
         logging.debug('datastore.get_properties %r', uid)
         metadata = self._metadata_store.retrieve(uid)
+        self._fill_internal_props(metadata, uid)
         return metadata
 
     @dbus.service.method(DS_DBUS_INTERFACE,

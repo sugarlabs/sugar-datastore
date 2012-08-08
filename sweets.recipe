@@ -11,7 +11,7 @@ exec      = %(BUILDDIR)s/bin/datastore-service
 binding   = PATH %(BUILDDIR)s/bin
             PYTHONPATH %(BUILDDIR)s/src
             XDG_DATA_DIRS share
-requires  = sugar-toolkit; python-cjson; xapian-bindings-python
+requires  = sugar-toolkit; xapian-bindings-python
 
 [Archive]
 arch      = any

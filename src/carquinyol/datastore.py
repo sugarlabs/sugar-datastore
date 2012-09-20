@@ -22,6 +22,7 @@ import logging
 import uuid
 import time
 import os
+import shutil
 
 import dbus
 import dbus.service
@@ -181,6 +182,13 @@ class DataStore(dbus.service.Object):
                     self._index_store.store(uid, props)
                 except Exception:
                     logging.exception('Error processing %r', uid)
+                    logging.warn('Will attempt to delete corrupt entry %r', uid)
+                    try:
+                        # self.delete(uid) only works on well-formed entries :-/
+                        entry_path = layoutmanager.get_instance().get_entry_path(uid)
+                        shutil.rmtree(entry_path)
+                    except Exception:
+                        logging.exception('Error deleting corrupt entry %r', uid)
 
         if not uids:
             self._index_store.flush()

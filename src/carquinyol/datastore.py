@@ -66,6 +66,9 @@ class DataStore(dbus.service.Object):
         self._index_store = IndexStore()
         self._index_updating = False
 
+        root_path = layoutmanager.get_instance().get_root_path()
+        self._cleanflag = os.path.join(root_path, 'ds_clean')
+
         if migrated:
             self._rebuild_index()
             return
@@ -83,6 +86,25 @@ class DataStore(dbus.service.Object):
         elif not self._index_store.index_updated:
             logging.debug('Index is not up-to-date, will update')
             self._update_index()
+        elif not os.path.exists(self._cleanflag):
+            logging.debug('DS state is not clean, will update')
+            self._update_index()
+        self._mark_clean()
+
+
+    def _mark_clean(self):
+        try:
+             f = open(self._cleanflag, 'w')
+             os.fsync(f.fileno())
+             f.close()
+        except Exception:
+             logging.exception("Could not mark the datastore clean")
+
+    def _mark_dirty(self):
+        try:
+            os.remove(self._cleanflag)
+        except:
+            pass
 
     def _open_layout(self):
         """Open layout manager, check version of data store on disk and
@@ -178,6 +200,7 @@ class DataStore(dbus.service.Object):
         self.Created(uid)
         self._optimizer.optimize(uid)
         logger.debug('created %s', uid)
+        self._mark_clean()
         async_cb(uid)
 
     @dbus.service.method(DS_DBUS_INTERFACE,
@@ -189,6 +212,8 @@ class DataStore(dbus.service.Object):
                async_cb, async_err_cb):
         uid = str(uuid.uuid4())
         logging.debug('datastore.create %r', uid)
+
+        self._mark_dirty()
 
         if not props.get('timestamp', ''):
             props['timestamp'] = int(time.time())
@@ -232,6 +257,7 @@ class DataStore(dbus.service.Object):
         self.Updated(uid)
         self._optimizer.optimize(uid)
         logger.debug('updated %s', uid)
+        self._mark_clean()
         async_cb()
 
     @dbus.service.method(DS_DBUS_INTERFACE,
@@ -242,6 +268,8 @@ class DataStore(dbus.service.Object):
     def update(self, uid, props, file_path, transfer_ownership,
                async_cb, async_err_cb):
         logging.debug('datastore.update %r', uid)
+
+        self._mark_dirty()
 
         if not props.get('timestamp', ''):
             props['timestamp'] = int(time.time())
@@ -393,6 +421,7 @@ class DataStore(dbus.service.Object):
              in_signature='s',
              out_signature='')
     def delete(self, uid):
+        self._mark_dirty()
         self._optimizer.remove(uid)
 
         self._index_store.delete(uid)
@@ -404,7 +433,7 @@ class DataStore(dbus.service.Object):
 
         self.Deleted(uid)
         logger.debug('deleted %s', uid)
-
+        self._mark_clean()
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Deleted(self, uid):
         pass

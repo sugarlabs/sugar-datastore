@@ -23,6 +23,8 @@ import uuid
 import time
 import os
 import shutil
+import subprocess
+import tempfile
 
 import dbus
 import dbus.service
@@ -44,6 +46,7 @@ DS_LOG_CHANNEL = 'org.laptop.sugar.DataStore'
 DS_SERVICE = "org.laptop.sugar.DataStore"
 DS_DBUS_INTERFACE = "org.laptop.sugar.DataStore"
 DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
+MIN_INDEX_FREE_BYTES = 1024 * 1024 * 5
 
 logger = logging.getLogger(DS_LOG_CHANNEL)
 
@@ -70,35 +73,53 @@ class DataStore(dbus.service.Object):
         root_path = layoutmanager.get_instance().get_root_path()
         self._cleanflag = os.path.join(root_path, 'ds_clean')
 
-        if migrated:
-            self._rebuild_index()
-            return
-
-        try:
-            self._index_store.open_index()
-        except Exception:
-            logging.exception('Failed to open index, will rebuild')
-            self._rebuild_index()
-            return
-
         if initiated:
             logging.debug('Initiate datastore')
+            self._rebuild_index()
             self._index_store.flush()
-        elif not self._index_store.index_updated:
-            logging.debug('Index is not up-to-date, will update')
-            self._update_index()
-        elif not os.path.exists(self._cleanflag):
-            logging.debug('DS state is not clean, will update')
-            self._update_index()
-        self._mark_clean()
+            self._mark_clean()
+            return
 
+        if migrated:
+            self._rebuild_index()
+            self._mark_clean()
+            return
+
+        rebuild = False
+        stat = os.statvfs(root_path)
+        da = stat.f_bavail * stat.f_bsize
+
+        if not self._index_store.index_updated:
+            logging.warn('Index is not up-to-date')
+            rebuild = True
+        elif not os.path.exists(self._cleanflag):
+            logging.warn('DS state is not clean')
+            rebuild = True
+        elif da < MIN_INDEX_FREE_BYTES:
+            logging.warn('Disk space tight for index')
+            rebuild = True
+
+        if rebuild:
+            logging.warn('Trigger index rebuild')
+            self._rebuild_index()
+	else:
+            # fast path
+            try:
+                self._index_store.open_index()
+            except:
+                logging.exception('Failed to open index')
+                # try...
+                self._rebuild_index()
+
+        self._mark_clean()
+        return
 
     def _mark_clean(self):
         try:
              f = open(self._cleanflag, 'w')
              os.fsync(f.fileno())
              f.close()
-        except Exception:
+        except:
              logging.exception("Could not mark the datastore clean")
 
     def _mark_dirty(self):
@@ -135,8 +156,44 @@ class DataStore(dbus.service.Object):
         """Remove and recreate index."""
         self._index_store.close_index()
         self._index_store.remove_index()
-        self._index_store.open_index()
+
+        # rebuild the index in tmpfs to better handle ENOSPC
+        temp_index_path = tempfile.mkdtemp(prefix='sugar-datastore-index-')
+        logger.warn('Rebuilding index in %s' % temp_index_path)
+        self._index_store.open_index(temp_path=temp_index_path)
         self._update_index()
+        self._index_store.close_index()
+
+        on_disk=False
+
+        # can we fit the index on disk? get disk usage in bytes...
+        index_du = subprocess.check_output(['/usr/bin/du', '-bs',
+                                            temp_index_path])
+        index_du = int(index_du.split('\t')[0])
+        # disk available, in bytes
+        index_path = layoutmanager.get_instance().get_index_path()
+        stat = os.statvfs(index_path)
+        da = stat.f_bavail * stat.f_bsize
+        if da > (index_du * 1.2) and da > MIN_INDEX_FREE_BYTES: # 20% room for growth
+            logger.warn('Attempting to move tempfs index to disk')
+            # move to internal disk
+            try:
+                if os.path.exists(index_path):
+                    shutil.rmtree(index_path)
+                shutil.copytree(temp_index_path, index_path)
+                shutil.rmtree(temp_index_path)
+                on_disk = True
+            except Exception as e:
+                logger.exception('Error copying tempfs index to disk,'
+                             'revert to using tempfs index.')
+        else:
+            logger.warn("Not enough disk space, using tempfs index")
+
+        if on_disk:
+            self._index_store.open_index()
+        else:
+            self._index_store.open_index(temp_path=temp_index_path)
+
 
     def _update_index(self):
         """Find entries that are not yet in the index and add them."""

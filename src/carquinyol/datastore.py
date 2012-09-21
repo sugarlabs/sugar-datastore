@@ -430,14 +430,22 @@ class DataStore(dbus.service.Object):
              out_signature='')
     def delete(self, uid):
         self._mark_dirty()
-        self._optimizer.remove(uid)
-
-        self._index_store.delete(uid)
-        self._file_store.delete(uid)
-        self._metadata_store.delete(uid)
-
-        entry_path = layoutmanager.get_instance().get_entry_path(uid)
-        os.removedirs(entry_path)
+        try:
+            entry_path = layoutmanager.get_instance().get_entry_path(uid)
+            self._optimizer.remove(uid)
+            self._index_store.delete(uid)
+            self._file_store.delete(uid)
+            self._metadata_store.delete(uid)
+            # remove the dirtree
+            shutil.rmtree(entry_path)
+            try:
+                # will remove the hashed dir if nothing else is there
+                os.removedirs(os.path.dirname(entry_path))
+            except:
+                pass
+        except:
+            logger.exception('Exception deleting entry')
+            raise
 
         self.Deleted(uid)
         logger.debug('deleted %s', uid)

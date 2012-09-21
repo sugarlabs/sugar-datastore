@@ -161,11 +161,8 @@ static PyObject *read_all_properties (const char *metadata_path) {
 
     dir_entry = readdir (dir_stream);
     while (dir_entry != NULL) {
-        // Skip . and ..
-        if (dir_entry->d_name[0] == '.' &&
-                (strlen (dir_entry->d_name) == 1 ||
-                        (dir_entry->d_name[1] == '.' &&
-                                strlen (dir_entry->d_name) == 2)))
+        // Skip '.', '..', and any .hidden file
+        if (dir_entry->d_name[0] == '.')
             goto next_property;
 
         if (add_property (metadata_path, dir_entry->d_name, dict, 1) == 0)

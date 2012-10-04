@@ -46,7 +46,7 @@ _FLUSH_THRESHOLD = 20
 # Force a flush after _n_ seconds since the last change to the db
 _FLUSH_TIMEOUT = 5
 
-_PROPERTIES_NOT_TO_INDEX = ['timestamp', 'preview']
+_PROPERTIES_NOT_TO_INDEX = ['timestamp', 'preview', 'launch-times']
 
 _MAX_RESULTS = int(2 ** 31 - 1)
 

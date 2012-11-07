@@ -171,8 +171,7 @@ class DataStore(dbus.service.Object):
                                             temp_index_path])
         index_du = int(index_du.split('\t')[0])
         # disk available, in bytes
-        index_path = layoutmanager.get_instance().get_index_path()
-        stat = os.statvfs(index_path)
+        stat = os.statvfs(temp_index_path)
         da = stat.f_bavail * stat.f_bsize
         if da > (index_du * 1.2) and da > MIN_INDEX_FREE_BYTES: # 20% room for growth
             logger.warn('Attempting to move tempfs index to disk')

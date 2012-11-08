@@ -177,6 +177,7 @@ class DataStore(dbus.service.Object):
             logger.warn('Attempting to move tempfs index to disk')
             # move to internal disk
             try:
+                index_path = layoutmanager.get_instance().get_index_path()
                 if os.path.exists(index_path):
                     shutil.rmtree(index_path)
                 shutil.copytree(temp_index_path, index_path)

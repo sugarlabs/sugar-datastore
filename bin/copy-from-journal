@@ -12,8 +12,8 @@ import dbus
 if os.path.exists("/tmp/olpc-session-bus"):
     os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/tmp/olpc-session-bus"
 
-from sugar.datastore import datastore
-import sugar.mime
+from sugar3.datastore import datastore
+import sugar3.mime
 
 # Limit the number of objects returned on an ambiguous query to this number,
 # for quicker operation.

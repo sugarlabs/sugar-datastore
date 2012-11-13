@@ -19,7 +19,7 @@ import errno
 import logging
 import tempfile
 
-import gobject
+from gi.repository import GObject
 
 from carquinyol import layoutmanager
 
@@ -223,4 +223,4 @@ class AsyncCopy(object):
         stat = os.fstat(self.src_fp)
         self.size = stat[6]
 
-        gobject.idle_add(self._copy_block)
+        GObject.idle_add(self._copy_block)

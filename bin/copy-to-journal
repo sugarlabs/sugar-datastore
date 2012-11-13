@@ -15,8 +15,8 @@ import dbus
 if os.path.exists("/tmp/olpc-session-bus"):
     os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/tmp/olpc-session-bus"
 
-from sugar.datastore import datastore
-from sugar import mime
+from sugar3.datastore import datastore
+from sugar3 import mime
 
 
 def build_option_parser():

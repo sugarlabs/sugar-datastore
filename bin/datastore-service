@@ -3,12 +3,12 @@ import sys
 import os
 import signal
 import logging
-import gobject
+from gi.repository import GObject
 import dbus.service
 import dbus.mainloop.glib
 import dbus.glib
 from carquinyol.datastore import DataStore
-from sugar import logger
+from sugar3 import logger
 
 # Path handling
 profile = os.environ.get('SUGAR_PROFILE', 'default')
@@ -28,7 +28,7 @@ connected = True
 ds = DataStore()
 
 # and run it
-mainloop = gobject.MainLoop()
+mainloop = GObject.MainLoop()
 
 
 def handle_disconnect():

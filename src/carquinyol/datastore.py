@@ -28,9 +28,9 @@ import tempfile
 
 import dbus
 import dbus.service
-import gobject
+from gi.repository import GObject
 
-from sugar import mime
+from sugar3 import mime
 
 from carquinyol import layoutmanager
 from carquinyol import migration
@@ -201,8 +201,8 @@ class DataStore(dbus.service.Object):
         logging.debug('Going to update the index with object_ids %r',
             uids)
         self._index_updating = True
-        gobject.idle_add(lambda: self.__update_index_cb(uids),
-                            priority=gobject.PRIORITY_LOW)
+        GObject.idle_add(lambda: self.__update_index_cb(uids),
+                         priority=GObject.PRIORITY_LOW)
 
     def __update_index_cb(self, uids):
         if uids:

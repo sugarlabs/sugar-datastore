@@ -302,7 +302,7 @@ class IndexStore(object):
             self._database.replace_document(_PREFIX_FULL_VALUE + \
                 _PREFIX_UID + uid, document)
 
-        self._flush()
+        self._flush(True)
 
     def find(self, query):
         offset = query.pop('offset', 0)
@@ -353,7 +353,7 @@ class IndexStore(object):
 
     def delete(self, uid):
         self._database.delete_document(_PREFIX_FULL_VALUE + _PREFIX_UID + uid)
-        self._flush()
+        self._flush(True)
 
     def get_activities(self):
         activities = []

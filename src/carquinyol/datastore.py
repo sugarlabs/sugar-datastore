@@ -444,6 +444,18 @@ class DataStore(dbus.service.Object):
                 metadata['filesize'] = '0'
 
     @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature='a{sv}',
+                         out_signature='as')
+    def find_ids(self, query):
+        if not self._index_updating:
+            try:
+                return self._index_store.find(query)[0]
+            except Exception:
+                logging.error('Failed to query index, will rebuild')
+                self._rebuild_index()
+        return []
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
              in_signature='s',
              out_signature='s',
              sender_keyword='sender')

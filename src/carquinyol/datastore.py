@@ -102,7 +102,7 @@ class DataStore(dbus.service.Object):
         if rebuild:
             logging.warn('Trigger index rebuild')
             self._rebuild_index()
-	else:
+        else:
             # fast path
             try:
                 self._index_store.open_index()
@@ -116,11 +116,11 @@ class DataStore(dbus.service.Object):
 
     def _mark_clean(self):
         try:
-             f = open(self._cleanflag, 'w')
-             os.fsync(f.fileno())
-             f.close()
+            f = open(self._cleanflag, 'w')
+            os.fsync(f.fileno())
+            f.close()
         except:
-             logging.exception("Could not mark the datastore clean")
+            logging.exception("Could not mark the datastore clean")
 
     def _mark_dirty(self):
         try:
@@ -164,7 +164,7 @@ class DataStore(dbus.service.Object):
         self._update_index()
         self._index_store.close_index()
 
-        on_disk=False
+        on_disk = False
 
         # can we fit the index on disk? get disk usage in bytes...
         index_du = subprocess.check_output(['/usr/bin/du', '-bs',
@@ -173,7 +173,8 @@ class DataStore(dbus.service.Object):
         # disk available, in bytes
         stat = os.statvfs(temp_index_path)
         da = stat.f_bavail * stat.f_bsize
-        if da > (index_du * 1.2) and da > MIN_INDEX_FREE_BYTES: # 20% room for growth
+        if da > (index_du * 1.2) and da > MIN_INDEX_FREE_BYTES:
+            # 1.2 due to 20% room for growth
             logger.warn('Attempting to move tempfs index to disk')
             # move to internal disk
             try:
@@ -183,9 +184,9 @@ class DataStore(dbus.service.Object):
                 shutil.copytree(temp_index_path, index_path)
                 shutil.rmtree(temp_index_path)
                 on_disk = True
-            except Exception as e:
+            except Exception:
                 logger.exception('Error copying tempfs index to disk,'
-                             'revert to using tempfs index.')
+                                 'revert to using tempfs index.')
         else:
             logger.warn("Not enough disk space, using tempfs index")
 
@@ -194,12 +195,11 @@ class DataStore(dbus.service.Object):
         else:
             self._index_store.open_index(temp_path=temp_index_path)
 
-
     def _update_index(self):
         """Find entries that are not yet in the index and add them."""
         uids = layoutmanager.get_instance().find_all()
         logging.debug('Going to update the index with object_ids %r',
-            uids)
+                      uids)
         self._index_updating = True
         GObject.idle_add(lambda: self.__update_index_cb(uids),
                          priority=GObject.PRIORITY_LOW)
@@ -209,7 +209,7 @@ class DataStore(dbus.service.Object):
             uid = uids.pop()
 
             logging.debug('Updating entry %r in index. %d to go.', uid,
-                len(uids))
+                          len(uids))
 
             if not self._index_store.contains(uid):
                 try:
@@ -227,8 +227,9 @@ class DataStore(dbus.service.Object):
                         if 'ctime' in props:
                             try:
                                 props['creation_time'] = time.mktime(
-                                        time.strptime(props['ctime'],
-                                            migration.DATE_FORMAT))
+                                    time.strptime(
+                                        props['ctime'],
+                                        migration.DATE_FORMAT))
                             except (TypeError, ValueError):
                                 pass
                         if 'creation_time' not in props:
@@ -239,13 +240,17 @@ class DataStore(dbus.service.Object):
                     self._index_store.store(uid, props)
                 except Exception:
                     logging.exception('Error processing %r', uid)
-                    logging.warn('Will attempt to delete corrupt entry %r', uid)
+                    logging.warn('Will attempt to delete corrupt entry %r',
+                                 uid)
                     try:
-                        # self.delete(uid) only works on well-formed entries :-/
-                        entry_path = layoutmanager.get_instance().get_entry_path(uid)
+                        # self.delete(uid) only works on well-formed
+                        # entries :-/
+                        entry_path = \
+                            layoutmanager.get_instance().get_entry_path(uid)
                         shutil.rmtree(entry_path)
                     except Exception:
-                        logging.exception('Error deleting corrupt entry %r', uid)
+                        logging.exception('Error deleting corrupt entry %r',
+                                          uid)
 
         if not uids:
             self._index_store.flush()
@@ -257,7 +262,7 @@ class DataStore(dbus.service.Object):
 
     def _create_completion_cb(self, async_cb, async_err_cb, uid, exc=None):
         logger.debug('_create_completion_cb(%r, %r, %r, %r)', async_cb,
-            async_err_cb, uid, exc)
+                     async_err_cb, uid, exc)
         if exc is not None:
             async_err_cb(exc)
             return
@@ -302,11 +307,11 @@ class DataStore(dbus.service.Object):
 
         self._metadata_store.store(uid, props)
         self._index_store.store(uid, props)
-        self._file_store.store(uid, file_path, transfer_ownership,
-                lambda * args: self._create_completion_cb(async_cb,
-                                                         async_err_cb,
-                                                         uid,
-                                                         * args))
+        self._file_store.store(
+            uid, file_path, transfer_ownership,
+            lambda * args: self._create_completion_cb(async_cb,
+                                                      async_err_cb,
+                                                      uid, * args))
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Created(self, uid):
@@ -314,7 +319,7 @@ class DataStore(dbus.service.Object):
 
     def _update_completion_cb(self, async_cb, async_err_cb, uid, exc=None):
         logger.debug('_update_completion_cb() called with %r / %r, exc %r',
-            async_cb, async_err_cb, exc)
+                     async_cb, async_err_cb, exc)
         if exc is not None:
             async_err_cb(exc)
             return
@@ -326,10 +331,10 @@ class DataStore(dbus.service.Object):
         async_cb()
 
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='sa{sv}sb',
-             out_signature='',
-             async_callbacks=('async_cb', 'async_err_cb'),
-             byte_arrays=True)
+                         in_signature='sa{sv}sb',
+                         out_signature='',
+                         async_callbacks=('async_cb', 'async_err_cb'),
+                         byte_arrays=True)
     def update(self, uid, props, file_path, transfer_ownership,
                async_cb, async_err_cb):
         logging.debug('datastore.update %r', uid)
@@ -365,19 +370,19 @@ class DataStore(dbus.service.Object):
         if os.path.exists(self._file_store.get_file_path(uid)) and \
                 (not file_path or os.path.exists(file_path)):
             self._optimizer.remove(uid)
-        self._file_store.store(uid, file_path, transfer_ownership,
-                lambda * args: self._update_completion_cb(async_cb,
-                                                         async_err_cb,
-                                                         uid,
-                                                         * args))
+        self._file_store.store(
+            uid, file_path, transfer_ownership,
+            lambda * args: self._update_completion_cb(async_cb,
+                                                      async_err_cb,
+                                                      uid, * args))
 
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Updated(self, uid):
         pass
 
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='a{sv}as',
-             out_signature='aa{sv}u')
+                         in_signature='a{sv}as',
+                         out_signature='aa{sv}u')
     def find(self, query, properties):
         logging.debug('datastore.find %r', query)
         t = time.time()
@@ -444,9 +449,21 @@ class DataStore(dbus.service.Object):
                 metadata['filesize'] = '0'
 
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='s',
-             out_signature='s',
-             sender_keyword='sender')
+                         in_signature='a{sv}',
+                         out_signature='as')
+    def find_ids(self, query):
+        if not self._index_updating:
+            try:
+                return self._index_store.find(query)[0]
+            except Exception:
+                logging.error('Failed to query index, will rebuild')
+                self._rebuild_index()
+        return []
+
+    @dbus.service.method(DS_DBUS_INTERFACE,
+                         in_signature='s',
+                         out_signature='s',
+                         sender_keyword='sender')
     def get_filename(self, uid, sender=None):
         logging.debug('datastore.get_filename %r', uid)
         user_id = dbus.Bus().get_unix_user(sender)
@@ -483,8 +500,8 @@ class DataStore(dbus.service.Object):
             return []
 
     @dbus.service.method(DS_DBUS_INTERFACE,
-             in_signature='s',
-             out_signature='')
+                         in_signature='s',
+                         out_signature='')
     def delete(self, uid):
         self._mark_dirty()
         try:
@@ -507,6 +524,7 @@ class DataStore(dbus.service.Object):
         self.Deleted(uid)
         logger.debug('deleted %s', uid)
         self._mark_clean()
+
     @dbus.service.signal(DS_DBUS_INTERFACE, signature="s")
     def Deleted(self, uid):
         pass

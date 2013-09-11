@@ -17,6 +17,8 @@
 import os
 import logging
 
+from sugar3 import env
+
 MAX_QUERY_LIMIT = 40960
 CURRENT_LAYOUT_VERSION = 6
 
@@ -27,10 +29,7 @@ class LayoutManager(object):
     """
 
     def __init__(self):
-        profile = os.environ.get('SUGAR_PROFILE', 'default')
-        base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
-
-        self._root_path = os.path.join(base_dir, 'datastore')
+        self._root_path = os.path.join(env.get_profile_path(), 'datastore')
 
         if not os.path.exists(self._root_path):
             os.makedirs(self._root_path)

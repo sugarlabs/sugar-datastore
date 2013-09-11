@@ -21,6 +21,8 @@ import tempfile
 
 from gi.repository import GObject
 
+from sugar3 import env
+
 from carquinyol import layoutmanager
 
 
@@ -107,9 +109,7 @@ class FileStore(object):
             destination_dir = os.path.join(os.environ['HOME'], 'isolation',
                 '1', 'uid_to_instance_dir', str(user_id))
         else:
-            profile = os.environ.get('SUGAR_PROFILE', 'default')
-            destination_dir = os.path.join(os.path.expanduser('~'), '.sugar',
-                    profile, 'data')
+            destination_dir = env.get_profile_path('data')
             if not os.path.exists(destination_dir):
                 os.makedirs(destination_dir)
 

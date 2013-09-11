@@ -10,13 +10,6 @@ import dbus.glib
 from carquinyol.datastore import DataStore
 from sugar3 import logger
 
-# Path handling
-profile = os.environ.get('SUGAR_PROFILE', 'default')
-base_dir = os.path.join(os.path.expanduser('~'), '.sugar', profile)
-log_dir = os.path.join(base_dir, "logs")
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
 # setup logger
 logger.start('datastore')
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #
 # Simple script to export a file from the datastore
 # Reinier Heeres, <reinier@heeres.eu>, 2007-12-24

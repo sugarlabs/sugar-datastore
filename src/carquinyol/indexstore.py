@@ -402,7 +402,9 @@ class IndexStore(object):
         self._pending_writes += 1
         if force or self._pending_writes > _FLUSH_THRESHOLD:
             try:
+                logging.debug("Start database flush")
                 self._database.flush()
+                logging.debug("Completed database flush")
             except Exception, e:
                 logging.exception(e)
                 logging.error("Exception during database.flush()")

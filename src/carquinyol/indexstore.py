@@ -39,6 +39,7 @@ _PREFIX_ACTIVITY = 'A'
 _PREFIX_ACTIVITY_ID = 'I'
 _PREFIX_MIME_TYPE = 'M'
 _PREFIX_KEEP = 'K'
+_PREFIX_PROJECT_ID = 'P'
 
 # Force a flush every _n_ changes to the db
 _FLUSH_THRESHOLD = 20
@@ -56,6 +57,7 @@ _QUERY_TERM_MAP = {
     'activity_id': _PREFIX_ACTIVITY_ID,
     'mime_type': _PREFIX_MIME_TYPE,
     'keep': _PREFIX_KEEP,
+    'project_id': _PREFIX_PROJECT_ID,
 }
 
 _QUERY_VALUE_MAP = {
@@ -239,7 +241,7 @@ class IndexStore(object):
         self._index_updated_path = os.path.join(root_path,
                                                 'index_updated')
         self._std_index_path = layoutmanager.get_instance().get_index_path()
-	self._index_path = self._std_index_path
+        self._index_path = self._std_index_path
 
     def open_index(self, temp_path=False):
         # callers to open_index must be able to

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #
 # Simple script to export a file from the datastore
 # Reinier Heeres, <reinier@heeres.eu>, 2007-12-24
@@ -71,8 +71,8 @@ if __name__ == "__main__":
             objects, count = \
                     datastore.find(query, limit=RETURN_LIMIT, sorting='-mtime')
             if count > 1:
-                print 'WARNING: %d objects found; getting most recent.' % count
-                for i in xrange(1, RETURN_LIMIT):
+                print('WARNING: %d objects found; getting most recent.' % count)
+                for i in range(1, RETURN_LIMIT):
                     objects[i].destroy()
 
             if count > 0:
@@ -80,20 +80,20 @@ if __name__ == "__main__":
 
         # If neither an explicit object ID nor a query gave us data, fail.
         if dsentry is None:
-            print 'ERROR: unable to determine journal object to copy.'
+            print('ERROR: unable to determine journal object to copy.')
             argument_parser.print_help()
             exit(0)
 
         # Print metadata if that is what the user asked for.
         if args.show_meta:
-            print 'Metadata:'
-            for key, val in dsentry.metadata.get_dictionary().iteritems():
+            print('Metadata:')
+            for key, val in dsentry.metadata.get_dictionary().items():
                 if key != 'preview':
-                    print '%20s -> %s' % (key, val)
+                    print('%20s -> %s' % (key, val))
 
         # If no file is associated with this object, we can't save it out.
         if dsentry.get_file_path() == "":
-            print 'ERROR: no file associated with object, just metadata.'
+            print('ERROR: no file associated with object, just metadata.')
             dsentry.destroy()
             exit(0)
 
@@ -112,15 +112,15 @@ if __name__ == "__main__":
         # Lastly, actually copy the file out of the datastore and onto the
         # filesystem.
         shutil.copyfile(dsentry.get_file_path(), outroot + outext)
-        print '%s -> %s' % (dsentry.get_file_path(), outroot + outext)
+        print('%s -> %s' % (dsentry.get_file_path(), outroot + outext))
 
         # Cleanup.
         dsentry.destroy()
 
     except DBusException:
-        print 'ERROR: Unable to connect to the datastore.\n'\
+        print('ERROR: Unable to connect to the datastore.\n'\
               'Check that you are running in the same environment as the '\
-              'datastore service.'
+              'datastore service.')
 
-    except Exception, e:
-        print 'ERROR: %s' % (e)
+    except Exception as e:
+        print('ERROR: %s' % (e))

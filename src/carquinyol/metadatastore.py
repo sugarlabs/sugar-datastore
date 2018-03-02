@@ -14,13 +14,13 @@ class MetadataStore(object):
         if not os.path.exists(metadata_path):
             os.makedirs(metadata_path)
         else:
-            received_keys = metadata.keys()
+            received_keys = list(metadata.keys())
             for key in os.listdir(metadata_path):
                 if key not in _INTERNAL_KEYS and key not in received_keys:
                     os.remove(os.path.join(metadata_path, key))
 
         metadata['uid'] = uid
-        for key, value in metadata.items():
+        for key, value in list(metadata.items()):
             self._set_property(uid, key, value, md_path=metadata_path)
 
     def _set_property(self, uid, key, value, md_path=False):
@@ -38,15 +38,12 @@ class MetadataStore(object):
         # str() is 8-bit clean right now, but
         # this won't last. We will need more explicit
         # handling of strings, int/floats vs raw data
-        if isinstance(value, unicode):
-            value = value.encode('utf-8')
-        elif not isinstance(value, basestring):
-            value = str(value)
-
+        if isinstance(value, bytes):
+            value = str(value)[2:-1]
         # avoid pointless writes; replace atomically
         if os.path.exists(fpath):
-            stored_val = open(fpath, 'r').read()
-
+            stored_val = open(fpath, 'rb').read()
+            stored_val = stored_val[2:-1]
             if stored_val == value:
                 changed = False
         if changed:
@@ -57,7 +54,12 @@ class MetadataStore(object):
 
     def retrieve(self, uid, properties=None):
         metadata_path = layoutmanager.get_instance().get_metadata_path(uid)
-        return metadatareader.retrieve(metadata_path, properties)
+        if properties is not None:
+            properties = [x.encode('utf-8') if isinstance(x,str) else x for x in properties]
+        metadata = metadatareader.retrieve(metadata_path, properties)
+        for x in metadata:
+            metadata[x] = str(metadata[x])[2:-1]
+        return metadata
 
     def delete(self, uid):
         metadata_path = layoutmanager.get_instance().get_metadata_path(uid)

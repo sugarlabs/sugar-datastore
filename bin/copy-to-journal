@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #
 # Simple script to import a file to the datastore
 # Reinier Heeres, <reinier@heeres.eu>, 2007-12-20
@@ -27,20 +27,20 @@ def build_option_parser():
 
     parser.add_argument("file", help="File to be copied to journal")
     parser.add_argument("-t", "--title", action="store", dest="title",
-     help="Set the title of the journal entry to TITLE", metavar="TITLE",
-     default=None)
+        help="Set the title of the journal entry to TITLE", metavar="TITLE",
+        default=None)
     parser.add_argument("-d", "--description", action="store",
-     dest="description", metavar="DESC",
-     help="Set the description of the journal entry to DESC",
-     default=None)
+        dest="description", metavar="DESC",
+        help="Set the description of the journal entry to DESC",
+        default=None)
     parser.add_argument("-m", "--mimetype", action="store",
-     dest="mimetype", metavar="MIMETYPE",
-     help="Set the file's MIME-type to MIMETYPE",
-     default=None)
+        dest="mimetype", metavar="MIMETYPE",
+        help="Set the file's MIME-type to MIMETYPE",
+        default=None)
     parser.add_argument("-T", "--tag", action="append", dest="tag_list",
-     help="Add tag TAG to the journal entry's tags; " \
+        help="Add tag TAG to the journal entry's tags; "
              "this option can be repeated",
-     metavar="TAG")
+        metavar="TAG")
     return parser
 
 if __name__ == "__main__":
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     fname = args.file
     absname = os.path.abspath(fname)
     if not os.path.exists(absname):
-        print 'Error: File does not exist.'
+        print('Error: File does not exist.')
         argument_parser.print_help()
         exit(0)
 
@@ -87,14 +87,15 @@ if __name__ == "__main__":
             entry.metadata['tags'] = tag_string
 
         datastore.write(entry)
-        print 'Created as %s' % (entry.object_id)
+        print('Created as %s' % (entry.object_id))
 
         entry.destroy()
 
     except DBusException:
         print 'ERROR: Unable to connect to the datastore.\n'\
+        print('ERROR: Unable to connect to the datastore.\n'\
               'Check that you are running in the same environment as the '\
-              'datastore service.'
+              'datastore service.')
 
-    except Exception, e:
-        print 'ERROR: %s' % (e)
+    except Exception as e:
+        print('ERROR: %s' % (e))

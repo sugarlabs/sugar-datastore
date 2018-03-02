@@ -69,7 +69,7 @@ class Optimizer(object):
             try:
                 os.rmdir(checksum_path)
                 logging.debug('removed %r', checksum_path)
-            except OSError, e:
+            except OSError as e:
                 if e.errno != errno.ENOTEMPTY:
                     raise
 

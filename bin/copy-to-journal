@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Simple script to import a file to the datastore
 # Reinier Heeres, <reinier@heeres.eu>, 2007-12-20
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     fname = args[0]
     absname = os.path.abspath(fname)
     if not os.path.exists(absname):
-        print 'Error: File does not exist.'
+        print('Error: File does not exist.')
         option_parser.print_help()
         exit(0)
 
@@ -86,14 +86,14 @@ if __name__ == "__main__":
             entry.metadata['tags'] = tag_string
 
         datastore.write(entry)
-        print 'Created as %s' % (entry.object_id)
+        print('Created as %s' % (entry.object_id))
 
         entry.destroy()
 
     except dbus.DBusException:
-        print 'ERROR: Unable to connect to the datastore.\n'\
+        print('ERROR: Unable to connect to the datastore.\n'\
               'Check that you are running in the same environment as the '\
-              'datastore service.'
+              'datastore service.')
 
-    except Exception, e:
-        print 'ERROR: %s' % (e)
+    except Exception as e:
+        print('ERROR: %s' % (e))

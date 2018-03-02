@@ -59,7 +59,7 @@ class FileStore(object):
                         destination_path)
                     os.rename(file_path, destination_path)
                     completion_cb()
-                except OSError, e:
+                except OSError as e:
                     if e.errno == errno.EXDEV:
                         self._async_copy(file_path, destination_path,
                                          completion_cb, unlink_src=True)
@@ -127,7 +127,7 @@ class FileStore(object):
         # fail if the file is in a different filesystem. Do a symlink instead.
         try:
             os.link(file_path, destination_path)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.EXDEV:
                 os.symlink(file_path, destination_path)
             else:
@@ -198,7 +198,7 @@ class AsyncCopy(object):
             if len(data) < AsyncCopy.CHUNK_SIZE:
                 self._complete(None)
                 return False
-        except Exception, err:
+        except Exception as err:
             logging.error('AC: Error copying %s -> %s: %r', self.src, self.
                 dest, err)
             self._complete(err)
@@ -218,7 +218,7 @@ class AsyncCopy(object):
 
         self.src_fp = os.open(self.src, os.O_RDONLY)
         self.dest_fp = os.open(self.dest, os.O_RDWR | os.O_TRUNC | os.O_CREAT,
-                0444)
+                0o444)
 
         stat = os.fstat(self.src_fp)
         self.size = stat[6]

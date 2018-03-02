@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 # Copyright (C) 2007, Red Hat, Inc.
 #
@@ -41,40 +41,40 @@ def get_name_and_version():
     exp = 'AC_INIT\(\[[^\]]+\],\[([^\]]+)\],\[\],\[([^\]]+)\]'
     match = re.search(exp, config)
     if not match:
-        print 'Cannot find the package name and version.'
+        print('Cannot find the package name and version.')
         sys.exit(0)
 
     return (match.group(2), match.group(1))
 
 
 def cmd_help():
-    print 'Usage: \n\
+    print('Usage: \n\
 maint-helper.py build-snapshot       - build a source snapshot \n\
 maint-helper.py fix-copyright [path] - fix the copyright year \n\
-maint-helper.py check-licenses       - check licenses in the source'
+maint-helper.py check-licenses       - check licenses in the source')
 
 
 def cmd_build_snapshot():
     name, version = get_name_and_version()
 
-    print 'Update git...'
+    print('Update git...')
 
     retcode = subprocess.call(['git', 'pull'])
     if retcode:
-        print 'ERROR - cannot pull from git'
+        print('ERROR - cannot pull from git')
 
     cmd = 'git-show-ref --hash=10 refs/heads/master'
     alphatag = os.popen(cmd).readline().strip()
 
     tarball = '%s-%s-git%s.tar.bz2' % (name, version, alphatag)
 
-    print 'Build %s...' % tarball
+    print('Build %s...' % tarball)
 
     os.spawnlp(os.P_WAIT, 'make', 'make', 'distcheck')
 
     os.rename('%s-%s.tar.bz2' % (name, version), tarball)
 
-    print 'Update NEWS.sugar...'
+    print('Update NEWS.sugar...')
 
     if 'SUGAR_NEWS' in os.environ:
         sugar_news_path = os.environ['SUGAR_NEWS']
@@ -100,7 +100,7 @@ def cmd_build_snapshot():
         f.write(sugar_news)
         f.close()
 
-    print 'Update NEWS...'
+    print('Update NEWS...')
 
     f = open('NEWS', 'r')
     news = f.read()
@@ -112,18 +112,18 @@ def cmd_build_snapshot():
     f.write(news)
     f.close()
 
-    print 'Committing to git...'
+    print('Committing to git...')
 
     changelog = 'Snapshot %s.' % alphatag
     retcode = subprocess.call(['git', 'commit', '-a', '-m % s' % changelog])
     if retcode:
-        print 'ERROR - cannot commit to git'
+        print('ERROR - cannot commit to git')
 
     retcode = subprocess.call(['git', 'push'])
     if retcode:
-        print 'ERROR - cannot push to git'
+        print('ERROR - cannot push to git')
 
-    print 'Done.'
+    print('Done.')
 
 
 def check_licenses(path, license_text, missing):
@@ -172,11 +172,11 @@ def cmd_check_licenses():
     missing = {}
     check_licenses(os.getcwd(), 'GPL', missing)
 
-    for item in missing.keys():
-        print '%s:\n' % item
+    for item in list(missing.keys()):
+        print('%s:\n' % item)
         for path in missing[item]:
-            print path
-        print '\n'
+            print(path)
+        print('\n')
 
 
 def fix_copyright(path):

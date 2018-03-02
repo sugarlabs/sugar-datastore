@@ -169,7 +169,7 @@ class DataStore(dbus.service.Object):
         # can we fit the index on disk? get disk usage in bytes...
         index_du = subprocess.check_output(['/usr/bin/du', '-bs',
                                             temp_index_path])
-        index_du = int(index_du.split('\t')[0])
+        index_du = int(index_du.split(b'\t')[0])
         # disk available, in bytes
         stat = os.statvfs(temp_index_path)
         da = stat.f_bavail * stat.f_bsize
@@ -390,6 +390,7 @@ class DataStore(dbus.service.Object):
         if not self._index_updating:
             try:
                 uids, count = self._index_store.find(query)
+                uids = [uid.decode() for uid in uids]
             except Exception:
                 logging.exception('Failed to query index, will rebuild')
                 self._rebuild_index()

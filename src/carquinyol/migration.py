@@ -73,13 +73,13 @@ def _migrate_metadata(root_path, old_root_path, uid):
         metadata['timestamp'] = \
                 time.mktime(time.strptime(metadata['mtime'], DATE_FORMAT))
 
-    for key, value in metadata.items():
+    for key, value in list(metadata.items()):
         try:
             f = open(os.path.join(metadata_path, key), 'w')
             try:
-                if isinstance(value, unicode):
+                if isinstance(value, str):
                     value = value.encode('utf-8')
-                if not isinstance(value, basestring):
+                if not isinstance(value, str):
                     value = str(value)
                 f.write(value)
             finally:

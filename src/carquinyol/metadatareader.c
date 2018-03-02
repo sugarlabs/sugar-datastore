@@ -50,10 +50,10 @@ add_property (const char *metadata_path, char *property_name, PyObject * dict,
         fclose (file);
         file = NULL;
 
-        value = PyString_FromString ("");
+        value = PyBytes_FromString("");
         if (value == NULL) {
             PyErr_SetString (PyExc_ValueError,
-                    "Failed to convert value to python string");
+                    "Failed to convert value to python bytes");
             goto cleanup;
         }
     } else {
@@ -80,7 +80,12 @@ add_property (const char *metadata_path, char *property_name, PyObject * dict,
         file = NULL;
 
         // Convert value to dbus.ByteArray
-        PyObject *args = Py_BuildValue ("(s#)", value_buf, file_size);
+        PyObject *args = Py_BuildValue ("(y#)", value_buf, file_size);
+        if (args == NULL) {
+            PyErr_SetString (PyExc_ValueError,
+                    "Failed to convert metadata value to bytes");
+            goto cleanup;
+        }
 
         PyMem_Free (value_buf);
         value_buf = NULL;
@@ -130,7 +135,7 @@ static PyObject *read_from_properties_list (const char *metadata_path,
     int i;
     for (i = 0; i < PyList_Size (properties); i++) {
         PyObject *property = PyList_GetItem (properties, i);
-        char *property_name = PyString_AsString (property);
+        char *property_name = PyBytes_AsString (property);
 
         if (add_property (metadata_path, property_name, dict, 0) == 0)
             goto cleanup;
@@ -211,10 +216,23 @@ static PyMethodDef metadatareader_functions[] = {
     {NULL, NULL, 0, NULL}
 };
 
-PyMODINIT_FUNC initmetadatareader (void) {
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "metadatareader",            /* m_name */
+    NULL,                        /* m_doc */
+    -1,                          /* m_size */
+    metadatareader_functions,    /* m_methods */
+    NULL,                        /* m_reload */
+    NULL,                        /* m_traverse */
+    NULL,                        /* m_clear */
+    NULL,                        /* m_free */
+};
+
+PyObject* PyInit_metadatareader (void) {
     PyObject *mod;
-    mod = Py_InitModule ("metadatareader", metadatareader_functions);
+    mod = PyModule_Create(&moduledef);
 
     PyObject *dbus_module = PyImport_ImportModule ("dbus");
     byte_array_type = PyObject_GetAttrString (dbus_module, "ByteArray");
+    return mod;
 }

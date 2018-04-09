@@ -159,7 +159,7 @@ class DataStore(dbus.service.Object):
 
         # rebuild the index in tmpfs to better handle ENOSPC
         temp_index_path = tempfile.mkdtemp(prefix='sugar-datastore-index-')
-        logger.warn('Rebuilding index in %s' % temp_index_path)
+        logger.debug('Rebuilding index in %s' % temp_index_path)
         self._index_store.open_index(temp_path=temp_index_path)
         self._update_index()
         self._index_store.close_index()
@@ -175,7 +175,7 @@ class DataStore(dbus.service.Object):
         da = stat.f_bavail * stat.f_bsize
         if da > (index_du * 1.2) and da > MIN_INDEX_FREE_BYTES:
             # 1.2 due to 20% room for growth
-            logger.warn('Attempting to move tempfs index to disk')
+            logger.debug('Attempting to move tempfs index to disk')
             # move to internal disk
             try:
                 index_path = layoutmanager.get_instance().get_index_path()

@@ -128,7 +128,7 @@ def cmd_build_snapshot():
 
 def check_licenses(path, license_text, missing):
     matchers = {'LGPL': 'GNU Lesser General Public',
-                 'GPL': 'GNU General Public License'}
+                'GPL': 'GNU General Public License'}
 
     license_file = os.path.join(path, '.license')
     if os.path.isfile(license_file):

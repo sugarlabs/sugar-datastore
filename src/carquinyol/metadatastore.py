@@ -55,7 +55,8 @@ class MetadataStore(object):
     def retrieve(self, uid, properties=None):
         metadata_path = layoutmanager.get_instance().get_metadata_path(uid)
         if properties is not None:
-            properties = [x.encode('utf-8') if isinstance(x,str) else x for x in properties]
+            properties = [x.encode('utf-8') if isinstance(x, str)
+                          else x for x in properties]
         metadata = metadatareader.retrieve(metadata_path, properties)
         for x in metadata:
             metadata[x] = str(metadata[x])[2:-1]

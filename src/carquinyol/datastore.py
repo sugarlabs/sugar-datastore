@@ -106,7 +106,7 @@ class DataStore(dbus.service.Object):
             # fast path
             try:
                 self._index_store.open_index()
-            except:
+            except BaseException:
                 logging.exception('Failed to open index')
                 # try...
                 self._rebuild_index()
@@ -119,13 +119,13 @@ class DataStore(dbus.service.Object):
             f = open(self._cleanflag, 'w')
             os.fsync(f.fileno())
             f.close()
-        except:
+        except BaseException:
             logging.exception("Could not mark the datastore clean")
 
     def _mark_dirty(self):
         try:
             os.remove(self._cleanflag)
-        except:
+        except BaseException:
             pass
 
     def _open_layout(self):
@@ -516,9 +516,9 @@ class DataStore(dbus.service.Object):
             try:
                 # will remove the hashed dir if nothing else is there
                 os.removedirs(os.path.dirname(entry_path))
-            except:
+            except BaseException:
                 pass
-        except:
+        except BaseException:
             logger.exception('Exception deleting entry')
             raise
 

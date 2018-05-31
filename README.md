@@ -4,9 +4,6 @@ Sugar Datastore
 Sugar Datastore provides activities with a way to store data and
 metadata, and the journal with querying and full text search.
 
-https://www.sugarlabs.org/
-
-https://wiki.sugarlabs.org/
 
 Installing on Debian or Ubuntu
 ------------------------------
@@ -26,7 +23,7 @@ Building
 Sugar Artwork follows the [GNU Coding
 Standards](https://www.gnu.org/prep/standards/).
 
-Install all dependencies; Python GI API bindings for GLib, Python
+Install all dependencies; Python GI API bindings for GLib, Python 3
 bindings for Xapian, Python bindings for D-Bus, and Sugar Toolkit.
 
 Clone the repository, run `autogen.sh`, then `make` and `make

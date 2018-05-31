@@ -70,13 +70,16 @@ _QUERY_VALUE_MAP = {
 class TermGenerator (xapian.TermGenerator):
 
     def index_document(self, document, properties):
-        document.add_value(_VALUE_TIMESTAMP,
-            xapian.sortable_serialise(float(properties['timestamp'])))
+        document.add_value(
+            _VALUE_TIMESTAMP,
+            xapian.sortable_serialise(
+                float(
+                    properties['timestamp'])))
         document.add_value(_VALUE_TITLE, properties.get('title', '').strip())
         if 'filesize' in properties:
             try:
-                document.add_value(_VALUE_FILESIZE,
-                    xapian.sortable_serialise(int(properties['filesize'])))
+                document.add_value(_VALUE_FILESIZE, xapian.sortable_serialise(
+                    int(properties['filesize'])))
             except (ValueError, TypeError):
                 logging.debug('Invalid value for filesize property: %s',
                               properties['filesize'])
@@ -143,7 +146,7 @@ class QueryParser (xapian.QueryParser):
     def _parse_query_term(self, name, prefix, value):
         if isinstance(value, list):
             subqueries = [self._parse_query_term(name, prefix, word)
-                for word in value]
+                          for word in value]
             return Query(Query.OP_OR, subqueries)
 
         elif prefix:
@@ -158,8 +161,10 @@ class QueryParser (xapian.QueryParser):
                 'Did you mean to pass a list instead?')
 
         start, end = value
-        return Query(Query.OP_VALUE_RANGE, info['number'],
-            self._convert_value(info, start), self._convert_value(info, end))
+        return Query(
+            Query.OP_VALUE_RANGE, info['number'], self._convert_value(
+                info, start), self._convert_value(
+                info, end))
 
     def _convert_value(self, info, value):
         if info['type'] in (float, int, int):
@@ -170,7 +175,7 @@ class QueryParser (xapian.QueryParser):
     def _parse_query_value(self, name, info, value):
         if isinstance(value, list):
             subqueries = [self._parse_query_value(name, info, word)
-                for word in value]
+                          for word in value]
             return Query(Query.OP_OR, subqueries)
 
         elif isinstance(value, tuple):
@@ -190,9 +195,9 @@ class QueryParser (xapian.QueryParser):
             return xapian.QueryParser.parse_query(
                 self, query_str,
                 QueryParser.FLAG_PHRASE |
-                        QueryParser.FLAG_BOOLEAN |
-                        QueryParser.FLAG_LOVEHATE |
-                        QueryParser.FLAG_WILDCARD,
+                QueryParser.FLAG_BOOLEAN |
+                QueryParser.FLAG_LOVEHATE |
+                QueryParser.FLAG_WILDCARD,
                 '')
 
         except xapian.QueryParserError as exception:
@@ -210,11 +215,13 @@ class QueryParser (xapian.QueryParser):
 
         for name, value in list(query_dict.items()):
             if name in _QUERY_TERM_MAP:
-                queries.append(self._parse_query_term(name,
-                    _QUERY_TERM_MAP[name], value))
+                queries.append(
+                    self._parse_query_term(
+                        name, _QUERY_TERM_MAP[name], value))
             elif name in _QUERY_VALUE_MAP:
-                queries.append(self._parse_query_value(name,
-                    _QUERY_VALUE_MAP[name], value))
+                queries.append(
+                    self._parse_query_value(
+                        name, _QUERY_VALUE_MAP[name], value))
             else:
                 logging.warning('Unknown term: %r=%r', name, value)
 
@@ -233,7 +240,7 @@ class IndexStore(object):
         self._database = None
         self._flush_timeout = None
         self._pending_writes = 0
-        root_path=layoutmanager.get_instance().get_root_path()
+        root_path = layoutmanager.get_instance().get_root_path()
         self._index_updated_path = os.path.join(root_path,
                                                 'index_updated')
         self._std_index_path = layoutmanager.get_instance().get_index_path()
@@ -248,17 +255,17 @@ class IndexStore(object):
             try:
                 # mark the on-disk index stale
                 self._set_index_updated(False)
-            except:
+            except BaseException:
                 pass
             self._index_path = temp_path
         else:
-             self._index_path = self._std_index_path
+            self._index_path = self._std_index_path
         try:
-             self._database = WritableDatabase(self._index_path,
-                                               xapian.DB_CREATE_OR_OPEN)
-        except Exception as e:
-             logging.error('Exception opening database')
-             raise
+            self._database = WritableDatabase(self._index_path,
+                                              xapian.DB_CREATE_OR_OPEN)
+        except BaseException:
+            logging.error('Exception opening database')
+            raise
 
     def close_index(self):
         """Close index database if it is open."""
@@ -269,7 +276,7 @@ class IndexStore(object):
         try:
             # does Xapian write in its destructors?
             self._database = None
-        except Exception as e:
+        except BaseException:
             logging.error('Exception tearing down database')
             raise
 
@@ -280,10 +287,10 @@ class IndexStore(object):
             os.remove(os.path.join(self._index_path, f))
 
     def contains(self, uid):
-        postings = self._database.postlist(_PREFIX_FULL_VALUE + \
-            _PREFIX_UID + uid)
+        postings = self._database.postlist(_PREFIX_FULL_VALUE +
+                                           _PREFIX_UID + uid)
         try:
-            __ = next(postings)
+            next(postings)
         except StopIteration:
             return False
         return True
@@ -297,8 +304,8 @@ class IndexStore(object):
         if not self.contains(uid):
             self._database.add_document(document)
         else:
-            self._database.replace_document(_PREFIX_FULL_VALUE + \
-                _PREFIX_UID + uid, document)
+            self._database.replace_document(_PREFIX_FULL_VALUE +
+                                            _PREFIX_UID + uid, document)
 
         self._flush(True)
 
@@ -370,8 +377,8 @@ class IndexStore(object):
 
     def _set_index_updated(self, index_updated):
         if self._std_index_path != self._index_path:
-             # operating from tmpfs
-             return True
+            # operating from tmpfs
+            return True
         if index_updated != self.index_updated:
             if index_updated:
                 index_updated_file = open(self._index_updated_path, 'w')
@@ -389,7 +396,7 @@ class IndexStore(object):
     def _flush(self, force=False):
         """Called after any database mutation"""
         logging.debug('IndexStore.flush: force=%r _pending_writes=%r',
-                force, self._pending_writes)
+                      force, self._pending_writes)
 
         self._set_index_updated(False)
 

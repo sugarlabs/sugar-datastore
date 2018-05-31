@@ -47,7 +47,7 @@ class Optimizer(object):
         if self._enqueue_checksum_id is None:
             self._enqueue_checksum_id = \
                 GLib.idle_add(self._process_entry_cb,
-                                 priority=GLib.PRIORITY_LOW)
+                              priority=GLib.PRIORITY_LOW)
 
     def remove(self, uid):
         """Remove any structures left from space optimization
@@ -140,7 +140,7 @@ class Optimizer(object):
                 if self._identical_file_already_exists(checksum):
                     if not self._already_linked(uid, checksum):
                         existing_entry_uid = \
-                                self._get_uid_from_checksum(checksum)
+                            self._get_uid_from_checksum(checksum)
 
                         self._file_store.hard_link_entry(uid,
                                                          existing_entry_uid)

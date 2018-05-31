@@ -56,7 +56,7 @@ class FileStore(object):
             if transfer_ownership:
                 try:
                     logging.debug('FileStore moving from %r to %r', file_path,
-                        destination_path)
+                                  destination_path)
                     os.rename(file_path, destination_path)
                     completion_cb()
                 except OSError as e:
@@ -67,7 +67,7 @@ class FileStore(object):
                         raise
             else:
                 self._async_copy(file_path, destination_path, completion_cb,
-                        unlink_src=False)
+                                 unlink_src=False)
             """
         TODO: How can we support deleting the file of an entry?
         elif not file_path and os.path.exists(destination_path):
@@ -80,14 +80,14 @@ class FileStore(object):
             completion_cb()
 
     def _async_copy(self, file_path, destination_path, completion_cb,
-            unlink_src):
+                    unlink_src):
         """Start copying a file asynchronously.
 
         """
         logging.debug('FileStore copying from %r to %r', file_path,
-            destination_path)
+                      destination_path)
         async_copy = AsyncCopy(file_path, destination_path, completion_cb,
-                unlink_src)
+                               unlink_src)
         async_copy.start()
 
     def retrieve(self, uid, user_id, extension):
@@ -102,12 +102,16 @@ class FileStore(object):
             return ''
 
         use_instance_dir = os.path.exists('/etc/olpc-security') and \
-                           os.getuid() != user_id
+            os.getuid() != user_id
         if use_instance_dir:
             if not user_id:
                 raise ValueError('Couldnt determine the current user uid.')
-            destination_dir = os.path.join(os.environ['HOME'], 'isolation',
-                '1', 'uid_to_instance_dir', str(user_id))
+            destination_dir = os.path.join(
+                os.environ['HOME'],
+                'isolation',
+                '1',
+                'uid_to_instance_dir',
+                str(user_id))
         else:
             destination_dir = env.get_profile_path('data')
             if not os.path.exists(destination_dir):
@@ -118,8 +122,8 @@ class FileStore(object):
         elif extension:
             extension = '.' + extension
 
-        fd, destination_path = tempfile.mkstemp(prefix=uid + '_',
-                suffix=extension, dir=destination_dir)
+        fd, destination_path = tempfile.mkstemp(
+            prefix=uid + '_', suffix=extension, dir=destination_dir)
         os.close(fd)
         os.unlink(destination_path)
 
@@ -187,9 +191,9 @@ class AsyncCopy(object):
             # error writing data to file?
             if count < len(data):
                 logging.error('AC: Error writing %s -> %s: wrote less than '
-                        'expected', self.src, self.dest)
+                              'expected', self.src, self.dest)
                 self._complete(RuntimeError(
-                        'Error writing data to destination file'))
+                    'Error writing data to destination file'))
                 return False
 
             # FIXME: emit progress here
@@ -200,7 +204,7 @@ class AsyncCopy(object):
                 return False
         except Exception as err:
             logging.error('AC: Error copying %s -> %s: %r', self.src, self.
-                dest, err)
+                          dest, err)
             self._complete(err)
             return False
 
@@ -218,7 +222,7 @@ class AsyncCopy(object):
 
         self.src_fp = os.open(self.src, os.O_RDONLY)
         self.dest_fp = os.open(self.dest, os.O_RDWR | os.O_TRUNC | os.O_CREAT,
-                0o444)
+                               0o444)
 
         stat = os.fstat(self.src_fp)
         self.size = stat[6]

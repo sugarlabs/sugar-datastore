@@ -71,7 +71,7 @@ def _migrate_metadata(root_path, old_root_path, uid):
 
     if 'timestamp' not in metadata and 'mtime' in metadata:
         metadata['timestamp'] = \
-                time.mktime(time.strptime(metadata['mtime'], DATE_FORMAT))
+            time.mktime(time.strptime(metadata['mtime'], DATE_FORMAT))
 
     for key, value in list(metadata.items()):
         try:
@@ -86,7 +86,7 @@ def _migrate_metadata(root_path, old_root_path, uid):
                 f.close()
         except Exception:
             logging.exception(
-                    'Error while migrating property %s of entry %s', key, uid)
+                'Error while migrating property %s of entry %s', key, uid)
 
 
 def _migrate_file(root_path, old_root_path, uid):

@@ -25,22 +25,28 @@ def build_option_parser():
             "[-T tag1 [-T tag2 ...]]"
     parser = optparse.OptionParser(usage=usage)
 
-    parser.add_option("-t", "--title", action="store", dest="title",
-     help="Set the title of the journal entry to TITLE", metavar="TITLE",
-     default=None)
+    parser.add_option(
+        "-t",
+        "--title",
+        action="store",
+        dest="title",
+        help="Set the title of the journal entry to TITLE",
+        metavar="TITLE",
+        default=None)
     parser.add_option("-d", "--description", action="store",
-     dest="description", metavar="DESC",
-     help="Set the description of the journal entry to DESC",
-     default=None)
+                      dest="description", metavar="DESC",
+                      help="Set the description of the journal entry to DESC",
+                      default=None)
     parser.add_option("-m", "--mimetype", action="store",
-     dest="mimetype", metavar="MIMETYPE",
-     help="Set the file's MIME-type to MIMETYPE",
-     default=None)
+                      dest="mimetype", metavar="MIMETYPE",
+                      help="Set the file's MIME-type to MIMETYPE",
+                      default=None)
     parser.add_option("-T", "--tag", action="append", dest="tag_list",
-     help="Add tag TAG to the journal entry's tags; " \
-             "this option can be repeated",
-     metavar="TAG")
+                      help="Add tag TAG to the journal entry's tags; "
+                      "this option can be repeated",
+                      metavar="TAG")
     return parser
+
 
 if __name__ == "__main__":
 
@@ -91,8 +97,8 @@ if __name__ == "__main__":
         entry.destroy()
 
     except dbus.DBusException:
-        print('ERROR: Unable to connect to the datastore.\n'\
-              'Check that you are running in the same environment as the '\
+        print('ERROR: Unable to connect to the datastore.\n'
+              'Check that you are running in the same environment as the '
               'datastore service.')
 
     except Exception as e:

@@ -104,6 +104,7 @@ class LayoutManager(object):
                         return False
         return True
 
+
 _instance = None
 
 

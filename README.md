@@ -20,7 +20,7 @@ desktop](https://github.com/sugarlabs/sugar).
 Building
 --------
 
-Sugar Artwork follows the [GNU Coding
+Sugar Datastore follows the [GNU Coding
 Standards](https://www.gnu.org/prep/standards/).
 
 Install all dependencies; Python GI API bindings for GLib, Python 3

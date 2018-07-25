@@ -19,7 +19,7 @@ import errno
 import logging
 import tempfile
 
-from gi.repository import GObject
+from gi.repository import GLib
 
 from sugar3 import env
 
@@ -223,4 +223,4 @@ class AsyncCopy(object):
         stat = os.fstat(self.src_fp)
         self.size = stat[6]
 
-        GObject.idle_add(self._copy_block)
+        GLib.idle_add(self._copy_block)

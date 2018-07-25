@@ -28,7 +28,7 @@ import tempfile
 
 import dbus
 import dbus.service
-from gi.repository import GObject
+from gi.repository import GLib
 
 from sugar3 import mime
 
@@ -201,8 +201,8 @@ class DataStore(dbus.service.Object):
         logging.debug('Going to update the index with object_ids %r',
                       uids)
         self._index_updating = True
-        GObject.idle_add(lambda: self.__update_index_cb(uids),
-                         priority=GObject.PRIORITY_LOW)
+        GLib.idle_add(lambda: self.__update_index_cb(uids),
+                         priority=GLib.PRIORITY_LOW)
 
     def __update_index_cb(self, uids):
         if uids:

@@ -18,7 +18,7 @@ import logging
 import os
 import sys
 
-from gi.repository import GObject
+from gi.repository import GLib
 import xapian
 from xapian import WritableDatabase, Document, Enquire, Query
 
@@ -398,7 +398,7 @@ class IndexStore(object):
         self._set_index_updated(False)
 
         if self._flush_timeout is not None:
-            GObject.source_remove(self._flush_timeout)
+            GLib.source_remove(self._flush_timeout)
             self._flush_timeout = None
 
         self._pending_writes += 1
@@ -415,5 +415,5 @@ class IndexStore(object):
             self._pending_writes = 0
             self._set_index_updated(True)
         else:
-            self._flush_timeout = GObject.timeout_add_seconds(_FLUSH_TIMEOUT,
-                                                      self._flush_timeout_cb)
+            self._flush_timeout = GLib.timeout_add_seconds(
+                _FLUSH_TIMEOUT, self._flush_timeout_cb)

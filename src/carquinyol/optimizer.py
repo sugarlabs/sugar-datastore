@@ -19,7 +19,7 @@ import errno
 import logging
 import subprocess
 
-from gi.repository import GObject
+from gi.repository import GLib
 
 from carquinyol import layoutmanager
 
@@ -46,8 +46,8 @@ class Optimizer(object):
 
         if self._enqueue_checksum_id is None:
             self._enqueue_checksum_id = \
-                    GObject.idle_add(self._process_entry_cb,
-                                     priority=GObject.PRIORITY_LOW)
+                GLib.idle_add(self._process_entry_cb,
+                                 priority=GLib.PRIORITY_LOW)
 
     def remove(self, uid):
         """Remove any structures left from space optimization

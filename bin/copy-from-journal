@@ -6,7 +6,7 @@
 
 import os
 import shutil
-import optparse
+import argparse
 import dbus
 
 if os.path.exists("/tmp/olpc-session-bus"):
@@ -20,20 +20,23 @@ import sugar3.mime
 RETURN_LIMIT = 2
 
 
-def build_option_parser():
+def build_argument_parser():
 
-    usage = "Usage: %prog [-o OBJECT_ID] [-q SEARCH_STR] [-m] OUTFILE"
-    parser = optparse.OptionParser(usage=usage)
+    usage = "%(prog)s [-o OBJECT_ID] [-q SEARCH_STR] [-m] OUTFILE"
+    parser = argparse.ArgumentParser(usage=usage)
 
-    parser.add_option("-o", "--object_id", action="store", dest="object_id",
+    parser.add_argument('outfile',
+                      help="Name the output file with the explicit name",
+                      metavar="OUTFILE")
+    parser.add_argument("-o", "--object_id", action="store", dest="object_id",
                       help="Retrieve object with explicit ID OBJECT_ID",
                       metavar="OBJECT_ID", default=None)
 
-    parser.add_option("-q", "--query", action="store", dest="query",
+    parser.add_argument("-q", "--query", action="store", dest="query",
                       help="Full-text-search the metadata for SEARCH_STR",
                       metavar="SEARCH_STR", default=None)
 
-    parser.add_option("-m", "--metadata", action="store_true",
+    parser.add_argument("-m", "--metadata", action="store_true",
             dest="show_meta",
             help="Show all non-preview metadata [default: hide]",
             default=False)
@@ -42,25 +45,25 @@ def build_option_parser():
 
 if __name__ == "__main__":
 
-    option_parser = build_option_parser()
-    options, args = option_parser.parse_args()
-    if len(args) < 1:
-        option_parser.print_help()
+    argument_parser = build_argument_parser()
+    args = argument_parser.parse_args()
+    if not args.outfile:
+        argument_parser.print_help()
         exit(0)
 
     try:
         dsentry = None
 
         # Get object directly if we were given an explicit object ID.
-        if options.object_id is not None:
-            dsentry = datastore.get(options.object_id)
+        if args.object_id is not None:
+            dsentry = datastore.get(args.object_id)
 
         # Compose the query based on the options provided.
         if dsentry is None:
             query = {}
 
-            if options.query is not None:
-                query['query'] = options.query
+            if args.query is not None:
+                query['query'] = args.query
 
             # We only want a single file at a time; limit the number of objects
             # returned to two, as anything more than one means the criteria
@@ -78,11 +81,11 @@ if __name__ == "__main__":
         # If neither an explicit object ID nor a query gave us data, fail.
         if dsentry is None:
             print 'ERROR: unable to determine journal object to copy.'
-            option_parser.print_help()
+            argument_parser.print_help()
             exit(0)
 
         # Print metadata if that is what the user asked for.
-        if options.show_meta:
+        if args.show_meta:
             print 'Metadata:'
             for key, val in dsentry.metadata.get_dictionary().iteritems():
                 if key != 'preview':
@@ -94,7 +97,7 @@ if __name__ == "__main__":
             dsentry.destroy()
             exit(0)
 
-        outname = args[0]
+        outname = args.outfile
         outroot, outext = os.path.splitext(outname)
 
         # Do our best to determine the output file extension, based on Sugar's

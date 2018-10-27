@@ -8,7 +8,7 @@
 # as otherwise the datastore will not accept the file.
 
 import os
-import optparse
+import argparse
 from gettext import gettext as _
 import dbus
 
@@ -21,22 +21,23 @@ from sugar3 import mime
 
 def build_option_parser():
 
-    usage = "Usage: %prog <file> [-m MIMETYPE] [-t TITLE] [-d DESC] " \
+    usage = "%(prog)s <file> [-m MIMETYPE] [-t TITLE] [-d DESC] " \
             "[-T tag1 [-T tag2 ...]]"
-    parser = optparse.OptionParser(usage=usage)
+    parser = argparse.ArgumentParser(usage=usage)
 
-    parser.add_option("-t", "--title", action="store", dest="title",
+    parser.add_argument("file", help="File to be copied to journal")
+    parser.add_argument("-t", "--title", action="store", dest="title",
      help="Set the title of the journal entry to TITLE", metavar="TITLE",
      default=None)
-    parser.add_option("-d", "--description", action="store",
+    parser.add_argument("-d", "--description", action="store",
      dest="description", metavar="DESC",
      help="Set the description of the journal entry to DESC",
      default=None)
-    parser.add_option("-m", "--mimetype", action="store",
+    parser.add_argument("-m", "--mimetype", action="store",
      dest="mimetype", metavar="MIMETYPE",
      help="Set the file's MIME-type to MIMETYPE",
      default=None)
-    parser.add_option("-T", "--tag", action="append", dest="tag_list",
+    parser.add_argument("-T", "--tag", action="append", dest="tag_list",
      help="Add tag TAG to the journal entry's tags; " \
              "this option can be repeated",
      metavar="TAG")
@@ -44,17 +45,17 @@ def build_option_parser():
 
 if __name__ == "__main__":
 
-    option_parser = build_option_parser()
-    options, args = option_parser.parse_args()
-    if len(args) < 1:
-        option_parser.print_help()
+    argument_parser = build_option_parser()
+    args = argument_parser.parse_args()
+    if not args.file:
+        argument_parser.print_help()
         exit(0)
 
-    fname = args[0]
+    fname = args.file
     absname = os.path.abspath(fname)
     if not os.path.exists(absname):
         print 'Error: File does not exist.'
-        option_parser.print_help()
+        argument_parser.print_help()
         exit(0)
 
     try:
@@ -62,27 +63,27 @@ if __name__ == "__main__":
         entry.set_file_path(absname)
 
         # Set the mimetype to the provided one.
-        if options.mimetype is None:
+        if args.mimetype is None:
             entry.metadata['mime_type'] = mime.get_for_file(absname)
         else:
-            entry.metadata['mime_type'] = options.mimetype
+            entry.metadata['mime_type'] = args.mimetype
 
         # If no title is given, use the filename.
-        if options.title:
-            entry.metadata['title'] = options.title
+        if args.title:
+            entry.metadata['title'] = args.title
         else:
             entry.metadata['title'] = os.path.basename(fname)
 
         # Use the description given, otherwise leave it blank.
-        if options.description:
-            entry.metadata['description'] = options.description
+        if args.description:
+            entry.metadata['description'] = args.description
         else:
             entry.metadata['description'] = _('From: %s') % fname
 
         # Lastly, if any tags are given, combine them into a single string
         # and save them.
-        if options.tag_list:
-            tag_string = " ".join(options.tag_list)
+        if args.tag_list:
+            tag_string = " ".join(args.tag_list)
             entry.metadata['tags'] = tag_string
 
         datastore.write(entry)

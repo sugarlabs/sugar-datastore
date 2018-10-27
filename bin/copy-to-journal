@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 #
 # Simple script to import a file to the datastore
 # Reinier Heeres, <reinier@heeres.eu>, 2007-12-20

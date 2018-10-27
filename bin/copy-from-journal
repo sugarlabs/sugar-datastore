@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 #
 # Simple script to export a file from the datastore
 # Reinier Heeres, <reinier@heeres.eu>, 2007-12-24
@@ -89,7 +89,7 @@ if __name__ == "__main__":
             print('Metadata:')
             for key, val in dsentry.metadata.get_dictionary().iteritems():
                 if key != 'preview':
-                    print ('%20s -> %s' % (key, val))
+                    print('%20s -> %s' % (key, val))
 
         # If no file is associated with this object, we can't save it out.
         if dsentry.get_file_path() == "":
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         if outext == "":
             mimetype = dsentry.metadata['mime_type']
             outext = sugar.mime.get_primary_extension(mimetype)
-            if outext == None:
+            if outext is None:
                 outext = "dsobject"
             outext = '.' + outext
 

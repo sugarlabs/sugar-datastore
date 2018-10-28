@@ -101,7 +101,7 @@ if __name__ == "__main__":
         # MIME-type-to-extension mappings.
         if outext == "":
             mimetype = dsentry.metadata['mime_type']
-            outext = sugar.mime.get_primary_extension(mimetype)
+            outext = sugar3.mime.get_primary_extension(mimetype)
             if outext == None:
                 outext = "dsobject"
             outext = '.' + outext

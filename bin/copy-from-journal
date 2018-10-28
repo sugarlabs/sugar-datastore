@@ -6,8 +6,9 @@
 
 import os
 import shutil
-import argparse
+from sugar_argparser import SugarArgumentParser
 import dbus
+
 
 if os.path.exists("/tmp/olpc-session-bus"):
     os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/tmp/olpc-session-bus"
@@ -23,7 +24,7 @@ RETURN_LIMIT = 2
 def build_argument_parser():
 
     usage = "%(prog)s [-o OBJECT_ID] [-q SEARCH_STR] [-m] OUTFILE"
-    parser = argparse.ArgumentParser(usage=usage)
+    parser = SugarArgumentParser(usage=usage)
 
     parser.add_argument('outfile',
                       help="Name the output file with the explicit name",
@@ -47,9 +48,6 @@ if __name__ == "__main__":
 
     argument_parser = build_argument_parser()
     args = argument_parser.parse_args()
-    if not args.outfile:
-        argument_parser.print_help()
-        exit(0)
 
     try:
         dsentry = None

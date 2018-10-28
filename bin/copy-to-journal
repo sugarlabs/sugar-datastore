@@ -8,7 +8,7 @@
 # as otherwise the datastore will not accept the file.
 
 import os
-import argparse
+from sugar_argparser import SugarArgumentParser
 from gettext import gettext as _
 import dbus
 
@@ -23,7 +23,7 @@ def build_option_parser():
 
     usage = "%(prog)s <file> [-m MIMETYPE] [-t TITLE] [-d DESC] " \
             "[-T tag1 [-T tag2 ...]]"
-    parser = argparse.ArgumentParser(usage=usage)
+    parser = SugarArgumentParser(usage=usage)
 
     parser.add_argument("file", help="File to be copied to journal")
     parser.add_argument("-t", "--title", action="store", dest="title",

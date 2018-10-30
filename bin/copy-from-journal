@@ -7,13 +7,13 @@
 import os
 import shutil
 import argparse
-import dbus
-
-if os.path.exists("/tmp/olpc-session-bus"):
-    os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/tmp/olpc-session-bus"
+from dbus import DBusException
 
 from sugar3.datastore import datastore
 import sugar3.mime
+
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
 
 # Limit the number of objects returned on an ambiguous query to this number,
 # for quicker operation.
@@ -117,7 +117,7 @@ if __name__ == "__main__":
         # Cleanup.
         dsentry.destroy()
 
-    except dbus.DBusException:
+    except DBusException:
         print 'ERROR: Unable to connect to the datastore.\n'\
               'Check that you are running in the same environment as the '\
               'datastore service.'

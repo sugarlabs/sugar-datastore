@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2
 #
 # Simple script to import a file to the datastore
 # Reinier Heeres, <reinier@heeres.eu>, 2007-12-20
@@ -10,13 +10,13 @@
 import os
 import argparse
 from gettext import gettext as _
-import dbus
-
-if os.path.exists("/tmp/olpc-session-bus"):
-    os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/tmp/olpc-session-bus"
+from dbus import DBusException
 
 from sugar3.datastore import datastore
 from sugar3 import mime
+
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
 
 
 def build_option_parser():
@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
         entry.destroy()
 
-    except dbus.DBusException:
+    except DBusException:
         print 'ERROR: Unable to connect to the datastore.\n'\
               'Check that you are running in the same environment as the '\
               'datastore service.'

@@ -38,8 +38,11 @@ class MetadataStore(object):
         # str() is 8-bit clean right now, but
         # this won't last. We will need more explicit
         # handling of strings, int/floats vs raw data
+        if isinstance(value, int):
+            value = str(value)
         if isinstance(value, bytes):
             value = str(value)[2:-1]
+
         # avoid pointless writes; replace atomically
         if os.path.exists(fpath):
             stored_val = open(fpath, 'rb').read()

@@ -167,7 +167,7 @@ class QueryParser (xapian.QueryParser):
                 info, end))
 
     def _convert_value(self, info, value):
-        if info['type'] in (float, int, int):
+        if info['type'] in (float, int):
             return xapian.sortable_serialise(info['type'](value))
 
         return str(info['type'](value))

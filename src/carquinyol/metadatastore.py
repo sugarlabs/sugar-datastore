@@ -1,4 +1,5 @@
 import os
+import dbus
 
 from carquinyol import layoutmanager
 from carquinyol import metadatareader
@@ -24,6 +25,16 @@ class MetadataStore(object):
             self._set_property(uid, key, value, md_path=metadata_path)
 
     def _set_property(self, uid, key, value, md_path=False):
+        """Set a property in metadata store
+
+        Value datatypes are almost entirely dbus.String, with
+        exceptions for certain keys as follows;
+
+        * "timestamp", and "creation_time" of dbus.Int32,
+        * "preview" of dbus.ByteArray,
+        * "filesize" of int, and
+        * "checksum" of str.
+        """
         if not md_path:
             md_path = layoutmanager.get_instance().get_metadata_path(uid)
         # Hack to support activities that still pass properties named as
@@ -34,35 +45,48 @@ class MetadataStore(object):
         changed = True
         fpath = os.path.join(md_path, key)
         tpath = os.path.join(md_path, '.' + key)
-        # FIXME: this codepath handles raw image data
-        # str() is 8-bit clean right now, but
-        # this won't last. We will need more explicit
-        # handling of strings, int/floats vs raw data
-        if isinstance(value, int):
-            value = str(value)
-        if isinstance(value, bytes):
-            value = str(value)[2:-1]
+
+        if isinstance(value, int):  # int or dbus.Int32
+            value = str(value).encode()
+        elif isinstance(value, str):  # str or dbus.String
+            value = value.encode()
 
         # avoid pointless writes; replace atomically
         if os.path.exists(fpath):
-            stored_val = open(fpath, 'rb').read()
-            stored_val = stored_val[2:-1]
+            f = open(fpath, 'rb')
+            stored_val = f.read()
+            f.close()
             if stored_val == value:
                 changed = False
         if changed:
-            f = open(tpath, 'w')
+            f = open(tpath, 'wb')
             f.write(value)
             f.close()
             os.rename(tpath, fpath)
 
     def retrieve(self, uid, properties=None):
+        """Retrieve metadata for an object from the store.
+
+        Values are read as dbus.ByteArray, then converted to expected
+        types.
+        """
         metadata_path = layoutmanager.get_instance().get_metadata_path(uid)
+
         if properties is not None:
             properties = [x.encode('utf-8') if isinstance(x, str)
                           else x for x in properties]
+
         metadata = metadatareader.retrieve(metadata_path, properties)
-        for x in metadata:
-            metadata[x] = str(metadata[x])[2:-1]
+
+        # convert from dbus.ByteArray to expected types
+        for key, value in metadata.items():
+            if key in ['filesize', 'creation_time', 'timestamp']:
+                metadata[key] = dbus.Int32(value)
+            elif key in ['checksum']:
+                metadata[key] = value.decode()
+            elif key != 'preview':
+                metadata[key] = dbus.String(value.decode())
+
         return metadata
 
     def delete(self, uid):

@@ -25,6 +25,8 @@ from sugar3 import env
 
 from carquinyol import layoutmanager
 
+logger = logging.getLogger('filestore')
+
 
 class FileStore(object):
     """Handle the storage of one file per entry.
@@ -55,7 +57,7 @@ class FileStore(object):
 
             if transfer_ownership:
                 try:
-                    logging.debug('FileStore moving from %r to %r', file_path,
+                    logger.debug('FileStore moving from %r to %r', file_path,
                                   destination_path)
                     os.rename(file_path, destination_path)
                     completion_cb()
@@ -71,12 +73,12 @@ class FileStore(object):
             """
         TODO: How can we support deleting the file of an entry?
         elif not file_path and os.path.exists(destination_path):
-            logging.debug('FileStore: deleting %r' % destination_path)
+            logger.debug('FileStore: deleting %r' % destination_path)
             os.remove(destination_path)
             completion_cb()
             """
         else:
-            logging.debug('FileStore: Nothing to do')
+            logger.debug('FileStore: Nothing to do')
             completion_cb()
 
     def _async_copy(self, file_path, destination_path, completion_cb,
@@ -84,7 +86,7 @@ class FileStore(object):
         """Start copying a file asynchronously.
 
         """
-        logging.debug('FileStore copying from %r to %r', file_path,
+        logger.debug('FileStore copying from %r to %r', file_path,
                       destination_path)
         async_copy = AsyncCopy(file_path, destination_path, completion_cb,
                                unlink_src)
@@ -98,7 +100,7 @@ class FileStore(object):
         """
         file_path = layoutmanager.get_instance().get_data_path(uid)
         if not os.path.exists(file_path):
-            logging.debug('Entry %r doesnt have any file', uid)
+            logger.debug('Entry %r doesnt have any file', uid)
             return ''
 
         use_instance_dir = os.path.exists('/etc/olpc-security') and \
@@ -155,10 +157,10 @@ class FileStore(object):
             existing_uid)
         new_file = layoutmanager.get_instance().get_data_path(new_uid)
 
-        logging.debug('removing %r', new_file)
+        logger.debug('removing %r', new_file)
         os.remove(new_file)
 
-        logging.debug('hard linking %r -> %r', new_file, existing_file)
+        logger.debug('hard linking %r -> %r', new_file, existing_file)
         os.link(existing_file, new_file)
 
 
@@ -190,7 +192,7 @@ class AsyncCopy(object):
 
             # error writing data to file?
             if count < len(data):
-                logging.error('AC: Error writing %s -> %s: wrote less than '
+                logger.error('AC: Error writing %s -> %s: wrote less than '
                               'expected', self.src, self.dest)
                 self._complete(RuntimeError(
                     'Error writing data to destination file'))
@@ -203,7 +205,7 @@ class AsyncCopy(object):
                 self._complete(None)
                 return False
         except Exception as err:
-            logging.error('AC: Error copying %s -> %s: %r', self.src, self.
+            logger.error('AC: Error copying %s -> %s: %r', self.src, self.
                           dest, err)
             self._complete(err)
             return False

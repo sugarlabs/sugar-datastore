@@ -2,7 +2,7 @@
 import sys
 import signal
 import logging
-from gi.repository import GObject
+from gi.repository import GLib
 import dbus.mainloop.glib
 from carquinyol.datastore import DataStore
 from sugar3 import logger
@@ -18,7 +18,7 @@ connected = True
 ds = DataStore()
 
 # and run it
-mainloop = GObject.MainLoop()
+mainloop = GLib.MainLoop()
 
 
 def handle_disconnect():

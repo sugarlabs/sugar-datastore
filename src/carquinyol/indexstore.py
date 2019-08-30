@@ -66,6 +66,8 @@ _QUERY_VALUE_MAP = {
     'creation_time': {'number': _VALUE_CREATION_TIME, 'type': float},
 }
 
+logger = logging.getLogger('indexstore')
+
 
 class TermGenerator (xapian.TermGenerator):
 
@@ -81,7 +83,7 @@ class TermGenerator (xapian.TermGenerator):
                 document.add_value(_VALUE_FILESIZE, xapian.sortable_serialise(
                     int(properties['filesize'])))
             except (ValueError, TypeError):
-                logging.debug('Invalid value for filesize property: %s',
+                logger.debug('Invalid value for filesize property: %s',
                               properties['filesize'])
         if 'creation_time' in properties:
             try:
@@ -89,7 +91,7 @@ class TermGenerator (xapian.TermGenerator):
                     _VALUE_CREATION_TIME, xapian.sortable_serialise(
                         float(properties['creation_time'])))
             except (ValueError, TypeError):
-                logging.debug('Invalid value for creation_time property: %s',
+                logger.debug('Invalid value for creation_time property: %s',
                               properties['creation_time'])
 
         self.set_document(document)
@@ -201,12 +203,12 @@ class QueryParser (xapian.QueryParser):
                 '')
 
         except xapian.QueryParserError as exception:
-            logging.warning('Invalid query string: ' + exception.get_msg())
+            logger.warning('Invalid query string: ' + exception.get_msg())
             return Query()
 
     # pylint: disable=W0221
     def parse_query(self, query_dict, query_string):
-        logging.debug('parse_query %r %r', query_dict, query_string)
+        logger.debug('parse_query %r %r', query_dict, query_string)
         queries = []
         query_dict = dict(query_dict)
 
@@ -223,12 +225,12 @@ class QueryParser (xapian.QueryParser):
                     self._parse_query_value(
                         name, _QUERY_VALUE_MAP[name], value))
             else:
-                logging.warning('Unknown term: %r=%r', name, value)
+                logger.warning('Unknown term: %r=%r', name, value)
 
         if not queries:
             queries.append(Query(''))
 
-        logging.debug('queries: %r', [str(q) for q in queries])
+        logger.debug('queries: %r', [str(q) for q in queries])
         return Query(Query.OP_AND, queries)
 
 
@@ -264,7 +266,7 @@ class IndexStore(object):
             self._database = WritableDatabase(self._index_path,
                                               xapian.DB_CREATE_OR_OPEN)
         except BaseException:
-            logging.error('Exception opening database')
+            logger.error('Exception opening database')
             raise
 
     def close_index(self):
@@ -277,7 +279,7 @@ class IndexStore(object):
             # does Xapian write in its destructors?
             self._database = None
         except BaseException:
-            logging.error('Exception tearing down database')
+            logger.error('Exception tearing down database')
             raise
 
     def remove_index(self):
@@ -345,7 +347,7 @@ class IndexStore(object):
         elif order_by == '-creation_time':
             enquire.set_sort_by_value(_VALUE_CREATION_TIME, False)
         else:
-            logging.warning('Unsupported property for sorting: %s', order_by)
+            logger.warning('Unsupported property for sorting: %s', order_by)
 
         query_result = enquire.get_mset(offset, limit, check_at_least)
         total_count = query_result.get_matches_estimated()
@@ -395,7 +397,7 @@ class IndexStore(object):
 
     def _flush(self, force=False):
         """Called after any database mutation"""
-        logging.debug('IndexStore.flush: force=%r _pending_writes=%r',
+        logger.debug('IndexStore.flush: force=%r _pending_writes=%r',
                       force, self._pending_writes)
 
         self._set_index_updated(False)
@@ -407,12 +409,12 @@ class IndexStore(object):
         self._pending_writes += 1
         if force or self._pending_writes > _FLUSH_THRESHOLD:
             try:
-                logging.debug("Start database flush")
+                logger.debug("Start database flush")
                 self._database.flush()
-                logging.debug("Completed database flush")
+                logger.debug("Completed database flush")
             except Exception as e:
-                logging.exception(e)
-                logging.error("Exception during database.flush()")
+                logger.exception(e)
+                logger.error("Exception during database.flush()")
                 # bail out to trigger a reindex
                 sys.exit(1)
             self._pending_writes = 0

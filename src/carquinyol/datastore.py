@@ -41,14 +41,12 @@ from carquinyol.filestore import FileStore
 from carquinyol.optimizer import Optimizer
 
 # the name used by the logger
-DS_LOG_CHANNEL = 'org.laptop.sugar.DataStore'
-
 DS_SERVICE = "org.laptop.sugar.DataStore"
 DS_DBUS_INTERFACE = "org.laptop.sugar.DataStore"
 DS_OBJECT_PATH = "/org/laptop/sugar/DataStore"
 MIN_INDEX_FREE_BYTES = 1024 * 1024 * 5
 
-logger = logging.getLogger(DS_LOG_CHANNEL)
+logger = logging.getLogger('datastore')
 
 
 class DataStore(dbus.service.Object):
@@ -74,7 +72,7 @@ class DataStore(dbus.service.Object):
         self._cleanflag = os.path.join(root_path, 'ds_clean')
 
         if initiated:
-            logging.debug('Initiate datastore')
+            logger.debug('Initiate datastore')
             self._rebuild_index()
             self._index_store.flush()
             self._mark_clean()
@@ -90,24 +88,24 @@ class DataStore(dbus.service.Object):
         da = stat.f_bavail * stat.f_bsize
 
         if not self._index_store.index_updated:
-            logging.warn('Index is not up-to-date')
+            logger.warn('Index is not up-to-date')
             rebuild = True
         elif not os.path.exists(self._cleanflag):
-            logging.warn('DS state is not clean')
+            logger.warn('DS state is not clean')
             rebuild = True
         elif da < MIN_INDEX_FREE_BYTES:
-            logging.warn('Disk space tight for index')
+            logger.warn('Disk space tight for index')
             rebuild = True
 
         if rebuild:
-            logging.warn('Trigger index rebuild')
+            logger.warn('Trigger index rebuild')
             self._rebuild_index()
         else:
             # fast path
             try:
                 self._index_store.open_index()
             except BaseException:
-                logging.exception('Failed to open index')
+                logger.exception('Failed to open index')
                 # try...
                 self._rebuild_index()
 
@@ -120,7 +118,7 @@ class DataStore(dbus.service.Object):
             os.fsync(f.fileno())
             f.close()
         except BaseException:
-            logging.exception("Could not mark the datastore clean")
+            logger.exception("Could not mark the datastore clean")
 
     def _mark_dirty(self):
         try:
@@ -198,7 +196,7 @@ class DataStore(dbus.service.Object):
     def _update_index(self):
         """Find entries that are not yet in the index and add them."""
         uids = layoutmanager.get_instance().find_all()
-        logging.debug('Going to update the index with object_ids %r',
+        logger.debug('Going to update the index with object_ids %r',
                       uids)
         self._index_updating = True
         GLib.idle_add(lambda: self.__update_index_cb(uids),
@@ -208,7 +206,7 @@ class DataStore(dbus.service.Object):
         if uids:
             uid = uids.pop()
 
-            logging.debug('Updating entry %r in index. %d to go.', uid,
+            logger.debug('Updating entry %r in index. %d to go.', uid,
                           len(uids))
 
             if not self._index_store.contains(uid):
@@ -239,8 +237,8 @@ class DataStore(dbus.service.Object):
                         self._metadata_store.store(uid, props)
                     self._index_store.store(uid, props)
                 except Exception:
-                    logging.exception('Error processing %r', uid)
-                    logging.warn('Will attempt to delete corrupt entry %r',
+                    logger.exception('Error processing %r', uid)
+                    logger.warn('Will attempt to delete corrupt entry %r',
                                  uid)
                     try:
                         # self.delete(uid) only works on well-formed
@@ -249,13 +247,13 @@ class DataStore(dbus.service.Object):
                             layoutmanager.get_instance().get_entry_path(uid)
                         shutil.rmtree(entry_path)
                     except Exception:
-                        logging.exception('Error deleting corrupt entry %r',
+                        logger.exception('Error deleting corrupt entry %r',
                                           uid)
 
         if not uids:
             self._index_store.flush()
             self._index_updating = False
-            logging.debug('Finished updating index.')
+            logger.debug('Finished updating index.')
             return False
         else:
             return True
@@ -281,7 +279,7 @@ class DataStore(dbus.service.Object):
     def create(self, props, file_path, transfer_ownership,
                async_cb, async_err_cb):
         uid = str(uuid.uuid4())
-        logging.debug('datastore.create %r', uid)
+        logger.debug('datastore.create %r', uid)
 
         self._mark_dirty()
 
@@ -337,7 +335,7 @@ class DataStore(dbus.service.Object):
                          byte_arrays=True)
     def update(self, uid, props, file_path, transfer_ownership,
                async_cb, async_err_cb):
-        logging.debug('datastore.update %r', uid)
+        logger.debug('datastore.update %r', uid)
 
         self._mark_dirty()
 
@@ -384,7 +382,7 @@ class DataStore(dbus.service.Object):
                          in_signature='a{sv}as',
                          out_signature='aa{sv}u')
     def find(self, query, properties):
-        logging.debug('datastore.find %r', query)
+        logger.debug('datastore.find %r', query)
         t = time.time()
 
         if not self._index_updating:
@@ -392,18 +390,18 @@ class DataStore(dbus.service.Object):
                 uids, count = self._index_store.find(query)
                 uids = [uid.decode() for uid in uids]
             except Exception:
-                logging.exception('Failed to query index, will rebuild')
+                logger.exception('Failed to query index, will rebuild')
                 self._rebuild_index()
 
         if self._index_updating:
-            logging.warning('Index updating, returning all entries')
+            logger.warning('Index updating, returning all entries')
             return self._find_all(query, properties)
 
         entries = []
         for uid in uids:
             entry_path = layoutmanager.get_instance().get_entry_path(uid)
             if not os.path.exists(entry_path):
-                logging.warning(
+                logger.warning(
                     'Inconsistency detected, returning all entries')
                 self._rebuild_index()
                 return self._find_all(query, properties)
@@ -457,7 +455,7 @@ class DataStore(dbus.service.Object):
             try:
                 return self._index_store.find(query)[0]
             except Exception:
-                logging.error('Failed to query index, will rebuild')
+                logger.error('Failed to query index, will rebuild')
                 self._rebuild_index()
         return []
 
@@ -466,7 +464,7 @@ class DataStore(dbus.service.Object):
                          out_signature='s',
                          sender_keyword='sender')
     def get_filename(self, uid, sender=None):
-        logging.debug('datastore.get_filename %r', uid)
+        logger.debug('datastore.get_filename %r', uid)
         user_id = dbus.Bus().get_unix_user(sender)
         extension = self._get_extension(uid)
         return self._file_store.retrieve(uid, user_id, extension)
@@ -481,7 +479,7 @@ class DataStore(dbus.service.Object):
                          in_signature='s',
                          out_signature='a{sv}')
     def get_properties(self, uid):
-        logging.debug('datastore.get_properties %r', uid)
+        logger.debug('datastore.get_properties %r', uid)
         metadata = self._metadata_store.retrieve(uid)
         self._fill_internal_props(metadata, uid)
         return metadata
@@ -497,7 +495,7 @@ class DataStore(dbus.service.Object):
         if not self._index_updating:
             return self._index_store.get_activities()
         else:
-            logging.warning('Index updating, returning an empty list')
+            logger.warning('Index updating, returning an empty list')
             return []
 
     @dbus.service.method(DS_DBUS_INTERFACE,

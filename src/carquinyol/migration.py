@@ -26,10 +26,11 @@ import json
 from carquinyol import layoutmanager
 
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S'
+logger = logging.getLogger('migration')
 
 
 def migrate_from_0():
-    logging.info('Migrating datastore from version 0 to version 1')
+    logger.info('Migrating datastore from version 0 to version 1')
 
     root_path = layoutmanager.get_instance().get_root_path()
     old_root_path = os.path.join(root_path, 'store')
@@ -41,7 +42,7 @@ def migrate_from_0():
         if ext != '.metadata':
             continue
 
-        logging.debug('Migrating entry %r', uid)
+        logger.debug('Migrating entry %r', uid)
 
         new_entry_dir = layoutmanager.get_instance().get_metadata_path(uid)
         if not os.path.exists(new_entry_dir):
@@ -52,13 +53,13 @@ def migrate_from_0():
             _migrate_file(root_path, old_root_path, uid)
             _migrate_preview(root_path, old_root_path, uid)
         except Exception:
-            logging.exception('Error while migrating entry %r', uid)
+            logger.exception('Error while migrating entry %r', uid)
 
     # Just be paranoid, it's cheap.
     if old_root_path.endswith('datastore/store'):
         shutil.rmtree(old_root_path)
 
-    logging.info('Migration finished')
+    logger.info('Migration finished')
 
 
 def _migrate_metadata(root_path, old_root_path, uid):
@@ -85,7 +86,7 @@ def _migrate_metadata(root_path, old_root_path, uid):
             finally:
                 f.close()
         except Exception:
-            logging.exception(
+            logger.exception(
                 'Error while migrating property %s of entry %s', key, uid)
 
 

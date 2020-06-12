@@ -80,8 +80,10 @@ class MetadataStore(object):
 
         # convert from dbus.ByteArray to expected types
         for key, value in metadata.items():
-            if key in ['filesize', 'creation_time', 'timestamp']:
-                metadata[key] = dbus.Int32(value)
+            if key in ['creation_time', 'timestamp']:
+                metadata[key] = dbus.Int32(int(value))
+            elif key == 'filesize':
+                metadata[key] = int(value)
             elif key in ['checksum']:
                 metadata[key] = value.decode()
             elif key != 'preview':

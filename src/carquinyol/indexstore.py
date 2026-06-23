@@ -397,7 +397,7 @@ class IndexStore(object):
 
     def _flush(self, force=False):
         """Called after any database mutation"""
-        logger.debug('IndexStore.flush: force=%r _pending_writes=%r',
+        logger.debug('IndexStore.commit: force=%r _pending_writes=%r',
                       force, self._pending_writes)
 
         self._set_index_updated(False)
@@ -410,11 +410,11 @@ class IndexStore(object):
         if force or self._pending_writes > _FLUSH_THRESHOLD:
             try:
                 logger.debug("Start database flush")
-                self._database.flush()
+                self._database.commit()
                 logger.debug("Completed database flush")
             except Exception as e:
                 logger.exception(e)
-                logger.error("Exception during database.flush()")
+                logger.error("Exception during database.commit()")
                 # bail out to trigger a reindex
                 sys.exit(1)
             self._pending_writes = 0

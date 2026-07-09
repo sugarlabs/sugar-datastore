@@ -120,10 +120,8 @@ if __name__ == "__main__":
         # Cleanup.
         dsentry.destroy()
 
-    except DBusException:
-        print('ERROR: Unable to connect to the datastore.\n'
-              'Check that you are running in the same environment as the '
-              'datastore service.')
+    except DBusException as e:
+        print('ERROR: %s' % (e))
 
     except Exception as e:
         print('ERROR: %s' % (e))

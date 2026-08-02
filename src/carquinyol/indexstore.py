@@ -47,7 +47,11 @@ _FLUSH_THRESHOLD = 20
 # Force a flush after _n_ seconds since the last change to the db
 _FLUSH_TIMEOUT = 5
 
-_PROPERTIES_NOT_TO_INDEX = ['timestamp', 'preview', 'launch-times']
+_PROPERTIES_NOT_TO_INDEX = ['timestamp', 'preview', 'launch-times',
+                            'reflections', 'next_steps']
+
+# Key prefixes whose values are binary blobs, not words.
+_PREFIXES_NOT_TO_INDEX = ['moment-snap-']
 
 _MAX_RESULTS = int(2 ** 31 - 1)
 
@@ -114,6 +118,9 @@ class TermGenerator (xapian.TermGenerator):
     def _index_property(self, doc, name, value, prefix=''):
         if name in _PROPERTIES_NOT_TO_INDEX or not value:
             return
+        for skip in _PREFIXES_NOT_TO_INDEX:
+            if name.startswith(skip):
+                return
         value = str(value)
 
         # We need to add the full value (i.e. not split into words) so
